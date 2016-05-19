@@ -1,0 +1,86 @@
+pro write_hdf, fileName, bandNames, bandValues, boundary, COMPRESS=COMPRESS
+
+  ;if strlen(fileName) gt 120 then message, 'choose a shorter full filename, less than 120 characters', fileName
+
+  pointpos=strpos(filename, '.', /REVERSE_SEARCH)
+  slashpos=strpos(filename, path_sep(), /REVERSE_SEARCH)
+
+  folder=strmid(filename, 0, slashpos)
+
+  tempDir=getenv('TEMP')
+  onlyRealFileName=strmid(filename, slashpos+1, strlen(filename)-slashpos+1)
+  onlyFileName=strmid(filename, slashpos+1, 140-strlen(tempDir))
+  tempFileName=tempDir+path_sep()+onlyFileName+'.nc'
+
+  sdid_file = HDF_SD_START(fileName, /CREATE)
+  for i=0, n_elements(bandNames)-1 do begin
+    thisBand=*bandValues[i]
+    sizeInfo=size(thisBand, /STRUCT)
+    idx=where(sizeInfo.Dimensions ne 0)
+    trueDims=sizeInfo.Dimensions[idx]
+    sdid_thisband = HDF_SD_CREATE(sdid_file, bandNames[i], trueDims, $
+      BYTE=sizeInfo.TYPE eq 1, DOUBLE=sizeInfo.TYPE eq 5, FLOAT=sizeInfo.TYPE eq 4, INT=sizeInfo.TYPE eq 2, LONG=sizeInfo.TYPE eq 3, STRING=sizeInfo.TYPE eq 7)
+    HDF_SD_ADDDATA, sdid_thisband, thisBand
+  endfor
+  HDF_SD_END, sdid_file
+
+  if keyword_set(compress) then begin
+    cd, curr=curr
+    cd, folder;'E:\mariomi\Documents\projects\LDTR\data\input\AVHRR\2003\'
+    ;fileName='GLOBAL_L3_GEOG_0.05DEG_264-264_03.NOAA-16_BRF.hdf'
+    zipCommand="C:\Program Files\7-Zip\7z.exe"
+    type="zip"
+    command="a"
+    option="-t{"+type+"}";+" ";+"-slp"
+    ; big file & delete original file
+    option=' -slp -sdel'
+    ;option=''
+    iFile=onlyRealFileName;fileName
+    zipFile=onlyRealFileName+'.'+type;fileName+'.'+type
+    print, "compressing with os call..."
+    spawn, '"'+zipCommand+'"'+" "+command+option+" "+zipFile+" "+iFile, /HIDE
+    cd, curr
+  endif
+
+
+  ;  1  BYTE
+  ;  2  INT
+  ;  3  LONG  Longword integer
+  ;  4   FLOAT Floating point
+  ;  5  DOUBLE  Double-precision floating
+  ;  6  COMPLEX  Complex floating
+  ;  7  STRING
+  ;  12  UINT  Unsigned Integer
+  ;  13  ULONG  Unsigned Longword Integer
+  ;  14  LONG64  64-bit Integer
+  ;  15  ULONG64  Unsigned 64-bit Integer
+
+  ;  sdid_band2 = HDF_SD_CREATE(SDinterface_id, 'BRF_BAND_2', [a[1],a[2]], /float)
+  ;
+  ;  sdid_sigmaband1 = HDF_SD_CREATE(SDinterface_id, 'SIGMA_BRF_BAND_1', [a[1],a[2]], /float)
+  ;  sdid_sigmaband2 = HDF_SD_CREATE(SDinterface_id, 'SIGMA_BRF_BAND_2', [a[1],a[2]], /float)
+  ;
+  ;  sdid_ts = HDF_SD_CREATE(SDinterface_id, 'TS', [a[1],a[2]], /float)
+  ;  sdid_tv = HDF_SD_CREATE(SDinterface_id, 'TV', [a[1],a[2]], /float)
+  ;  sdid_phi = HDF_SD_CREATE(SDinterface_id, 'PHI', [a[1],a[2]], /float)
+  ;  sdid_phi_corrected = HDF_SD_CREATE(SDinterface_id, 'PHI_CORRECTED', [a[1],a[2]], /float)
+  ;
+  ;  sdid_qa = HDF_SD_CREATE(SDinterface_id, 'QA', [a[1],a[2]], /float)
+  ;  sdid_qc = HDF_SD_CREATE(SDinterface_id, 'QC', [a[1],a[2]], /float)
+  ;
+  ;  HDF_SD_ADDDATA, sdid_band1, red_brf
+  ;  HDF_SD_ADDDATA, sdid_band2, nir_brf
+  ;
+  ;  HDF_SD_ADDDATA, sdid_sigmaband1, sigma_red
+  ;  HDF_SD_ADDDATA, sdid_sigmaband2, sigma_nir
+  ;
+  ;  HDF_SD_ADDDATA, sdid_tv, native_tv
+  ;  HDF_SD_ADDDATA, sdid_ts, native_ts
+  ;  HDF_SD_ADDDATA, sdid_phi, RELAZ
+  ;  HDF_SD_ADDDATA, sdid_phi_corrected, new_phi_avhrr
+  ;
+  ;  HDF_SD_ADDDATA, sdid_qa, brdf_qa_avhrr
+  ;  HDF_SD_ADDDATA, sdid_qc, qc_avhrr
+  ;  HDF_SD_END, SDinterface_id
+
+end

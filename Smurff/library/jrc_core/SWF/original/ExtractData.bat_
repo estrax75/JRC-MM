@@ -1,0 +1,40 @@
+
+; @/home/melinfr/OC/CAL/SWF/ExtractData.bat
+
+; Procedures needed:
+.comp /home/melinfr/OC/CAL/SWF/read_nc4_data
+
+.comp /home/melinfr/OC/CAL/SWF/ExtractSubset
+
+.comp /home/melinfr/OC/CAL/SWF/SWFInfo
+.comp /home/melinfr/OC/CAL/SWF/FindPixel
+
+.comp /home/melinfr/OC/CAL/SWF/SelectData
+
+; Execution
+.comp /home/melinfr/OC/CAL/SWF/ExtractData
+
+; ----------------------------------------------------------------------
+
+option = 1 ; 1: basic set of variables; 2: all QAA IOPs; 3: all terms for RT equation
+
+; Site chosen for extraction of data.
+
+k_site = 1 ; 1: AAOT, 2: GDLT, 3: HLT, 4: AABP, 5: COVE, 6: MVCO, 7: WaveCIS_Site_CSI_6; 10: MOBy (assumed fixed)
+
+; directory where the data files are. Must finish with / .
+in_dir="/net/netsea1/vol/vol22_h01/data/SWF_CAL/MSEA/tmp/"
+
+out_dir = "/net/netsea1/vol/vol22_h01/data/SWF_CAL/MSEA/tmp/"
+
+
+; Size of extraction (extraction of a square of n_side x n_side pixels) with n_side = 2n_e +1
+n_side = 3
+ n_side = 5
+
+; type of the files to be read
+root = 'S*.L2_*.nc'
+
+ExtractData,k_site,option,n_side,in_dir,out_dir,root
+
+; End of Program

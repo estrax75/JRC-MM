@@ -1,0 +1,15 @@
+; RESET IDL Session
+.RESET_SESSION
+
+;ENVI, /restore_base_save_files
+;ENVI_BATCH_INIT, /NO_STATUS_WINDOW
+
+; Execute the pre-compile command
+.compile  before_compile_local
+
+; Resolve all routines (skip built-in ENVI routines)
+RESOLVE_ALL, /CONTINUE_ON_ERROR, SKIP_ROUTINES='envi'
+
+; Execute the post-compile command
+;.compile  after_compile_local
+

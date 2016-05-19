@@ -1,0 +1,106 @@
+
+
+;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+; NAME:
+;       read_hdf_dataset
+;
+; PURPOSE:
+;
+;       read a variable from an HDF file returning the information
+;		of the header.
+;
+; CATEGORY:
+; 
+;       I/O
+;
+; CALLING SEQUENCE:
+;
+;       read_hdf_data,filename,varname,header,data,iflag
+;
+; INPUTS:
+;			filename:	input file name (string)
+;			varname:	name of the variable to be read (string)
+;
+; OUTPUTS:
+;			data:		SDS output data set
+;			header:		header of SDS data set
+;			iflag:		flag value: 1: good status, -1 otherwise
+;			
+; KEYWORD PARAMETERS:
+;					none
+;
+; COMMENTS:
+;		header: structure { name:varname, longname:' ',units: ' ', slope:hbad, intercept:hbad }
+;			
+; REFERENCES:
+;
+; EXAMPLE:
+;
+; MODIFICATION HISTORY:
+;
+;       Written by: F. MELIN, 04/2005, JRC/IES/GEM.			
+;
+;------------------------------------------------------------------------------
+
+PRO read_hdf_data,filename,varname,header,data,iflag
+
+iflag = -1
+hbad=-9999.
+
+!QUIET=1
+
+; Opens HDF file
+SD_ID = HDF_SD_START (filename,/READ)
+
+index = HDF_SD_NAMETOINDEX(SD_ID,varname)
+
+IF ( index GE 0 ) THEN BEGIN
+; Open access to variable.
+   SDS_ID = HDF_SD_SELECT(SD_ID,index)
+; Get variable.
+   HDF_SD_GETDATA,SDS_ID,data
+   
+; Get header
+   header = { name:varname, longname:' ',units: ' ', slope:hbad, intercept:hbad, badvalue:-999999. }
+
+   index = HDF_SD_ATTRFIND(SDS_ID,'long_name')
+   IF ( index GE 0 ) THEN BEGIN
+       HDF_SD_ATTRINFO,SDS_ID,index,NAME=name,TYPE=t,COUNT=c,DATA=d
+       header.longname=d[0]   
+   ENDIF
+
+   index = HDF_SD_ATTRFIND(SDS_ID,'units')
+   IF ( index GE 0 ) THEN BEGIN
+       HDF_SD_ATTRINFO,SDS_ID,index,NAME=name,TYPE=t,COUNT=c,DATA=d
+       header.units=d[0]   
+   ENDIF
+
+   index = HDF_SD_ATTRFIND(SDS_ID,'slope')
+   IF ( index GE 0 ) THEN BEGIN
+       HDF_SD_ATTRINFO,SDS_ID,index,NAME=name,TYPE=t,COUNT=c,DATA=d
+       header.slope=d[0]   
+   ENDIF
+
+   index = HDF_SD_ATTRFIND(SDS_ID,'intercept')
+   IF ( index GE 0 ) THEN BEGIN
+       HDF_SD_ATTRINFO,SDS_ID,index,NAME=name,TYPE=t,COUNT=c,DATA=d
+       header.intercept=d[0]
+   ENDIF
+
+   index = HDF_SD_ATTRFIND(SDS_ID,'bad_value_scaled')
+   IF ( index GE 0 ) THEN BEGIN
+       HDF_SD_ATTRINFO,SDS_ID,index,NAME=name,TYPE=t,COUNT=c,DATA=d
+       header.badvalue=FLOAT(d[0])
+   ENDIF
+
+; End access to variable.
+   HDF_SD_ENDACCESS,SDS_ID
+
+   iflag = 1 ; Variable read.
+
+ENDIF
+; Close HDF file
+HDF_SD_END,SD_ID
+!QUIET=0
+
+END

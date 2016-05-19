@@ -1,0 +1,40 @@
+
+; @/home/melinfr/OC/CAL/VRS/ExtractData.bat
+
+; Procedures needed:
+
+.comp /home/melinfr/OC/CAL/VRS/read_nc4_data
+.comp /home/melinfr/OC/CAL/VRS/ExtractSubset
+
+.comp /home/melinfr/OC/CAL/VRS/GetVRSInfo
+.comp /home/melinfr/OC/CAL/VRS/FindPixel
+
+.comp /home/melinfr/OC/CAL/VRS/SelectData
+
+; Execution
+.comp /home/melinfr/OC/CAL/VRS/ExtractData
+
+; ----------------------------------------------------------------------
+
+option = 1 ; 1: basic set of variables; 2: all QAA IOPs; 3: all terms for RT equation
+
+; Site chosen for extraction of data.
+
+k_site = 1 ; list of site
+
+; directory where the data files are. Must finish with / .
+in_dir = "/net/netsea1/vol/vol23_h01/data/VRS_CAL/MSEA/"
+out_dir = "/net/netsea1/vol/vol23_h01/data/VRS_CAL/MSEA/"
+
+
+; Size of extraction (extraction of a square of n_side x n_side pixels) with n_side = 2n_e +1
+n_side = 3
+ n_side = 5
+
+; type of the files to be read
+
+root = 'V*.L2_*C*.nc'
+
+ExtractData,k_site,option,n_side,in_dir,out_dir,root
+
+; End of Program

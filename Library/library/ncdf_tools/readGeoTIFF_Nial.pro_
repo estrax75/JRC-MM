@@ -1,0 +1,334 @@
+pro STRREPLACE, Strings, Find1, Replacement1
+
+;   Check integrity of input parameter
+
+         NP        = N_PARAMS()
+         if (NP ne 3) then message,'Must be called with 3 parameters, '+$
+                   'Strings, Find, Replacement'
+
+         sz        = SIZE(Strings)
+         ns        = n_elements(sz)
+         if (sz(ns-2) ne 7) then message,'Parameter must be of string type.'
+
+         Find      = STRING(Find1)
+         pos       = STRPOS(Strings,Find)
+         here      = WHERE(pos ne -1, nreplace)
+
+         if (nreplace eq 0) then return
+
+         Replacement=STRING(Replacement1)
+         Flen      = strlen(Find)
+         for i=0,nreplace-1 do begin
+
+              j         = here(i)
+              prefix    = STRMID(Strings(j),0,pos(j))
+              suffix    = STRMID(Strings(j),pos(j)+Flen,$
+                                       strlen(Strings(j))-(pos(j)+Flen))
+              Strings(j) = prefix + replacement + suffix
+         endfor
+end
+pro main
+; procedure to read a geoTiff and export an a new one 
+	
+	
+	blnGSL=0
+	
+	
+	if (blnGSL eq 1)then begin
+		strFile='/home/robusmo/FAPAR/idl/readGeoTIFF/input/march_2016/GSL_TIFFs/EU_ GSL_1975.tif'
+		outputFile='/home/robusmo/FAPAR/idl/readGeoTIFF/input/march_2016/GSL_TIFFs/'				
+		strFName=outputfile+'GSL.nc'
+	endif else begin
+		strFile='/home/robusmo/FAPAR/idl/readGeoTIFF/input/march_2016/SPI3_TIFFs/EU_SPI3_1975.tif'
+		outputFile='/home/robusmo/FAPAR/idl/readGeoTIFF/input/march_2016/SPI3_TIFFs/'				
+		strFName=outputfile+'SPI3.nc'
+	endelse
+	
+	
+	
+	inputArray=READ_TIFF(strFile, GEOTIFF=GeoKeys)
+		
+		help,inputArray
+		a=size(inputArray)
+		xdim=a[1]
+		ydim=a[2]
+		;print,GeoKeys
+		
+
+		
+				
+		id_new  = NCDF_CREATE(strFName,/CLOBBER)
+		NCDF_CONTROL, id_new, /FILL
+		zdim=40
+		yid = NCDF_DIMDEF(id_new,'lat',ydim)
+		xid = NCDF_DIMDEF(id_new,'lon',xdim)
+		zid = NCDF_DIMDEF(id_new,'time',zdim)
+		
+		if (blnGSL eq 1)then begin
+			ds_id    = NCDF_VARDEF(id_new,'GSL',[xid,yid,zid],/LONG)		
+		endif else begin
+			ds_id    = NCDF_VARDEF(id_new,'SPI3',[xid,yid,zid],/DOUBLE)		
+		endelse
+		; definition fields
+		lat_id      = NCDF_VARDEF(id_new,'lat',yid,/FLOAT)
+		lon_id      = NCDF_VARDEF(id_new,'lon',xid,/FLOAT)	   	
+		stop
+		time_id      = NCDF_VARDEF(id_new,'time',zid,/LONG)	   
+		stop
+		lon_ini=1600000
+		lonMax=7625000
+		lat_ini=766700	
+		latMax=5966700
+		res_lon=(lonMax-lon_ini)/xdim
+		res_lat=(latMax-lat_ini)/ydim
+		lon=FLTARR(xdim)    
+		for i=0, xdim-1 do begin
+			lon[i]=FLOAT(lon_ini)+FLOAT(res_lon*(i+0.5))        
+		endfor	
+		lat=FLTARR(ydim)    
+		for i=0, ydim-1 do begin
+			lat[i]=FLOAT(lat_ini)+FLOAT(res_lat*(i+0.5))        
+		endfor		
+		time=UINTARR(zdim)    
+		for i=0, zdim-1 do begin			
+			time[i]=1975+i
+		endfor	
+		print ,time
+		
+			if (blnGSL eq 1)then begin
+				arrayValues=LONARR(xdim,ydim,zdim)
+			endif else begin
+				arrayValues=DBLARR(xdim,ydim,zdim)
+			endelse				
+		
+		for i=1975, 2014 do begin
+				
+		
+			if (blnGSL eq 1)then begin
+				strFile='/home/robusmo/FAPAR/idl/readGeoTIFF/input/march_2016/GSL_TIFFs/EU_ GSL_'+STRTRIM(string(i),1)+'.tif'
+			endif else begin
+				strFile='/home/robusmo/FAPAR/idl/readGeoTIFF/input/march_2016/SPI3_TIFFs/EU_SPI3_'+STRTRIM(string(i),1)+'.tif'
+			endelse
+			print,strFile
+			inputArray=READ_TIFF(strFile, GEOTIFF=GeoKeys)
+			
+		
+			help,inputArray
+			a=size(inputArray)
+			inputArray=reverse(inputArray,2)						
+			if (blnGSL eq 1)then begin
+				inputArray=LONG(inputArray)
+			endif else begin
+				inputArray=DOUBLE(inputArray)
+			endelse			
+			;print,inputArray[100,100]
+			;stop
+			
+			xdim=a[1]
+			ydim=a[2]			
+			arrayValues[*,*,i-1975]=inputArray[*,*]
+		endfor
+		stop
+		
+
+		if (blnGSL eq 1)then begin
+			;--------------------------------
+			;GSL
+			;--------------------------------
+			; global attributes		
+			NCDF_ATTPUT, id_new, "Conventions", "CF-1.6", /GLOBAL
+			NCDF_ATTPUT, id_new, /GLOBAL,"title", "Length of thermal growing season", /CHAR				
+			strTemp='2'
+			NCDF_ATTPUT, id_new, /GLOBAL, "tier" , strTemp, /CHAR				
+			NCDF_ATTPUT, id_new, /GLOBAL,"software_version",'1.0',/CHAR	
+			NCDF_ATTPUT, id_new, /GLOBAL,"platform",'all',/CHAR	
+			NCDF_ATTPUT, id_new, /GLOBAL,"algorithm", "Mitchell, T.D. and Hulme, M. 2002. Length of the growing season. Weather, 57, 196-198.", /CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"sensor",'none',/CHAR	
+			NCDF_ATTPUT, id_new, /GLOBAL,"contact_email", "niall.mccormick@jrc.ec.europa.eu", /CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"time_coverage_resolution",'',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"time_coverage_duration",'40 years',/CHAR		
+			NCDF_ATTPUT, id_new, /GLOBAL,"time_coverage_start",'01-01-1975 T00:00:00',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"time_coverage_end",'31-12-2014 T23:59:59',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"crs",'EPSG:3035',/CHAR			
+			NCDF_ATTPUT, id_new, /GLOBAL,"geospatial_lat_resolution",'25000',/CHAR			
+			NCDF_ATTPUT, id_new, /GLOBAL,"geospatial_lat_resolution_unit",'meters',/CHAR	
+			NCDF_ATTPUT, id_new, /GLOBAL,"geospatial_lon_resolution",'25000',/CHAR				
+			NCDF_ATTPUT, id_new, /GLOBAL,"geospatial_lon_resolution_unit",'meters',/CHAR			
+			NCDF_ATTPUT, id_new, /GLOBAL,"geospatial_lat_min",'766700',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"geospatial_lat_max",'5966700',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"geospatial_lon_min",'1600000',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"geospatial_lon_max",'7625000',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"data_created",'09-03-2016 T10:00:00',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"creator_name",'Niall McCormick',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"creator_url",'https://ec.europa.eu/jrc/en/institutes/ies',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"creator_email",'niall.mccormick@jrc.ec.europa.eu',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"project", "CLIPC project", /CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"frequency", "--", /CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"frequency tag", "--", /CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"history", "--", /CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"comment", "--", /CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"standard_name_vocabulary", "--", /CHAR			
+			NCDF_ATTPUT, id_new, /GLOBAL,"keywords", "growing season length,temperature", /CHAR		
+			NCDF_ATTPUT, id_new, /GLOBAL,"summary", "Longest continuous period (in days) with average temperature above the point required for crop growth, for a given year. The start and end of the warm period are defined by 5 consecutive days with daily average air temperature > 5°C and < 5°C (for example), respectively. ", /CHAR
+			;NCDF_ATTPUT, id_new, /GLOBAL,"time_number_steps",STRTRIM('days',1),/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"cdm_datatype","ETRS_1989_LAEA",/CHAR		; grid				
+			NCDF_ATTPUT, id_new, /GLOBAL,"license","Copyright: European Communities, 2016",/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"source","JRC MARS AGRI4CAST datasets", /CHAR		
+				
+			; latitude attributes
+			NCDF_ATTPUT, id_new, lat_id, 'long_name', 'Latitude'
+			NCDF_ATTPUT, id_new, lat_id, 'standard_name', 'grid_latitude'
+			NCDF_ATTPUT, id_new, lat_id, 'units', 'm'
+			NCDF_ATTPUT, id_new, lat_id, 'axis' , 'Y'
+
+			; longitude attributes
+			NCDF_ATTPUT, id_new, lon_id, 'long_name', 'Longitude'
+			NCDF_ATTPUT, id_new, lon_id, 'standard_name', 'grid_longitude'
+			NCDF_ATTPUT, id_new, lon_id, 'units', 'm'
+			NCDF_ATTPUT, id_new, lon_id, 'axis' , 'X'	
+			
+			; time attributes
+			NCDF_ATTPUT, id_new, time_id, 'long_name', 'Time'
+			NCDF_ATTPUT, id_new, time_id, 'standard_name', 'time'
+			NCDF_ATTPUT, id_new, time_id, 'units', 'year'
+			NCDF_ATTPUT, id_new, time_id, 'axis' , 'Z'	
+			
+					
+			; in_var attributes	
+			; GSL
+			NCDF_ATTPUT, id_new, ds_id, 'long_name', 'Length of thermal Growing Season'
+			NCDF_ATTPUT, id_new, ds_id, 'standard_name', 'GSL'
+			NCDF_ATTPUT, id_new, ds_id, 'grid_mapping', 'LAEA'
+			NCDF_ATTPUT, id_new, ds_id, 'units', 'days'
+			NCDF_ATTPUT, id_new, ds_id, 'valid_min', 0,/LONG
+			NCDF_ATTPUT, id_new, ds_id, 'valid_max', 366,/LONG
+			NCDF_ATTPUT, id_new, ds_id, '_fillValue',32767,/LONG
+			NCDF_ATTPUT, id_new, ds_id, '_NoDataValue',-999,/LONG				
+					
+		endif else begin
+			;-------------------------------------
+			; SPI3
+			;-------------------------------------
+			; global attributes		
+			NCDF_ATTPUT, id_new, "Conventions", "CF-1.6", /GLOBAL
+			NCDF_ATTPUT, id_new, /GLOBAL,"title", "Standardized Precipitation Index (June-July-August)", /CHAR				
+			strTemp='2'
+			NCDF_ATTPUT, id_new, /GLOBAL, "tier" , strTemp, /CHAR						
+			NCDF_ATTPUT, id_new, /GLOBAL,"software_version",'1.0',/CHAR	
+			NCDF_ATTPUT, id_new, /GLOBAL,"platform",'all',/CHAR	
+			NCDF_ATTPUT, id_new, /GLOBAL,"algorithm", "Edwards, D.C. and T.B. Mckee. 1997. Characteristics of 20th Century Drought in the United States at Multiple Time Scales. Climatology report No. 97-2.", /CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"sensor",'none',/CHAR	
+			NCDF_ATTPUT, id_new, /GLOBAL,"contact_email", "niall.mccormick@jrc.ec.europa.eu", /CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"time_coverage_resolution",'',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"time_coverage_duration",'40 years',/CHAR		
+			NCDF_ATTPUT, id_new, /GLOBAL,"time_coverage_start",'01-01-1975 T00:00:00',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"time_coverage_end",'31-12-2014 T23:59:59',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"crs",'EPSG:3035',/CHAR			
+			NCDF_ATTPUT, id_new, /GLOBAL,"geospatial_lat_resolution",'25000',/CHAR			
+			NCDF_ATTPUT, id_new, /GLOBAL,"geospatial_lat_resolution_unit",'meters',/CHAR	
+			NCDF_ATTPUT, id_new, /GLOBAL,"geospatial_lon_resolution",'25000',/CHAR				
+			NCDF_ATTPUT, id_new, /GLOBAL,"geospatial_lon_resolution_unit",'meters',/CHAR			
+			NCDF_ATTPUT, id_new, /GLOBAL,"geospatial_lat_min",'766700',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"geospatial_lat_max",'5966700',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"geospatial_lon_min",'1600000',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"geospatial_lon_max",'7625000',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"data_created",'09-03-2016 T10:00:00',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"creator_name",'Niall McCormick',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"creator_url",'https://ec.europa.eu/jrc/en/institutes/ies',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"creator_email",'niall.mccormick@jrc.ec.europa.eu',/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"project", "CLIPC project", /CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"frequency", "--", /CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"frequency tag", "--", /CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"history", "--", /CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"comment", "--", /CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"standard_name_vocabulary", "--", /CHAR
+			; some additional missing information		
+			NCDF_ATTPUT, id_new, /GLOBAL,"keywords", "spi,standardized precipitation index", /CHAR		
+			NCDF_ATTPUT, id_new, /GLOBAL,"summary", "Deviation (in standard deviations) from the long-term mean of the total precipitation for the three months June-July-August (i.e. summer) for a given year.", /CHAR
+			;NCDF_ATTPUT, id_new, /GLOBAL,"time_number_steps",STRTRIM('days',1),/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"cdm_datatype","ETRS_1989_LAEA",/CHAR		; grid				
+			NCDF_ATTPUT, id_new, /GLOBAL,"license","Copyright: European Communities, 2016",/CHAR
+			NCDF_ATTPUT, id_new, /GLOBAL,"source","JRC MARS AGRI4CAST datasets", /CHAR		
+				
+			; latitude attributes
+			NCDF_ATTPUT, id_new, lat_id, 'long_name', 'Latitude'
+			NCDF_ATTPUT, id_new, lat_id, 'standard_name', 'grid_latitude'
+			NCDF_ATTPUT, id_new, lat_id, 'units', 'm'
+			NCDF_ATTPUT, id_new, lat_id, 'axis' , 'Y'
+
+			; longitude attributes
+			NCDF_ATTPUT, id_new, lon_id, 'long_name', 'Longitude'
+			NCDF_ATTPUT, id_new, lon_id, 'standard_name', 'grid_longitude'
+			NCDF_ATTPUT, id_new, lon_id, 'units', 'm'
+			NCDF_ATTPUT, id_new, lon_id, 'axis' , 'X'	
+
+			; time attributes
+			NCDF_ATTPUT, id_new, time_id, 'long_name', 'time'
+			NCDF_ATTPUT, id_new, time_id, 'standard_name', 'time'
+			NCDF_ATTPUT, id_new, time_id, 'units', 'year'
+			NCDF_ATTPUT, id_new, time_id, 'axis' , 'Z'	
+			
+			; in_var attributes	
+			; SPI3
+			NCDF_ATTPUT, id_new, ds_id, 'long_name', 'Standardized Precipitation Index (June-July-August)'
+			NCDF_ATTPUT, id_new, ds_id, 'standard_name', 'SPI3'
+			NCDF_ATTPUT, id_new, ds_id, 'grid_mapping', 'LAEA'
+			NCDF_ATTPUT, id_new, ds_id, 'units', 'standard deviations'
+			NCDF_ATTPUT, id_new, ds_id, 'valid_min', -6.0,/DOUBLE
+			NCDF_ATTPUT, id_new, ds_id, 'valid_max', 6.0,/DOUBLE
+			NCDF_ATTPUT, id_new, ds_id, '_fillValue',-1.79769313486e+308,/DOUBLE
+			NCDF_ATTPUT, id_new, ds_id, '_NoDataValue',-999,/DOUBLE		
+					
+		endelse
+		
+
+
+		NCDF_CONTROL, id_new, /ENDEF	
+		
+
+		
+		NCDF_VARPUT, id_new, lat_id, lat
+		NCDF_VARPUT, id_new, lon_id, lon		
+		NCDF_VARPUT, id_new, time_id, time
+		NCDF_VARPUT, id_new, ds_id, arrayValues[0:xdim-1,0:ydim-1,0:zdim-1]
+		NCDF_CLOSE, id_new			
+		print,strFName
+		
+	exit
+	
+	
+	inputArray=READ_TIFF(inputFile, GEOTIFF=GeoKeys)
+	help,inputArray
+	
+;	; INPUTARRAY      BYTE      = Array[720, 348]	
+	outputArray=BYTARR(720,360)
+	outputArray[*,*]=255
+	outputArray[*,12:359]=inputArray[*,*]	 
+	GeoKeys.MODELTIEPOINTTAG[4]=90.0	 
+	WRITE_TIFF, outputFile, outputArray , GEOTIFF=GeoKeys
+	
+	
+;	INPUTARRAY      BYTE      = Array[7200, 3473]	
+	outputArray=BYTARR(7200,3600)
+	outputArray[*,*]=255
+	outputArray[*,127:3599]=inputArray[*,*]	 
+	GeoKeys.MODELTIEPOINTTAG[4]=90.0	 
+	WRITE_TIFF, outputFile, outputArray , GEOTIFF=GeoKeys
+	
+	
+	outputArray=READ_TIFF(outputFile, GEOTIFF=GeoKeys)
+	
+; procedure to read a .dbf file and export its content to .csv file
+	myshape=OBJ_NEW('IDLffShape', '/home/robusmo/FAPAR/idl/readGeoTIFF/input/world/world_with2.shp')  
+;	status = myShape->Open('/home/robusmo/FAPAR/idl/readGeoTIFF/input/world/World.shp',  /UPDATE)	
+	attr = myShape->getAttributes( /ALL )  
+	a=size(attr)
+	
+	OPENW, inunit, '/home/robusmo/FAPAR/idl/readGeoTIFF/output/list_up.txt', /GET_LUN
+	for i=0, 250 do begin
+		print,attr[i]
+		printf,inunit,attr[i]
+	endfor
+	FREE_LUN, inunit 
+	WRITE_CSV,'/home/robusmo/FAPAR/idl/readGeoTIFF/output/list.csv',attr
+end

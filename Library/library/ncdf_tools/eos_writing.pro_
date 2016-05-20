@@ -1,0 +1,43 @@
+pro eos_writing
+
+  file_id  = EOS_GD_OPEN(file_new,/create)
+  upleft  = dblarr(2)
+  lowrgt  = dblarr(2)
+
+  upleft[0]= -32000000.0d       ; Longitude (packed format)
+  upleft[1]=   72000000.0d       ; Latitude
+
+  lowrgt[0]=  70000000.0d
+  lowrgt[1]=  25000000.0d
+
+  xdim = 6258L
+  ydim = 4352L
+
+  grid_id = EOS_GD_CREATE(file_id,"map",xdim,ydim,upleft,lowrgt)
+  status = EOS_GD_DEFCOMP(grid_id, 0)
+  status  = EOS_GD_DEFPROJ(grid_id,0,0,0,0)
+  status  = EOS_GD_DEFDIM(grid_id,'classes',9L)
+  status  = EOS_GD_DEFDIM(grid_id,'lat',4352L)
+  status  = EOS_GD_DEFDIM(grid_id,'lon',6258L)
+
+  status  = EOS_GD_DEFFIELD(grid_id,'country',  'lon,lat',21)
+
+  status  = EOS_GD_WRITEFIELD(grid_id,'country',a)
+
+  south_lat = 25. & st = EOS_GD_WRITEATTR(grid_id,
+  'Southernmost_Latitude',south_lat)
+  north_lat = 72. & st = EOS_GD_WRITEATTR(grid_id,
+  'Northernmost_Latitude',north_lat)
+  east_long = 70. & st = EOS_GD_WRITEATTR(grid_id,
+  'Easternmost_Longitude',east_long)
+  west_long =-32. & st = EOS_GD_WRITEATTR(grid_id,
+  'Westernmost_Longitude',west_long)
+  num_colum =6258  & st = EOS_GD_WRITEATTR(grid_id,
+  'Number_of_Columns'    ,num_colum)
+  num_lines =4352  & st = EOS_GD_WRITEATTR(grid_id,
+  'Number_of_Rows'       ,num_lines)
+
+  vg_id   = EOS_GD_DETACH(grid_id)
+  st = EOS_GD_CLOSE(file_id)
+
+end

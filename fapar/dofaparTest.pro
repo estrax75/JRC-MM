@@ -102,7 +102,7 @@ pro dofaparfTest, confDir, rootDir1, tempDir, outputDir
 ;        print, 'file2: ', file2
 ;        print, 'file3: ', file3
 
-        resFile=makeitglob_new(sensor, resolution, missionName, mainVarName, missionCode, thisyear, thismonth, thisday, /OVERWRITE)
+        resFile=makeitglob_new(sensor, resolution, missionName, mainVarName, missionCode, thisyear, thismonth, thisday, /OVERWRITE, /FIRST)
         if resFile eq -1 then print, thisyear, thismonth, thisday, ' skip (already exists or missing/corrupted source file)
         ;resFile=AVH01_merge_BRFGlob(file1, file2, file3, confDir, thisYear, thisMonth, thisDay, noaanumber, operatorObj, fsObj, tempDir, testFile=testFile)
         ;resFile=merge_BRFGlob(file1, file2, file3, confDir, thisYear, thisMonth, thisDay, noaanumber, operatorObj, fsObj, tempDir, testFile=testFile)

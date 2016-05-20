@@ -1,5 +1,5 @@
 ;function makeitglob_new, sensor, noaanumber, year, month, day
-function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCode, year, month, day, OVERWRITE=OVERWRITE
+function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCode, year, month, day, OVERWRITE=OVERWRITE, FIRST_LOOK=FIRST_LOOK
   ;
   ;
   ; sensor = avhrr or modis
@@ -19,10 +19,10 @@ function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCo
 
   hdfInfo=file_info(hdffilename)
   ncdfInfo=file_info(hdffilename)
-  
+
   if ncdfInfo.size ne 0 and ~keyword_set(OVERWRITE) then return, -1
   if hdfInfo.size ne 0 and ~keyword_set(OVERWRITE) then return, -1
-  
+
   output={  ExpId_t, $
     fpar: fltarr(7200,3600), $
     sigma: fltarr(7200,3600), $
@@ -84,7 +84,7 @@ function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCo
 
 
   ;
-  
+
   red_avhrr=data.red_avhrr & slope_red=data.slope_red & offset_red=data.offset_red
   nir_avhrr=data.nir_avhrr & slope_nir=data.slope_nir & offset_nir=data.offset_nir
   ts_avhrr=data.ts_avhrr & slope_ts=data.slope_ts & offset_ts=data.offset_ts
@@ -499,48 +499,173 @@ function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCo
     'RECTIFIED RED', 'Sigma RECTIFIED RED', $
     'RECTIFIED NIR', 'Sigma RECTIFIED NIR', $
     'FLAG', $
+    'TS', 'TV', 'PHI', $
     'BRF TOC RED', 'BRF TOC NIR', $
-    'JRC QA']
-  
+    'MASK']
+
   bandMeasaureUnits=['FAPAR mu','-', $
     '-', 'RECTIFIED RED mu', $
     '-', 'RECTIFIED NIR mu', $
     '-', $
+    'deg','deg','deg', $
     'BRF TOC RED mu', 'BRF TOC NIR mu', $
     '-']
-  dataSets=[ptr_new(output.fpar, /NO_COPY), ptr_new(output.sigma, /NO_COPY), $
-    ptr_new(output.red, /NO_COPY), ptr_new(output.sigma_red, /NO_COPY), $
-    ptr_new(output.nir, /NO_COPY), ptr_new(output.sigma_nir, /NO_COPY), $
-    ptr_new(output.flag, /NO_COPY), $
+  dims=size(output.fpar, /DIMENSIONS)
+  if keyword_set(FIRST_LOOK) then begin
+    fLookDir='first_look'
+    ;cd, dirout
+    firstLookDir=dirout+fLookDir
+    fInfo=file_info(fLookDir)
+    if ~(fInfo.exists) then file_mkdir, firstLookDir
+    sampleImg=rebin(output.fpar, dims[0]/10,dims[1]/10)
+    minvalue=min(output.fpar, max=maxvalue)
+    sampleImg=bytscl(sampleImg)
+    samplefilename='fl_'+new_file+'.gif'
+    fullSampleFName=firstLookDir+path_sep()+samplefilename
+    LOADCT, 14
+    print, 'sampleImage-->', fullSampleFName
+    write_gif, fullSampleFName, sampleImg
+  endif
+  tags=TAG_NAMES(output)
+  byteScaledData=ptrarr(n_elements(tags))
+
+  bandDataType=[1,1,$
+    1,1,$
+    1,1,$
+    1,$
+    2,2,2, $
+    2,2,$
+    1]
+
+  tags_no=n_elements(tags)
+  mins=fltarr(tags_no) & max=fltarr(tags_no)
+  minReservedValue=251
+  maxReservedValue=255
+  minMax=fltarr(tags_no, 2)
+
+  for i=0,tags_no-1 do begin
+    ;topV=250
+    temp=output.(i)
+    ; reserve 5 bytevalues for flagging
+    reservedIndex=where(temp ge minReservedValue and temp le maxReservedValue, count, ncompl=ncompl, COMPLEMENT=dataIndex)
+    if ncompl ne 0 then minValue=min(temp[dataIndex], max=maxValue) else minValue=min(temp, max=maxValue)
+    minMax[i,*]=[minValue, maxValue]
+    temp=bytscl(temp, max=maxValue, min=minValue);top=topV)
+    if count ne 0 then begin
+      temp[reservedIndex]=(output.(i))[reservedIndex]
+    endif
+    byteScaledData[i]=ptr_new(temp, /NO_COPY)
+    print,'Summary of output.',tags[i], '(', i, ') : ', minValue, maxValue
+  endfor
+
+  ;  dataSets=[ptr_new(output.fpar, /NO_COPY), ptr_new(output.sigma, /NO_COPY), $
+  ;    ptr_new(output.red, /NO_COPY), ptr_new(output.sigma_red, /NO_COPY), $
+  ;    ptr_new(output.nir, /NO_COPY), ptr_new(output.sigma_nir, /NO_COPY), $
+  ;    ptr_new(output.flag, /NO_COPY), $
+  ;    ptr_new(reform(angles[*,*,0]), /NO_COPY), ptr_new(reform(angles[*,*,1]), /NO_COPY), ptr_new(reform(angles[*,*,2]), /NO_COPY), $
+  ;    ptr_new(reform(reflectance(*,*,0)), /NO_COPY), ptr_new(reform(reflectance(*,*,1)), /NO_COPY), $
+  ;    ptr_new(MASK_avhrr, /NO_COPY)]
+  minMaxs=fltarr(n_elements(bandDataType), 2)
+  nanList=fltarr(n_elements(bandDataType))
+
+  minMaxs[*,*]=-1
+  minMaxs[0,*]=minMax[0,*]
+  nanList[0]=255
+
+  minMaxs[1,*]=minMax[1,*]
+  nanList[1]=255
+
+  minMaxs[2,*]=minMax[2,*]
+  nanList[2]=255
+
+  minMaxs[3,*]=minMax[3,*]
+  nanList[3]=255
+
+  minMaxs[4,*]=minMax[4,*]
+  nanList[4]=255
+
+  minMaxs[5,*]=minMax[5,*]
+  nanList[5]=255
+
+  minMaxs[6,*]=minMax[6,*]
+  tempMin=min(angles(*,*,0), max=tempMax)
+  nanList[6]=-9999
+
+  minMaxs[7,*]=[0.,90.]
+  tempMin=min(angles(*,*,1), max=tempMax)
+  nanList[7]=-9999
+
+  minMaxs[8,*]=[0.,90.]
+  nanList[8]=-9999
+
+  tempMin=min(angles(*,*,2), max=tempMax)
+  minMaxs[9,*]=[-180,180]
+  nanList[9]=-9999
+
+  tempMin=min(reflectance(*,*,0), max=tempMax)
+  minMaxs[10,*]=[tempMin>0.,tempMax]
+  nanList[10]=-9999
+
+  tempMin=min(reflectance(*,*,1), max=tempMax)
+  minMaxs[11,*]=[tempMin>0.,tempMax]
+  nanList[11]=-9999
+
+  minMaxs[12,*]=minMax[7,*]
+  nanList[12]=255
+
+  dataSets=[byteScaledData[0], byteScaledData[1], $
+    byteScaledData[2], byteScaledData[3], $
+    byteScaledData[4], byteScaledData[5], $
+    byteScaledData[6], $
+    ptr_new(reform(angles[*,*,0]), /NO_COPY), ptr_new(reform(angles[*,*,1]), /NO_COPY), ptr_new(reform(angles[*,*,2]), /NO_COPY), $
     ptr_new(reform(reflectance(*,*,0)), /NO_COPY), ptr_new(reform(reflectance(*,*,1)), /NO_COPY), $
-    ptr_new(MASK_avhrr, /NO_COPY)]
+    byteScaledData[7]]
 
   bandIntercepts=lonarr(n_elements(bandNames))
-  bandSlopes=[10e-05, 10e-05, $
-    10e-05, 10e-05, $
-    10e-05, 10e-05,$
+  ;bandSlopes=[10e-05, 10e-05, $
+  ;  bandSlopes=[1, 10e-05, $
+  ;    10e-05, 10e-05, $
+  ;    10e-05, 10e-05,$
+  ;    1, $
+  ;    10e-03, 10e-03, 10e-03,$
+  ;    10e-05, 10e-05,$
+  ;    1]
+  bandSlopes=[1, 1, $
+    1, 1, $
+    1, 1,$
     1, $
+    10e-03, 10e-03, 10e-03,$
     10e-05, 10e-05,$
     1]
 
-  bandDataType=[2,2,$
-    2,2,$
-    2,2,$
+  ;  bandDataType=[1,2,$
+  ;    2,2,$
+  ;    2,2,$
+  ;    1,$
+  ;    1,1,1, $
+  ;    2,2,$
+  ;    1]
+  bandDataType=[1,1,$
+    1,1,$
+    1,1,$
     1,$
+    2,2,2, $
     2,2,$
     1]
 
   boundary=[-180.0, 180.0, -90, 90.]
   filePath=dirout
   fName=new_file
-  write_hdf, hdffilename, $
-      bandNames, bandMeasaureUnits, $
-      dataSets, bandDataType, bandIntercepts, bandSlopes, tempDir, boundary, /NOREVERSE
 
+  write_hdf, hdffilename, $
+    bandNames, bandMeasaureUnits, $
+    dataSets, bandDataType, bandIntercepts, bandSlopes, tempDir, boundary, $
+    trueMinMaxs=minMaxs, nanList=nanList
 
   write_georef_ncdf, ncfilename, $
     bandNames, bandMeasaureUnits, $
-    dataSets, bandDataType, bandIntercepts, bandSlopes, tempDir, boundary, /NOREVERSE
+    dataSets, bandDataType, bandIntercepts, bandSlopes, tempDir, boundary, $
+    /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList
 
   ;
   PPMSA_ALBEDOCOLOR

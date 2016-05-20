@@ -1,2 +1,4 @@
 @ ncdf_reader.pro
 @ ncdf_routines.pro
+@ readStandardNcContents.pro
+@ readStandardNcSingleBand.pro

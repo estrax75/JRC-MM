@@ -1,3 +1,5 @@
+;@../library/library/core/structure_definition
+@structure_definition
 function filterBadValues, dataSet, METHODNAME=METHODNAME, REPORT=REPORT
 
   COMMON smurffCB, mainApp

@@ -1,3 +1,4 @@
+@../../library/core/structure_definition
 
 ; .run /home/melinfr/OC/MOD/utilities/GetData
 ; .run /home/melinfr/OC/MOD/utilities/ReadMODISAGeo
@@ -15,7 +16,6 @@
 
 
 ; .run /home/melinfr/OC/MOD/extract/ExtractDataAEROC
-
 
 PRO mod_ExtractData, option, in_dir, out_dir, sensorFileFilter, parList, siteInfoStruct, operator, dType, sensor, $
   originalVarList=originalVarList, overwrite=overwrite, satInfo=satInfo
@@ -50,9 +50,15 @@ PRO mod_ExtractData, option, in_dir, out_dir, sensorFileFilter, parList, siteInf
   ; type of the files to be read
 
   cd, curr=curr
-  
-  dir=in_dir+path_sep()+strupcase(siteFolder)+path_sep()
-  cd , dir
+  test1=in_dir+path_sep()+siteFolder
+  test2=in_dir+path_sep()+strupcase(siteFolder)
+
+  chk1=fileInfo(test1)
+  chk2=fileInfo(test2)
+
+  if chk1.exist then cd, test1
+  if chk2.exist then cd, test2
+
   ;varFilter=in_dir+path_sep()+siteFolder+path_sep()+sensorFileFilter
 
   ;findvariable = STRCOMPRESS(in_dir+sensor+root,/REMOVE_ALL)
@@ -60,7 +66,7 @@ PRO mod_ExtractData, option, in_dir, out_dir, sensorFileFilter, parList, siteInf
 
   ; List of files.
   ;filenameList=file_search(varFilter, count=NbFiles, fold_case=1);
-  filenameList=file_search(sensorFileFilter, count=NbFiles, fold_case=1);
+  filenameList=file_search(sensorFileFilter, count=NbFiles, fold_case=1, /FULLY_QUALIFY););
   cd, curr
   ;filename=FINDFILE(findvariable, count=NbFiles)
 

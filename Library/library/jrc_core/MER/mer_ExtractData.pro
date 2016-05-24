@@ -1,3 +1,4 @@
+@../../library/core/structure_definition
 
 
 ; .run /home/melinfr/OC/CAL/MER/read_hdf_dataset
@@ -33,18 +34,22 @@ PRO mer_ExtractData, option, in_dir, out_dir, sensorFileFilter, parList, siteInf
 
   ; type of the files to be read
 
-  varFilter=in_dir+path_sep()+siteFolder+path_sep()+sensorFileFilter
+  cd, curr=curr
+  test1=in_dir+path_sep()+siteFolder
+  test2=in_dir+path_sep()+strupcase(siteFolder)
+
+  chk1=fileInfo(test1)
+  chk2=fileInfo(test2)
+
+  if chk1.exist then cd, test1
+  if chk2.exist then cd, test2
   ;findvariable = STRCOMPRESS(in_dir+root,/REMOVE_ALL)
 
   ; List of files.
   ;filename=FINDFILE(findvariable, count=NbFiles)
-  filenameList=file_search(varFilter, count=NbFiles, fold_case=1);
-
-  ;print,'Number of files: ',NbFiles
-  count=0
-  duplicate=0
-  discarded=0
-
+  ;filenameList=file_search(varFilter, count=NbFiles, fold_case=1);
+  filenameList=file_search(sensorFileFilter, count=NbFiles, fold_case=1, /FULLY_QUALIFY);
+  cd, curr
   if sitelon gt 150 and sitelon lt 180.2 then HOUR_SHIFT=12
   if sitelon gt -180.1 and sitelon lt -150 then HOUR_SHIFT=-12
   satInfo=replicate(getSatInfoStruct(), NbFiles)
@@ -89,8 +94,10 @@ PRO mer_ExtractData, option, in_dir, out_dir, sensorFileFilter, parList, siteInf
     
     satInfo[f].sourceFile=filenameList[f]
     satInfo[f].findPixelistatus=istatus
-    satInfo[f].edgeNSflag=(line ge 0) and (line LE n_e OR line GE nline-n_e)
-    satInfo[f].edgeEWflag=(elem ge 0) and (elem LE n_e OR elem GE nelem-1-n_e)
+
+    satInfo[f].edgeNSflag=(istatus eq 1) and (line LT n_e OR line GE nline-n_e) ; 
+    satInfo[f].edgeEWflag=(istatus eq 1) and (elem LT n_e OR elem GE nelem-1-n_e) ; test 19 -->  =1 (istatus)
+
     satInfo[f].orbitnumber=DataStruct.orbitnumber
     
     dataInfo=getDateAttrib(DataStruct)
@@ -98,7 +105,8 @@ PRO mer_ExtractData, option, in_dir, out_dir, sensorFileFilter, parList, siteInf
     satInfo[f].day=dataInfo[1]
     satInfo[f].month=dataInfo[2]
     satInfo[f].year=dataInfo[3]
-    ;print, dataInfo
+    satInfo[f].hour=DataStruct.starthour
+    print, 'date conversion:', dataInfo, satInfo[f].hour 
     
 
     ; Check if the pixel is not close to edges
@@ -116,30 +124,44 @@ PRO mer_ExtractData, option, in_dir, out_dir, sensorFileFilter, parList, siteInf
 
       FAIL=1
       parCheck=1
+      testSensor=sensor
       for jj=0, n_elements(parList)-1 do begin
-        fileName=operator->buildOperatorResultFileName(dType, originalVarList[jj], sdata.startday, sdata.startyear, sensor, ext, out_dir, $
+        ;fileName=operator->buildOperatorResultFileName(dType, originalVarList[jj], sdata.startday, sdata.startyear, sensor, ext, out_dir, $
+        ;override wrong startDay from swf_SelectData (sdata.startday is day of month instead day of year)
+        fileName=operator->buildOperatorResultFileName(dType, originalVarList[jj], dataInfo[0] , dataInfo[3], testSensor, ext, out_dir, $
           JULDAY=JULDAY, INTERVAL=INTERVAL, FULLPATH=FULLPATH, LOWCASE=LOWCASE)
+        ;for cc=1, 9 do begin
+        if testSensor eq sensor then begin
+          checkExistence=where(satInfo[*].assignedExtractionFile eq fileName, countCheck)
+          if countCheck ne 0 then testSensor=sensor+'_'+strcompress(1, /remove_all)
+        endif
+        ;testSensor=sensor+'_'+strcompress(cc, /remove_all)
+        ;endfor
+        ; 20160408: check if wind -> store module (or adding an extra band)
         operator->setLocalBandFromExtraction, sdata, parList[jj], FAIL=FAIL
         if keyword_set(parCheck) then satInfo[f].assignedExtractionFile=fileName
         DelIdlVar, parCheck
-        WRITEFILE=1
-        if FILE_TEST(out_dir+path_sep()+fileName) and ~keyword_set(overwrite) then begin
-          doLog,"File duplicated (previous elaboration or the pixel drops in different tiles)", LEVEL=4
-          WRITEFILE=0
-          duplicate++
-        endif
-        if ~keyword_set(FAIL) and WRITEFILE then begin
-          operator->writeResult, sdata.startday, sdata.startyear, sensor, ext, archiveDir=out_dir, fileName=fileName
-          if FILE_TEST(out_dir+path_sep()+fileName) then doLog, 'overwrite...', LEVEL=4
-          doLog,"data found on: ", filenameList[f], ' assigned to result file: ',fileName, LEVEL=4
-          count++
-        endif
+        ;WRITEFILE=1
+        ;if FILE_TEST(out_dir+path_sep()+fileName) and ~keyword_set(overwrite) then begin
+        ;  doLog,"File duplicated (previous elaboration or the pixel drops in different tiles)", LEVEL=4
+        ;  doLog, 'skip-->', startday, sdata.startyear, LEVEL=4
+        ;  WRITEFILE=0
+        ;  duplicate++
+        ;endif
+        ;if ~keyword_set(FAIL) and WRITEFILE then begin
+        doLog, 'store-->', originalVarList[jj], dataInfo[0], dataInfo[3], LEVEL=4
+        fileName=operator->buildOperatorResultFileName(dType, originalVarList[jj], dataInfo[0], dataInfo[3], testSensor, ext, out_dir, $
+          JULDAY=JULDAY, INTERVAL=INTERVAL, FULLPATH=FULLPATH, LOWCASE=LOWCASE)
+        operator->writeResult, dataInfo[0], dataInfo[3], sensor, ext, archiveDir=out_dir, fileName=fileName
+        ;if FILE_TEST(out_dir+path_sep()+fileName) then doLog, 'overwrite...', LEVEL=4
+        ;doLog,"data found on: ", filenameList[f], ' assigned to result file: ',fileName, LEVEL=4
+        ;doLog,"File not selected", LEVEL=4
+        ;endif
       endfor
       ;saveFileName=out_dir+path_sep()+finalName
       ;save, /VARIABLES, SData, filename=saveFileName
     ENDIF ELSE BEGIN
       doLog,"File not selected", LEVEL=4
-      discarded++
     ENDELSE
 
   ENDFOR

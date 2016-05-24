@@ -787,10 +787,14 @@ PRO cgScatter2D, x, y, $
        ; Write the correlation coefficient and the fitting equation on the display,
        ; if allowed to.
        IF Keyword_Set(nodisplay) EQ 0 THEN BEGIN
+           ;cgText, xloc, yloc, /Normal, 'R = ' + String(coefficient, Format='(F0.3)'), $
+           ;    Charsize=fcharsize
+           ;cgText, xloc, y1loc, /Normal, 'y = ' + String(params[1], Format='(F0.2)') $
+           ;    + 'x + ' + String(params[0], Format='(F0.2)'), Charsize=fcharsize
            cgText, xloc, yloc, /Normal, 'R = ' + String(coefficient, Format='(F0.3)'), $
-               Charsize=fcharsize
+               Charsize=fcharsize, color='red'
            cgText, xloc, y1loc, /Normal, 'y = ' + String(params[1], Format='(F0.2)') $
-               + 'x + ' + String(params[0], Format='(F0.2)'), Charsize=fcharsize
+               + 'x + ' + String(params[0], Format='(F0.2)'), Charsize=fcharsize, color='red'
        ENDIF
 	   
        IF Keyword_Set(BIAS) THEN BEGIN

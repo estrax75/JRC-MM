@@ -1,15 +1,18 @@
 pro launch_fapar
 
  confDir='/space3/storage/products/scripts/data'
- rootDir1=''
- rootDir2='/space3/storage/products/AVHRR_LDTR'
- rootDir3=''
- rootDir4=''
- tempDir=''
- ;outputDir='/space3/storage/products/results/BRFs'
- outputDir='/space3/storage/products/results/FAPAR'
- tempDir='/space3/storage/products/results/temp'
+ ;rootDir1=''
+ ;sourceDir2='/space3/storage/products/AVHRR_LDTR'
+ sourceDir3='/space3/storage/products/results/BRFs'
+ ;sourceDir4=''
+ ;sourceDir5=''
+ TYPE1=1
+ TYPE2=1-keyword_set(TYPE1)
  
- dofaparfTest, confDir, rootDir1, tempDir, outputDir
+ if keyword_set(TYPE1) then outputDir='/space3/storage/products/results/FAPAR/type1/'
+ if keyword_set(TYPE2) then outputDir='/space3/storage/products/results/FAPAR/type2/'
+ tempDir='/space3/storage/products/results/temp/'
+ 
+ runDailyFapar, confDir, sourceDir3, tempDir, outputDir, TYPE2=TYPE2, TYPE1=TYPE1
 
 end

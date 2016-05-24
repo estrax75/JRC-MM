@@ -200,6 +200,7 @@ endif
                   EndMillisec:emsec, $
                   StartTime:stime, $
                   EndTime:etime, $
+                  StartHour:shour, $
                   NumberLine:nline, $
                   NumberPixel:nelem $
                  }

@@ -1,3 +1,4 @@
+@readNcdfGeoInfo
 FUNCTION extract_biomap_parameter_D, periodType, $
     month, year, roiCode, roiArchiveCode, inputDir, outputDir, $
     parCode, day=day, outTitle=outTitle, refRoi=refRoi, elabName=elabName, $

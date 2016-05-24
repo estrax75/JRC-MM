@@ -5,6 +5,8 @@ PRO envi_setup_head_oxy, FNAME=FNAME, NS=ns, NL=nl, DATA_IGNORE_VALUE=DATA_IGNOR
   fs=obj_new('FileSystem', /STAND)
   newFName=fs->removeFileExtension(FNAME)
   fs->removeEnviHeaderFile, newFName
+  MAP_INFO.nl=nl
+  MAP_INFO.ns=ns
   envi_setup_head,  $
     R_FID=R_FID, $
     FNAME=newFName,$

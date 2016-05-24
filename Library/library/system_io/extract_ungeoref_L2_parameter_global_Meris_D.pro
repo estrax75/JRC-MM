@@ -4,7 +4,7 @@ FUNCTION extract_ungeoref_L2_parameter_global_Meris_D, periodType, $
   NOTFOUND=NOTFOUND, GETCHLVAR=GETCHLVAR, GETMAPINFO=GETMAPINFO, $
   outMapInfo=outMapInfo, SETNAN=SETNAN, NORANGE=NORANGE, $
   FULLPATH=FULLPATH, EXPORTMAP=EXPORTMAP, report=report, $
-  READ_FROM_DB=READ_FROM_DB, GLOBTYPE=GLOBTYPE
+  READ_FROM_DB=READ_FROM_DB, GLOBTYPE=GLOBTYPE, DUPLICATE=DUPLICATE
   
   COMMON smurffCB, mainApp
   
@@ -18,11 +18,8 @@ FUNCTION extract_ungeoref_L2_parameter_global_Meris_D, periodType, $
   
   L2Op=obj_new('L2Meris_Operator', mainApp, tempDir, sensorCode='Meris')
   
-  firstReport=getInvalidStruct()
   data=L2Op->importBand(periodType, parCode, date, year, roiCode, roiArchiveCode, inputDir, NF=NF, $
-    day=day, targetMapInfo=targetMapInfo, report=firstReport)
-  report=firstReport
-  NOTFOUND=keyword_set(NF)
+    day=day, targetMapInfo=targetMapInfo, report=report, DUPLICATE=DUPLICATE)
   return, data
     
 END

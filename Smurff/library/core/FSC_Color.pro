@@ -1,3 +1,4 @@
+@PICKCOLORNAME.pro
 FUNCTION FSC_Color, theColour, colorIndex, $
     AllColors=allcolors, $
     Brewer=brewer, $

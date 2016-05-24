@@ -60,7 +60,7 @@ PRO GetMERInfo,file,DataStruct ,i_latlon, HOUR_SHIFT=HOUR_SHIFT
   if error_status NE 0 THEN BEGIN
     ERROR=1
     catch, /CANCEL
-    msg='Problem with file '+fileName+' check version, contents, existence or read permission.'
+    msg='Problem with file '+file+' check version, contents, existence or read permission.'
     ;;errMsg=dialog_message(msg, /ERROR)
     message, msg
     return

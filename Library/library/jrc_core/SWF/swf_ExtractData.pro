@@ -33,8 +33,17 @@ PRO swf_ExtractData, option, in_dir, out_dir, sensorFileFilter, parList, siteInf
 
   ; type of the files to be read
   cd, curr=curr
-  cd, in_dir+path_sep()+siteFolder
-  varFilter=in_dir+path_sep()+siteFolder+path_sep()+sensorFileFilter
+  ;manage all-uppercase folder name case...
+  test1=in_dir+path_sep()+siteFolder
+  test2=in_dir+path_sep()+strupcase(siteFolder)
+
+  chk1=fileInfo(test1)
+  chk2=fileInfo(test2)
+
+  if chk1.exist then cd, test1
+  if chk2.exist then cd, test2
+  ;if chk 
+  ;varFilter=in_dir+path_sep()+siteFolder+path_sep()+sensorFileFilter
   ;findvariable = STRCOMPRESS(in_dir+root,/REMOVE_ALL)
 
   ; List of files.
@@ -46,7 +55,6 @@ PRO swf_ExtractData, option, in_dir, out_dir, sensorFileFilter, parList, siteInf
   if sitelon gt 150 and sitelon lt 180.2 then HOUR_SHIFT=12
   if sitelon gt -180.1 and sitelon lt -150 then HOUR_SHIFT=-12
   satInfo=replicate(getSatInfoStruct(), NbFiles)
-  filenameList=allFilenameList
 
   ;for j=0, n_elements(yearList)-1 do begin
   ;thisYear=YearList[j]

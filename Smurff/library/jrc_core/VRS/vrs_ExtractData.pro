@@ -33,14 +33,20 @@ PRO vrs_ExtractData, option, in_dir, out_dir, sensorFileFilter, parList, siteInf
 
   ; type of the files to be read
   cd, curr=curr
-  cd, in_dir+path_sep()+siteFolder
-  varFilter=in_dir+path_sep()+siteFolder+path_sep()+sensorFileFilter
+  test1=in_dir+path_sep()+siteFolder
+  test2=in_dir+path_sep()+strupcase(siteFolder)
+
+  chk1=fileInfo(test1)
+  chk2=fileInfo(test2)
+
+  if chk1.exist then cd, test1
+  if chk2.exist then cd, test2
   ;findvariable = STRCOMPRESS(in_dir+root,/REMOVE_ALL)
 
   ; List of files.
   ;filename=FINDFILE(findvariable, count=NbFiles)
   ;filenameList=file_search(varFilter, count=NbFiles, fold_case=1);
-  filenameList=file_search(sensorFileFilter, count=NbFiles, fold_case=1);
+  filenameList=file_search(sensorFileFilter, count=NbFiles, fold_case=1, /FULLY_QUALIFY);
   cd, curr
   ;print,'Number of files: ',NbFiles
 

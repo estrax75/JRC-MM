@@ -97,9 +97,9 @@ PRO MODISInfo,FileName,MODISStr, HOUR_SHIFT=HOUR_SHIFT
     Delta_t = HOUR_SHIFT
 
     ;time = time-delta_t
-    shour = shour+delta_t
-    IF ( shour LT 0. ) THEN BEGIN
-      shour = shour + 24.
+    stime = stime+delta_t
+    IF ( stime LT 0. ) THEN BEGIN
+      stime = stime + 24.
       sday = sday-1
       ; 0-365/366
       IF ( sday LE 0 ) THEN BEGIN

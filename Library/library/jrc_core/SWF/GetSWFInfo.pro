@@ -208,6 +208,7 @@ PRO GetSWFInfo,file,SatStruct,fstr,latitude,longitude, HOUR_SHIFT=HOUR_SHIFT
     EndMillisec:emsec, $
     StartTime:stime, $
     EndTime:etime, $
+    StartHour:shour, $
     NumberLine:nline, $
     NumberPixel:nelem $
   }

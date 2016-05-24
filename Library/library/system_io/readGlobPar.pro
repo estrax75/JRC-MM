@@ -1,3 +1,4 @@
+@../core/structuredefinition
 FUNCTION readGlobPar, buildFileNameFunction, periodType, getVarDataFunction, $
     varList, convFuncList, archiveRoot, $
     year, month, roiArchiveList, targetMapInfo, $

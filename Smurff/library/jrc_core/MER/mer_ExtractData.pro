@@ -1,3 +1,4 @@
+@../../library/core/structure_definition
 
 
 ; .run /home/melinfr/OC/CAL/MER/read_hdf_dataset
@@ -34,16 +35,21 @@ PRO mer_ExtractData, option, in_dir, out_dir, sensorFileFilter, parList, siteInf
   ; type of the files to be read
 
   cd, curr=curr
-  cd, IN_DIR+PATH_SEP()+strupcase(SITEFOLDER)
-  varFilter=in_dir+path_sep()+siteFolder+path_sep()+sensorFileFilter
+  test1=in_dir+path_sep()+siteFolder
+  test2=in_dir+path_sep()+strupcase(siteFolder)
+
+  chk1=fileInfo(test1)
+  chk2=fileInfo(test2)
+
+  if chk1.exist then cd, test1
+  if chk2.exist then cd, test2
   ;findvariable = STRCOMPRESS(in_dir+root,/REMOVE_ALL)
 
   ; List of files.
   ;filename=FINDFILE(findvariable, count=NbFiles)
   ;filenameList=file_search(varFilter, count=NbFiles, fold_case=1);
-  filenameList=file_search(sensorFileFilter, count=NbFiles, fold_case=1);
+  filenameList=file_search(sensorFileFilter, count=NbFiles, fold_case=1, /FULLY_QUALIFY);
   cd, curr
-
   if sitelon gt 150 and sitelon lt 180.2 then HOUR_SHIFT=12
   if sitelon gt -180.1 and sitelon lt -150 then HOUR_SHIFT=-12
   satInfo=replicate(getSatInfoStruct(), NbFiles)

@@ -4,7 +4,7 @@ FUNCTION extract_ungeoref_L2_parameter_global_ModisA_D, periodType, $
   NOTFOUND=NOTFOUND, GETCHLVAR=GETCHLVAR, GETMAPINFO=GETMAPINFO, $
   outMapInfo=outMapInfo, SETNAN=SETNAN, NORANGE=NORANGE, $
   FULLPATH=FULLPATH, EXPORTMAP=EXPORTMAP, report=report, $
-  READ_FROM_DB=READ_FROM_DB, GLOBTYPE=GLOBTYPE
+  READ_FROM_DB=READ_FROM_DB, GLOBTYPE=GLOBTYPE, DUPLICATE=DUPLICATE
   
   COMMON smurffCB, mainApp
   
@@ -19,7 +19,7 @@ FUNCTION extract_ungeoref_L2_parameter_global_ModisA_D, periodType, $
   L2Op=obj_new('L2ModisA_Operator', mainApp, tempDir, sensorCode='ModisA')
   
   data=L2Op->importBand(periodType, parCode, date, year, roiCode, roiArchiveCode, inputDir, NF=NF, $
-    day=day, targetMapInfo=targetMapInfo, report=report)
+    day=day, targetMapInfo=targetMapInfo, report=report, DUPLICATE=DUPLICATE)
   return, data
     
 END

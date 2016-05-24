@@ -1,3 +1,4 @@
+@../../library/core/structure_definition
 
 ; .run /home/melinfr/OC/MOD/utilities/GetData
 ; .run /home/melinfr/OC/MOD/utilities/ReadMODISAGeo
@@ -48,21 +49,30 @@ PRO mod_ExtractData, option, in_dir, out_dir, sensorFileFilter, parList, siteInf
 
   ; type of the files to be read
 
-  varFilter=in_dir+path_sep()+siteFolder+path_sep()+sensorFileFilter
+  cd, curr=curr
+  test1=in_dir+path_sep()+siteFolder
+  test2=in_dir+path_sep()+strupcase(siteFolder)
+
+  chk1=fileInfo(test1)
+  chk2=fileInfo(test2)
+
+  if chk1.exist then cd, test1
+  if chk2.exist then cd, test2
+
+  ;varFilter=in_dir+path_sep()+siteFolder+path_sep()+sensorFileFilter
 
   ;findvariable = STRCOMPRESS(in_dir+sensor+root,/REMOVE_ALL)
 
 
   ; List of files.
-  filenameList=file_search(varFilter, count=NbFiles, fold_case=1);
+  ;filenameList=file_search(varFilter, count=NbFiles, fold_case=1);
+  filenameList=file_search(sensorFileFilter, count=NbFiles, fold_case=1, /FULLY_QUALIFY););
+  cd, curr
   ;filename=FINDFILE(findvariable, count=NbFiles)
 
 
 
   doLog,'Number of files: ',NbFiles
-  count=0
-  duplicate=0
-  discarded=0
   edgesType1=0l
   edgesType2=0l
 
@@ -134,9 +144,17 @@ PRO mod_ExtractData, option, in_dir, out_dir, sensorFileFilter, parList, siteInf
     
     ; Check if the pixel is not close to edges
     satInfo[f].sourceFile=filenameList[f]
-    satInfo[f].findPixelistatus=istatus
-    satInfo[f].edgeNSflag=(line ge 0) and (line LE n_e OR line GE nline-n_e)
-    satInfo[f].edgeEWflag=(elem ge 0) and (elem LE n_e OR elem GE nelem-1-n_e)
+    satInfo[f].findPixelistatus=istatus ; test =-1
+    
+    ;if f eq 19 then stop
+    ;satInfo[f].edgeNSflag=(line ge 0) and (line LT n_e OR line GE nline-n_e)
+    ;satInfo[f].edgeEWflag=(elem ge 0) and (elem LT n_e OR elem GE nelem-1-n_e)
+    satInfo[f].edgeNSflag=(istatus eq 1) and (line LT n_e OR line GE nline-n_e) ; 
+    satInfo[f].edgeEWflag=(istatus eq 1) and (elem LT n_e OR elem GE nelem-1-n_e) ; test 19 -->  =1 (istatus)
+    
+    ;satInfo[f].edgeNSflag=(line ge 0) and (line LE n_e OR line GE nline-n_e)
+    ;satInfo[f].edgeEWflag=(elem ge 0) and (elem LE n_e OR elem GE nelem-1-n_e)
+
     satInfo[f].orbitnumber=MODISInfo.orbitnumber
     
     dataInfo=getDateAttrib(MODISInfo)
@@ -144,8 +162,10 @@ PRO mod_ExtractData, option, in_dir, out_dir, sensorFileFilter, parList, siteInf
     satInfo[f].day=dataInfo[1]
     satInfo[f].month=dataInfo[2]
     satInfo[f].year=dataInfo[3]
+    satInfo[f].hour=MODISInfo.startTime
+    print, 'date conversion:', dataInfo, satInfo[f].hour 
 
-    IF ( istatus EQ 1 AND ( line LE n_e OR line GE nline-n_e OR elem LE n_e OR elem GE nelem-1-n_e ) ) THEN istatus = -1
+    IF ( istatus EQ 1 AND ( line LT n_e OR line GE nline-n_e OR elem LT n_e OR elem GE nelem-1-n_e ) ) THEN istatus = -1
     
     ;    elem = elem-ModisGeo.ExtractPixelOffset
 
@@ -165,34 +185,43 @@ PRO mod_ExtractData, option, in_dir, out_dir, sensorFileFilter, parList, siteInf
 
       FAIL=1
       parCheck=1
+      testSensor=sensor
       for jj=0, n_elements(parList)-1 do begin
-        fileName=operator->buildOperatorResultFileName(dType, originalVarList[jj], sdata.startday, sdata.startyear, sensor, ext, out_dir, $
+        ;fileName=operator->buildOperatorResultFileName(dType, originalVarList[jj], sdata.startday, sdata.startyear, sensor, ext, out_dir, $
+        ;override wrong startDay from swf_SelectData (sdata.startday is day of month instead day of year)
+        fileName=operator->buildOperatorResultFileName(dType, originalVarList[jj], dataInfo[0], dataInfo[3], testSensor, ext, out_dir, $
           JULDAY=JULDAY, INTERVAL=INTERVAL, FULLPATH=FULLPATH, LOWCASE=LOWCASE)
+        ;for cc=1, 9 do begin
+        if testSensor eq sensor then begin
+          checkExistence=where(satInfo[*].assignedExtractionFile eq fileName, countCheck)
+          if countCheck ne 0 then testSensor=sensor+'_'+strcompress(1, /remove_all)
+        endif
+        ;testSensor=sensor+'_'+strcompress(cc, /remove_all)
+        ;endfor
+        operator->setLocalBandFromExtraction, sdata, parList[jj], FAIL=FAIL
         if keyword_set(parCheck) then satInfo[f].assignedExtractionFile=fileName
         DelIdlVar, parCheck
-        operator->setLocalBandFromExtraction, sdata, parList[jj], FAIL=FAIL
-        WRITEFILE=1
+        ;WRITEFILE=1
         ;if FILE_TEST(out_dir+path_sep()+fileName) and ~keyword_set(overwrite) then begin
         ;  doLog,"File duplicated (previous elaboration or the pixel drops in different tiles)", LEVEL=4
+        ;  doLog, 'skip-->', startday, sdata.startyear, LEVEL=4
         ;  WRITEFILE=0
         ;  duplicate++
         ;endif
-        if ~keyword_set(FAIL) and WRITEFILE then begin
-          operator->writeResult, sdata.startday, sdata.startyear, sensor, ext, archiveDir=out_dir, fileName=fileName
-          if FILE_TEST(out_dir+path_sep()+fileName) then doLog, 'overwrite...', LEVEL=4
-          doLog,"data found on: ", filenameList[f], ' assigned to result file: ',fileName, LEVEL=4
-          count++
-        endif
+        ;if ~keyword_set(FAIL) and WRITEFILE then begin
+        doLog, 'store-->', originalVarList[jj], dataInfo[0], dataInfo[3], LEVEL=4
+        fileName=operator->buildOperatorResultFileName(dType, originalVarList[jj], dataInfo[0], dataInfo[3], testSensor, ext, out_dir, $
+          JULDAY=JULDAY, INTERVAL=INTERVAL, FULLPATH=FULLPATH, LOWCASE=LOWCASE)
+        operator->writeResult, dataInfo[0], dataInfo[3], sensor, ext, archiveDir=out_dir, fileName=fileName
+        ;if FILE_TEST(out_dir+path_sep()+fileName) then doLog, 'overwrite...', LEVEL=4
+        ;doLog,"data found on: ", filenameList[f], ' assigned to result file: ',fileName, LEVEL=4
+        ;doLog,"File not selected", LEVEL=4
+        ;endif
       endfor
       ;saveFileName=out_dir+path_sep()+finalName
       ;save, /VARIABLES, SData, filename=saveFileName
-
-
-      ; Write the various variables into a ascii file.
-      ;     WriteData,ofile,SData,sensor,option
     ENDIF ELSE BEGIN
       doLog,"File not selected", LEVEL=4
-      discarded++
     ENDELSE
 
 

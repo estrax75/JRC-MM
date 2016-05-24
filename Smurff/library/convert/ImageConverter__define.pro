@@ -2,7 +2,7 @@
 ; .run ~/OC/IDL/DefineSDomain
 ; .run ~/OC/IDL/DefineADomain
 ; .run ~/OC/IDL/setScale
-
+@addGraphicColorTable.pro
 FUNCTION ImageConverter::convertFactorCodeToFactorSample, factorCode, NOTFOUND=NOTFOUND
 
   check=where(strupcase(factorCode) eq strupcase(self.availableFactorCodes), count)

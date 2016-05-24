@@ -10,6 +10,7 @@ FUNCTION getSatelliteInfoStruct
     edgeEWflag:0l, $
     edgeNSflag:0l, $
     findPixelistatus:0l, $
+    hour:0l, $
     dayOfYear:0l, $
     day:0l, $
     month:0l, $

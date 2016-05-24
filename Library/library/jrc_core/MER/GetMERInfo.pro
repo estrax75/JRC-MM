@@ -57,14 +57,14 @@ PRO GetMERInfo,file,DataStruct ,i_latlon, HOUR_SHIFT=HOUR_SHIFT
   ; Opens HDF file
   catch, error_status
 
-  ;if error_status NE 0 THEN BEGIN
-    ;ERROR=1
-    ;catch, /CANCEL
-    ;msg='Problem with file '+fileName+' check version, contents, existence or read permission.'
+  if error_status NE 0 THEN BEGIN
+    ERROR=1
+    catch, /CANCEL
+    msg='Problem with file '+file+' check version, contents, existence or read permission.'
     ;;errMsg=dialog_message(msg, /ERROR)
-    ;;message, msg
-;    return
-  ;endif
+    message, msg
+    return
+  endif
 
   sd_id = HDF_SD_START (file,/READ)
 
@@ -287,6 +287,7 @@ PRO GetMERInfo,file,DataStruct ,i_latlon, HOUR_SHIFT=HOUR_SHIFT
     EndMillisec:emsec, $
     StartTime:stime, $
     EndTime:etime, $
+    StartHour:shour, $
     NumberLine:nline, $
     NumberPixel:nelem }
 

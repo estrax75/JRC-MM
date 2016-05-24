@@ -1,4 +1,5 @@
 ;@/library/system_io/readSingleBand
+@readSingleBand
 function readJRCContents, infilenames, inputVarList, outputVarList, conv_functions, $
   tempDir, roiName, ignoreValue, NOTFOUND=NOTFOUND, MEMORY=MEMORY, targetCropInfo=targetCropInfo
   

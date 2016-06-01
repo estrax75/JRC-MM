@@ -1,3 +1,4 @@
+@../core/structure_definition
 PRO computeSingleSatelliteExtraction
 
   sensorList=['MODISA','SEAWIFS', 'VIIRS', 'MERIS']

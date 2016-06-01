@@ -1,27 +1,56 @@
 ;function makeitglob_new, sensor, noaanumber, year, month, day
-function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCode, year, month, day, OVERWRITE=OVERWRITE, FIRST_LOOK=FIRST_LOOK
-  ;
-  ;
-  ; sensor = avhrr or modis
-  ;
-  ;
-  dirroot='/space3/storage/products/results/temp/'
-  dirout='/space3/storage/products/results/FAPAR/'
+@../../Library/library/jrc_core/mapQualityFlags
+;@../../Library/library/jrc_core/mapQualityFlags
+function doFapar, sensor, resolution, missionName, mainVarName, missionCode, year, month, day, $
+  sourceDir, outputDir, tempdir, $
+  OVERWRITE=OVERWRITE, FIRST_LOOK=FIRST_LOOK, TYPE1=TYPE1, TYPE2=TYPE2
 
-  if sensor eq 'AVHRR' then new_file=buildAVHRRFAPARFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName)
+
+  if ~obj_valid(operatorObj) then operatorObj=obj_new('GenericOperator')
+  if ~obj_valid(fsObj) then fsObj=obj_new('FileSystem', /STAND)
+  ;NaN=-9999 ;!VALUES.F_NAN
+
+  outputDir=fsObj->adjustDirSep(outputDir, /ADD)
+  sourceDir=fsObj->adjustDirSep(sourceDir, /ADD)
+  tempDir=fsObj->adjustDirSep(tempDir, /ADD)
+
+  yearS=string(year, format='(I04)')
+  monthS=string(month, format='(I02)')
+  dayS=string(day, format='(I02)')
+
+  sourceFileName=buildBrfFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName)
+  if sensor eq 'AVH09C1' then new_file=buildAVHRRFAPARFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName)
   if sensor eq 'MODIS' then new_file=buildMODISFAPARFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName)
 
-  tempDir='/space3/storage/products/results/temp/'
-  hdffilename=dirout+new_file+'.HDF'
-  ;tempDir='E:\mariomi\Documents\temp\'
-  ncfilename=dirout+new_file+'.NC'
-  print, dirout+new_file
+  ;resFName='AVHRR_'+'GEOG_0.05DEG'+'_'+years+'_'+months+'_'+days+'_NOAA-N'+strcompress(noaaCode, /REMOVE)+'_BRF'
+  ;sourceFileNC=fsObj->addFileExtension(sourceDir+sourceFileName, 'nc')
+  sourceFileNC=fsObj->addFileExtension(sourceFileName, 'nc')
+  ncfilename=fsObj->addFileExtension(outputDir+new_file, 'NC')
+  hdffilename=fsObj->addFileExtension(outputDir+new_file, 'HDF')
+  ;resFileHDF=fsObj->addFileExtension(filePath+resFName, 'hdf')
 
-  hdfInfo=file_info(hdffilename)
-  ncdfInfo=file_info(hdffilename)
+  checkInput=file_info(sourceDir+sourceFileNC)
+  checkOutput1=file_info(ncfilename)
+  checkOutput2=file_info(hdffilename)
 
-  if ncdfInfo.size ne 0 and ~keyword_set(OVERWRITE) then return, -1
-  if hdfInfo.size ne 0 and ~keyword_set(OVERWRITE) then return, -1
+  if checkInput[0].size eq 0 then NOHDFAVAILABLE=1
+  if checkOutput1[0].size ne 0 and ~keyword_set(OVERWRITE) then NOWRITENC=1
+  if checkOutput2[0].size ne 0 and ~keyword_set(OVERWRITE) then NOWRITEHDF=1
+  ;if checkHDF[0].size ne 0 and ~keyword_set(OVERWRITE) then NONCWRITE=1
+
+  if keyword_set(NOHDFAVAILABLE) or (keyword_set(NOHDFWRITE) and keyword_set(NOHDFWRITE)) then return, -1
+
+  data=readBRF(sourceDir, sourceFileNC, FOUND=FOUND)
+
+  if ~keyword_set(FOUND) then return, -1
+
+  INT_NAN=-9999
+  DATA_RANGE=[0., 1.]
+  DATA_NAN=255
+
+
+  ;ncfilename=sourceDir+new_file+'.NC'
+  ;print, dirout+new_file
 
   output={  ExpId_t, $
     fpar: fltarr(7200,3600), $
@@ -76,10 +105,7 @@ function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCo
   ;
   ;
   ;=================================================================================
-  readFileName=buildBrfFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName, 'nc')
-  data=readBRF(dirroot, readFileName, FOUND=FOUND)
-
-  if ~keyword_set(FOUND) then return, -1
+  ;readFileName=buildBrfFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName, 'nc')
   ;fName='AVHRR_'+'GEOG_0.05DEG'+'_'+years+'_'+months+'_'+days+'_NOAA-N'+strcompress(noaaCode, /REMOVE)+'_BRF'
 
 
@@ -256,7 +282,9 @@ function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCo
   ;stop
   ;
   ;
-  if sensor eq 'AVHRR' then begin
+
+  if sensor eq 'AVH09C1' then begin
+    ;if sensor eq 'AVHRR' then begin
     sza=angles[*,*,0] ;/180.*!pi
     vza=angles[*,*,1] ;/180.*!pi
     saa=angles[*,*,2] ;/180.*!pi
@@ -277,10 +305,11 @@ function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCo
     ; make the process only over vegetated areas
     ;
     idx=where(flag2 eq 0)
-    NOAString=strcompress(noaanumber, /REMOVE)
+    ;NOAString=strcompress(noaanumber, /REMOVE)
+    NOAString=string(noaanumber, format='(I02)')
     if idx(0) ge 0 then begin
 
-      FAPAR,'AVHRR'+NOAString,sza(idx),vza(idx),saa(idx),vaa(idx),$
+      FAPAR,'AVHRR', NOAString,sza(idx),vza(idx),saa(idx),vaa(idx),$
         red(idx),red(idx),nir(idx),$
         D_BRF_ToA_RED(idx),D_BRF_ToA_RED(idx),D_BRF_ToA_NIR(idx), $
         rhoRED, rhoNIR, D_rhoRED, D_rhoNIR, $
@@ -349,7 +378,7 @@ function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCo
     vaa=angles[*,*,3] ;/180.*!pi
 
 
-    Rectified,'AVHRR'+NOAString,sza(idx_soil),vza(idx_soil),saa(idx_soil),vaa(idx_soil),$
+    Rectified,'AVHRR', NOAString,sza(idx_soil),vza(idx_soil),saa(idx_soil),vaa(idx_soil),$
       red(idx_soil),red(idx_soil),nir(idx_soil),$
       D_BRF_ToA_RED(idx_soil),D_BRF_ToA_RED(idx_soil),D_BRF_ToA_NIR(idx_soil), $
       rhoRED_S, rhoNIR_S, D_rhoRED_S, D_rhoNIR_S, $
@@ -370,7 +399,7 @@ function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCo
     ;stop
   endif
   ;
-  PPMSA_ALBEDOCOLOR
+  ;PPMSA_ALBEDOCOLOR
   ;	window, 4, xsize=720, ysize=360, title='Rectified Red '+SENSOR
   ;    	tv, reverse(congrid(bytscl(output.red, min=0., max=0.6), 720,360),2)
   output.flag=flag2
@@ -383,32 +412,78 @@ function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCo
   ;idx_5 = where (flag_angles eq 2)
   ;
   ;
-  if idx_3(0) ge 0 then begin
-    output.fpar(idx_3)=253
-    output.sigma(idx_3)=253
-    output.red(idx_3)=253
-    output.nir(idx_3)=253
-    output.sigma_red(idx_3)=253
-    output.sigma_nir(idx_3)=253
-  endif
-  ;
-  if idx_2(0) ge 0 then begin
-    output.fpar(idx_2)=254
-    output.sigma(idx_3)=254
-    output.red(idx_3)=254
-    output.nir(idx_3)=254
-    output.sigma_red(idx_3)=254
-    output.sigma_nir(idx_3)=254
-  endif
-  ;
-  if idx_1(0) ge 0 then begin
-    output.fpar(idx_1)=255
-    output.sigma(idx_3)=255
-    output.red(idx_3)=255
-    output.nir(idx_3)=255
-    output.sigma_red(idx_3)=255
-    output.sigma_nir(idx_3)=255
-  endif
+  ;, ZEROISNAN=ZEROISNAN, VALUE_BYTES=VALUE_BYTES, DATA_MIN=DATA_MIN, DATA_MAX=DATA_MAX, DATA_NAN_RANGE=DATA_NAN_RANGE
+  ZEROISNAN=keyword_set(TYPE1) ;0
+  ;byteOutput=dataByteScaling(output.fpar, NAN_BYTE_VALUE=0, VALUE_BYTES=[1,255])
+  ;byteOutput=dataByteScaling(output.fpar, NAN_BYTE_VALUE=0, VALUE_BYTES=[1,255])
+  ;byteOutput=dataByteScaling(output.fpar, VALUE_BYTES=[0,250])
+  remarkableFlags=[255,254,253]
+  if keyword_set(ZEROISNAN) then begin
+    DATA_NAN=255
+    BYTE_NAN=0
+    BYTE_RANGE=[1,255]
+    remarkableFlags[*]=BYTE_NAN
+  endif else begin
+    DATA_NAN=255
+    BYTE_NAN=255
+    BYTE_RANGE=[0,250]
+  endelse
+
+  res=dataByteScaling(output.fpar, output.flag, FLAG_VALUES=[9,10], $
+    DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
+    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE)
+  output.fpar=res.resultData
+  output.flag=res.resultFlag
+
+  res=dataByteScaling(output.sigma, output.flag, $
+    DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
+    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE)
+  output.sigma=res.resultData
+  output.flag=res.resultFlag
+
+  res=dataByteScaling(output.red, output.flag, FLAG_VALUES=[9,10], $
+    DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
+    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE)
+  ;output.red=res.resultData
+  output.flag=res.resultFlag
+
+  res=dataByteScaling(OUTPUT.SIGMA_RED, output.flag, $
+    DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
+    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE)
+  ;output.sigma_red=res.resultData
+  output.flag=res.resultFlag
+
+  res=dataByteScaling(output.nir, output.flag, FLAG_VALUES=[13,14], $
+    DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
+    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE)
+  ;output.nir=res.resultData
+  output.flag=res.resultFlag
+
+  res=dataByteScaling(output.sigma_nir, output.flag, $
+    DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
+    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE)
+  ;output.sigma_nir=res.resultData
+  output.flag=res.resultFlag
+
+  flagTags=strupcase(['fpar', 'sigma'])
+  tags=tag_names(output)
+
+  for i=0, n_elements(flagTags)-1 do begin
+    thisIdx=(where(flagTags[i] eq tags, count))[0]
+    if count eq 1 then begin
+      output.(thisIdx)=mapQualityFlags(output.(thisIdx), idx_1, remarkableFlags[0])
+      output.(thisIdx)=mapQualityFlags(output.(thisIdx), idx_2, remarkableFlags[1])
+      output.(thisIdx)=mapQualityFlags(output.(thisIdx), idx_3, remarkableFlags[2])
+    endif
+  endfor
+
+  ;map -9999 on int data
+  flagTags=strupcase(['red', 'nir', 'sigma_red', 'sigma_nir'])
+  for i=0, n_elements(flagTags)-1 do begin
+    thisIdx=(where(flagTags[i] eq tags, count))[0]
+    nanIdxs=where(output.(thisIdx) gt 250, count)
+    output.(thisIdx)=mapQualityFlags(output.(thisIdx), nanIdxs, INT_NAN)
+  endfor
 
   ;
   ;if idx_4(0) ge 0 then img(idx_4)=-9996.0
@@ -418,40 +493,10 @@ function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCo
   ;
   ;
 
-  print,'Write the results in ',dirout+new_file
+  print,'Write the results in ',outputDir+new_file
   ;
-  idxneg=where(output.fpar lt 0.0)
-  if idxneg(0) ge 0 then begin
-    output.fpar(idxneg)=0.0
-    output.flag(idxneg)= 9
-  endif
-  idxbig=where(output.fpar gt 1.0 and output.fpar le 250.0)
-  if idxbig(0) ge 0 then begin
-    output.fpar(idxbig)=1.0
-    output.flag(idxbig)= 10
-  endif
   ;
-  idxneg1=where(output.red lt 0.0)
-  if idxneg1(0) ge 0 then begin
-    output.red(idxneg1)=0.0
-    output.flag(idxneg1)= 11
-  endif
-  idxbig1=where(output.red gt 1.0 and output.red le 250.0)
-  if idxbig1(0) ge 0 then begin
-    output.red(idxbig1)=1.0
-    output.flag(idxbig1)= 12
-  endif
   ;
-  idxneg2=where(output.nir lt 0.0)
-  if idxneg2(0) ge 0 then begin
-    output.nir(idxneg2)=0.0
-    output.flag(idxneg2)= 13
-  endif
-  idxbig2=where(output.nir gt 1.0 and output.nir le 250.0)
-  if idxbig2(0) ge 0 then begin
-    output.nir(idxbig2)=1.0
-    output.flag(idxbig2)= 14
-  endif
   ;
   ;idx_4 = where (flag_angles eq 1)
   ;idx_5 = where (flag_angles eq 2)
@@ -471,30 +516,6 @@ function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCo
   ; create output file
   ;
   ;
-  ;stop
-  ;    sdid_outfile1 = HDF_SD_START(dirout+new_file, /CREATE)
-  ;    a=size(output.fpar)
-  ;    sdid_fpar = HDF_SD_CREATE(sdid_outfile1, 'FAPAR', [a(1),a(2)], /float)
-  ;    sdid_uncert = HDF_SD_CREATE(sdid_outfile1, 'Sigma FAPAR', [a(1),a(2)], /float)
-  ;    sdid_red = HDF_SD_CREATE(sdid_outfile1, 'RECTIFIED RED', [a(1),a(2)], /float)
-  ;    sdid_uncert_red = HDF_SD_CREATE(sdid_outfile1, 'Sigma RECTIFIED RED', [a(1),a(2)], /float)
-  ;    sdid_nir = HDF_SD_CREATE(sdid_outfile1, 'RECTIFIED NIR', [a(1),a(2)], /float)
-  ;    sdid_uncert_nir = HDF_SD_CREATE(sdid_outfile1, 'Sigma RECTIFIED NIR', [a(1),a(2)], /float)
-  ;    sdid_flag = HDF_SD_CREATE(sdid_outfile1, 'FLAG', [a(1),a(2)], /byte)
-  ;    sdid_redtoc = HDF_SD_CREATE(sdid_outfile1, 'BRF TOC RED', [a(1),a(2)], /float)
-  ;    sdid_nirtoc = HDF_SD_CREATE(sdid_outfile1, 'BRF TOC NIR', [a(1),a(2)], /float)
-  ;    sdid_qa =  HDF_SD_CREATE(sdid_outfile1, 'JRC QA', [a(1),a(2)], /byte)
-  ;    HDF_SD_ADDDATA, sdid_fpar, output.fpar
-  ;    HDF_SD_ADDDATA, sdid_uncert, output.sigma
-  ;    HDF_SD_ADDDATA, sdid_red, output.red
-  ;    HDF_SD_ADDDATA, sdid_uncert_red, output.sigma_red
-  ;    HDF_SD_ADDDATA, sdid_nir, output.nir
-  ;    HDF_SD_ADDDATA, sdid_uncert_nir, output.sigma_nir
-  ;    HDF_SD_ADDDATA, sdid_flag, output.flag
-  ;    HDF_SD_ADDDATA, sdid_redtoc, reflectance(*,*,0)
-  ;    HDF_SD_ADDDATA, sdid_nirtoc, reflectance(*,*,1)
-  ;    HDF_SD_ADDDATA, sdid_qa, MASK_avhrr
-  ;    HDF_SD_END, sdid_outfile1
   bandNames=['FAPAR','Sigma FAPAR', $
     'RECTIFIED RED', 'Sigma RECTIFIED RED', $
     'RECTIFIED NIR', 'Sigma RECTIFIED NIR', $
@@ -514,7 +535,7 @@ function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCo
   if keyword_set(FIRST_LOOK) then begin
     fLookDir='first_look'
     ;cd, dirout
-    firstLookDir=dirout+fLookDir
+    firstLookDir=outputDir+fLookDir
     fInfo=file_info(fLookDir)
     if ~(fInfo.exists) then file_mkdir, firstLookDir
     sampleImg=rebin(output.fpar, dims[0]/10,dims[1]/10)
@@ -526,37 +547,6 @@ function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCo
     print, 'sampleImage-->', fullSampleFName
     write_gif, fullSampleFName, sampleImg
   endif
-  tags=TAG_NAMES(output)
-  byteScaledData=ptrarr(n_elements(tags))
-
-  bandDataType=[1,1,$
-    1,1,$
-    1,1,$
-    1,$
-    2,2,2, $
-    2,2,$
-    1]
-
-  tags_no=n_elements(tags)
-  mins=fltarr(tags_no) & max=fltarr(tags_no)
-  minReservedValue=251
-  maxReservedValue=255
-  minMax=fltarr(tags_no, 2)
-
-  for i=0,tags_no-1 do begin
-    ;topV=250
-    temp=output.(i)
-    ; reserve 5 bytevalues for flagging
-    reservedIndex=where(temp ge minReservedValue and temp le maxReservedValue, count, ncompl=ncompl, COMPLEMENT=dataIndex)
-    if ncompl ne 0 then minValue=min(temp[dataIndex], max=maxValue) else minValue=min(temp, max=maxValue)
-    minMax[i,*]=[minValue, maxValue]
-    temp=bytscl(temp, max=maxValue, min=minValue);top=topV)
-    if count ne 0 then begin
-      temp[reservedIndex]=(output.(i))[reservedIndex]
-    endif
-    byteScaledData[i]=ptr_new(temp, /NO_COPY)
-    print,'Summary of output.',tags[i], '(', i, ') : ', minValue, maxValue
-  endfor
 
   ;  dataSets=[ptr_new(output.fpar, /NO_COPY), ptr_new(output.sigma, /NO_COPY), $
   ;    ptr_new(output.red, /NO_COPY), ptr_new(output.sigma_red, /NO_COPY), $
@@ -565,96 +555,85 @@ function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCo
   ;    ptr_new(reform(angles[*,*,0]), /NO_COPY), ptr_new(reform(angles[*,*,1]), /NO_COPY), ptr_new(reform(angles[*,*,2]), /NO_COPY), $
   ;    ptr_new(reform(reflectance(*,*,0)), /NO_COPY), ptr_new(reform(reflectance(*,*,1)), /NO_COPY), $
   ;    ptr_new(MASK_avhrr, /NO_COPY)]
-  minMaxs=fltarr(n_elements(bandDataType), 2)
-  nanList=fltarr(n_elements(bandDataType))
-
-  minMaxs[*,*]=-1
-  minMaxs[0,*]=minMax[0,*]
-  nanList[0]=255
-
-  minMaxs[1,*]=minMax[1,*]
-  nanList[1]=255
-
-  minMaxs[2,*]=minMax[2,*]
-  nanList[2]=255
-
-  minMaxs[3,*]=minMax[3,*]
-  nanList[3]=255
-
-  minMaxs[4,*]=minMax[4,*]
-  nanList[4]=255
-
-  minMaxs[5,*]=minMax[5,*]
-  nanList[5]=255
-
-  minMaxs[6,*]=minMax[6,*]
-  tempMin=min(angles(*,*,0), max=tempMax)
-  nanList[6]=-9999
-
-  minMaxs[7,*]=[0.,90.]
-  tempMin=min(angles(*,*,1), max=tempMax)
-  nanList[7]=-9999
-
-  minMaxs[8,*]=[0.,90.]
-  nanList[8]=-9999
-
-  tempMin=min(angles(*,*,2), max=tempMax)
-  minMaxs[9,*]=[-180,180]
-  nanList[9]=-9999
-
-  tempMin=min(reflectance(*,*,0), max=tempMax)
-  minMaxs[10,*]=[tempMin>0.,tempMax]
-  nanList[10]=-9999
-
-  tempMin=min(reflectance(*,*,1), max=tempMax)
-  minMaxs[11,*]=[tempMin>0.,tempMax]
-  nanList[11]=-9999
-
-  minMaxs[12,*]=minMax[7,*]
-  nanList[12]=255
-
-  dataSets=[byteScaledData[0], byteScaledData[1], $
-    byteScaledData[2], byteScaledData[3], $
-    byteScaledData[4], byteScaledData[5], $
-    byteScaledData[6], $
+  maskMin=min(MASK_avhrr, max=maskMax)
+  dataSets=[ptr_new(output.fpar, /NO_COPY), ptr_new(output.sigma, /NO_COPY), $
+    ptr_new(output.red, /NO_COPY), ptr_new(output.sigma_red, /NO_COPY), $
+    ptr_new(output.nir, /NO_COPY), ptr_new(output.sigma_nir, /NO_COPY), $
+    ptr_new(output.flag, /NO_COPY), $
     ptr_new(reform(angles[*,*,0]), /NO_COPY), ptr_new(reform(angles[*,*,1]), /NO_COPY), ptr_new(reform(angles[*,*,2]), /NO_COPY), $
     ptr_new(reform(reflectance(*,*,0)), /NO_COPY), ptr_new(reform(reflectance(*,*,1)), /NO_COPY), $
-    byteScaledData[7]]
+    ptr_new(MASK_avhrr, /NO_COPY)]
 
-  bandIntercepts=lonarr(n_elements(bandNames))
-  ;bandSlopes=[10e-05, 10e-05, $
-  ;  bandSlopes=[1, 10e-05, $
-  ;    10e-05, 10e-05, $
-  ;    10e-05, 10e-05,$
-  ;    1, $
-  ;    10e-03, 10e-03, 10e-03,$
-  ;    10e-05, 10e-05,$
-  ;    1]
   bandSlopes=[1, 1, $
-    1, 1, $
-    1, 1,$
+    10e-05, 10e-05, $
+    10e-05, 10e-05, $
     1, $
     10e-03, 10e-03, 10e-03,$
     10e-05, 10e-05,$
     1]
 
-  ;  bandDataType=[1,2,$
-  ;    2,2,$
-  ;    2,2,$
-  ;    1,$
-  ;    1,1,1, $
-  ;    2,2,$
-  ;    1]
   bandDataType=[1,1,$
-    1,1,$
-    1,1,$
+    2,2,$
+    2,2,$
     1,$
     2,2,2, $
     2,2,$
     1]
 
+  bandIntercepts=lonarr(n_elements(bandNames))
+
+  minMaxs=fltarr(n_elements(bandDataType), 2)
+  nanList=fltarr(n_elements(bandDataType))
+
+  minMaxs[*,*]=-1
+  minMaxs[0,*]=DATA_RANGE;minMax[0,*]
+  nanList[0]=BYTE_NAN
+
+  minMaxs[1,*]=DATA_RANGE;minMax[0,*]
+  nanList[1]=BYTE_NAN
+
+  minMaxs[2,*]=DATA_RANGE;minMax[0,*]
+  nanList[2]=INT_NAN
+
+  minMaxs[3,*]=DATA_RANGE;minMax[0,*]
+  nanList[3]=INT_NAN
+
+  minMaxs[4,*]=DATA_RANGE;minMax[0,*]
+  nanList[4]=INT_NAN
+
+  minMaxs[5,*]=DATA_RANGE;minMax[0,*]
+  nanList[5]=INT_NAN
+
+  tempMin=min(output.flag, max=tempMax)
+  minMaxs[6,*]=[tempMin, tempMax]
+  nanList[6]=INT_NAN
+
+  tempMin=min(angles(*,*,0), max=tempMax)
+  minMaxs[7,*]=[0.,90.]
+  nanList[7]=INT_NAN
+
+  tempMin=min(angles(*,*,1), max=tempMax)
+  minMaxs[8,*]=[0.,90.]
+  nanList[8]=INT_NAN
+
+  tempMin=min(angles(*,*,2), max=tempMax)
+  minMaxs[9,*]=[-180,180]
+  nanList[9]=INT_NAN
+
+  tempMin=min(reflectance(*,*,0), max=tempMax)
+  minMaxs[10,*]=[tempMin>0.,tempMax]
+  nanList[10]=INT_NAN
+
+  tempMin=min(reflectance(*,*,1), max=tempMax)
+  minMaxs[11,*]=[tempMin>0.,tempMax]
+  nanList[11]=INT_NAN
+
+
+  minMaxs[12,*]=[maskMin, maskMax]
+  nanList[12]=INT_NAN
+
   boundary=[-180.0, 180.0, -90, 90.]
-  filePath=dirout
+  filePath=outputDir
   fName=new_file
 
   write_hdf, hdffilename, $
@@ -668,14 +647,14 @@ function makeitglob_new, sensor, resolution, missionName, mainVarName, missionCo
     /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList
 
   ;
-  PPMSA_ALBEDOCOLOR
+  ;PPMSA_ALBEDOCOLOR
   ;window, 5, xsize=720*2, ysize=360*2, title='Rectified nir '+SENSOR
   ;tv, reverse(congrid(bytscl(output.nir,min=0.,max=0.8), 720*2,360*2),2)
 
   ;window, 6, xsize=720*2, ysize=360*2, title='Rectified Red '+SENSOR
   ;tv, reverse(congrid(bytscl(output.red, min=0.,max=0.8), 720*2,360*2),2)
 
-  faparcolor
+  ;faparcolor
   ;window, 7, xsize=720*2, ysize=360*2, title='FAPAR '+SENSOR
   ;tv, reverse(congrid(output.fpar*250.0, 720*2,360*2),2)
 

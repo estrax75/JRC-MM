@@ -1,8 +1,11 @@
+COMMON bigData, data_day, expectedDays, foundDays
+
 FUNCTION getCoeffStruct
 
   struct = {G0coeffs:fltarr(6), G1coeffs:fltarr(11), $
     G2coeffs:fltarr(11), RahmanCoeffs_BLUE:fltarr(3), $
-    RahmanCoeffs_RED:fltarr(3), RahmanCoeffs_NIR:fltarr(3) $
+    RahmanCoeffs_RED:fltarr(3), RahmanCoeffs_NIR:fltarr(3), $
+    soilCoeffs: fltarr(2) $
   }
 
   return, struct

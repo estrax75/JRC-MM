@@ -1,31 +1,31 @@
-@/fapar/compile
-;@/library/ncdf_tools/compile
-;@//home/mariomi/IDLWorkspace85/Library/library/ncdf_tools/compile
-@/reader/compile
-@/colors/compile
-@/avhrr/compile
-;@/main/fapar_uncertainties.pro
-pro dofaparfTest, confDir, rootDir1, tempDir, outputDir
+pro runDailyFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, startMonth, endMonth, TYPE1=TYPE1, TYPE2=TYPE2
 
   ;confDir='E:\mariomi\Documents\projects\LDTR\data\AVHRR\data'
 
-  sensor='AVHRR'
+  years=indgen(endYear-startYear+1)+startYear
+  months=indgen(endMonth-startMonth+1)+startMonth
+
+  ;sensor='AVHRR'
+  sensor='AVH09C1'
   resolution='GEOG_0.05DEG'
-  missionName='NOAA-N'
-  missionCode='16'
+  missionName='N'
+  ;missionName='NOAA-N'
   mainVarName='BRF'
-
-  years=[2005]
+  
+  ;years3=[2006]
+  ;months2=indgen(12)+1
+  ;months2=indgen(8)+4
   startDay=1
-
-  months=[9]
   ;monthDays=[30]
 
   utility=obj_new('Utility')
 
   for y=0, n_elements(years)-1 do begin
+    thisYear=years[y]
+    missionCode=getAVHRRNOAANumber(thisYear, undef)
     for m=0, n_elements(months)-1 do begin
       monthDays=utility->calcDayOfMonth([years[y],months[m],1,0])
+      ;monthDays=6
       for d=startDay, monthDays do begin
       ;for d=0, n_elements(monthDays)-1 do begin
         thisDay=d
@@ -102,7 +102,9 @@ pro dofaparfTest, confDir, rootDir1, tempDir, outputDir
 ;        print, 'file2: ', file2
 ;        print, 'file3: ', file3
 
-        resFile=makeitglob_new(sensor, resolution, missionName, mainVarName, missionCode, thisyear, thismonth, thisday, /OVERWRITE, /FIRST)
+        resFile=doFapar(sensor, resolution, missionName, mainVarName, missionCode, thisyear, thismonth, thisday, $
+          sourceDir, outputDir, tempdir, $
+          /OVERWRITE, /FIRST, TYPE1=TYPE1, TYPE2=TYPE2 )
         if resFile eq -1 then print, thisyear, thismonth, thisday, ' skip (already exists or missing/corrupted source file)
         ;resFile=AVH01_merge_BRFGlob(file1, file2, file3, confDir, thisYear, thisMonth, thisDay, noaanumber, operatorObj, fsObj, tempDir, testFile=testFile)
         ;resFile=merge_BRFGlob(file1, file2, file3, confDir, thisYear, thisMonth, thisDay, noaanumber, operatorObj, fsObj, tempDir, testFile=testFile)

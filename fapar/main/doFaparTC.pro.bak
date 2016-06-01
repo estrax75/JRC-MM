@@ -1,0 +1,123 @@
+FUNCTION doFaparTC, sensor, resolution, missionName, confDir, sourceDir, tempDir, outputDir, year, month, MONTHLY=MONTHLY, TENDAYS=TENDAYS
+  ;
+  ;
+  if ~obj_valid(operatorObj) then operatorObj=obj_new('GenericOperator')
+  if ~obj_valid(fsObj) then fsObj=obj_new('FileSystem', /STAND)
+  ;
+  ;
+  ;dir_in='/net/netsea2/vol/vol06/data/projects/QA4ECV/WP4/'+sensor+'/FAPAR/'
+  ;dirout='/net/netsea2/vol/vol06/data/projects/QA4ECV/WP4/'+sensor+'/FAPAR_TC/'
+  outputDir=fsObj->adjustDirSep(outputDir, /ADD)
+  sourceDir=fsObj->adjustDirSep(sourceDir, /ADD)
+  tempDir=fsObj->adjustDirSep(tempDir, /ADD)
+  print, 'working on', thisYear, thisMonth, '...'
+  dir_in=sourceDir
+  dirout=outputDir
+  IF KEYWORD_SET(TENDAYS) then begin
+    first=[01,11,21]
+    last=[10,20,31]
+  endif
+  IF KEYWORD_SET(MONTHLY) then begin
+    first=[01]
+    last=[31]
+  endif
+
+  ;for m=0, N_elements(month)-1 do begin
+  ;
+  ; look for files within the month
+  ;
+  ;
+
+
+  ;file_name=sensor+'_'+platform+'_'+year+month(m)+'*'
+  ;end_file='L2_MUL_000009_900S900N1800W1800E_PLC_0005D_PRO.HDF'
+  ;expidfile = dir_in + file_name+end_file
+  missionCode=getAVHRRNOAANumber(y, undef)
+  ;
+  ;monthDays=utility->calcDayOfMonth([y,m,1,0])
+  ;monthDays=6
+  for type=0, n_elements(first)-1 do begin
+    destTAFile=buildMODISFAPARFileName_TA(sensor, resolution, y, m, D, missionName, missionCode, mainVarName, startDay=first[type], endDay=first[type])
+    for d=first[type], first[type] do begin
+
+      if sensor eq 'AVH09C1' then new_file=buildAVHRRFAPARFileName_D(sensor, resolution, y, m, d, missionName, missionCode, mainVarName)
+      if sensor eq 'MODIS' then new_file=buildMODISFAPARFileName_D(sensor, resolution, y, m, d, missionName, missionCode, mainVarName)
+      ncfilename=fsObj->addFileExtension(dir_in+new_file, 'NC'); nc
+      hdffilename=fsObj->addFileExtension(dir_in+new_file, 'HDF'); hdf
+
+      ff1 = FILE_SEARCH(ncfilename, COUNT=cnt1)
+      ff2 = FILE_SEARCH(hdffilename, COUNT=cnt2)
+      ;destTAFile=buildAVHRRFAPARFileName_TA(sensor, resolution, y, m, D, missionName, missionCode, mainVarName)
+      print, ff(id_file)
+      ;
+      ; read files requested in the period
+      ;
+      call_read_all, sensor, platform, year, month(m), dir_in, ff(id_file), val_time
+      ;
+      ; call time composite program
+      ;stop
+      ;endfor
+      ;
+      call_composite, val_time, val_comp
+      ;
+      new_file=sensor+'_'+platform+'_'+year+month(m)+first(t)+'000000_'+$
+        year+month(m)+last(t)+'000000_'+$
+        'L3_MUL_000009_900S900N1800W1800E_PLC_0005D_PRO.HDF'
+      ; save the results
+      ;
+      sdid_outfile1 = HDF_SD_START(dirout+new_file, /CREATE)
+      a=size(val_comp.fapar)
+      sdid_fpar = HDF_SD_CREATE(sdid_outfile1, 'FAPAR', [a(1),a(2)], /float)
+      sdid_uncert = HDF_SD_CREATE(sdid_outfile1, 'Sigma FAPAR', [a(1),a(2)], /float)
+      sdid_delta = HDF_SD_CREATE(sdid_outfile1, 'Temporal Deviation FAPAR', [a(1),a(2)], /float)
+      sdid_red = HDF_SD_CREATE(sdid_outfile1, 'RECTIFIED RED', [a(1),a(2)], /float)
+      sdid_uncert_red = HDF_SD_CREATE(sdid_outfile1, 'Sigma RECTIFIED RED', [a(1),a(2)], /float)
+      sdid_delta_red = HDF_SD_CREATE(sdid_outfile1, 'Temporal Deviation Red', [a(1),a(2)], /float)
+      sdid_nir = HDF_SD_CREATE(sdid_outfile1, 'RECTIFIED NIR', [a(1),a(2)], /float)
+      sdid_uncert_nir = HDF_SD_CREATE(sdid_outfile1, 'Sigma RECTIFIED NIR', [a(1),a(2)], /float)
+      sdid_delta_nir = HDF_SD_CREATE(sdid_outfile1, 'Temporal Deviation NIR', [a(1),a(2)], /float)
+      sdid_day = HDF_SD_CREATE(sdid_outfile1, 'DOY', [a(1),a(2)], /byte)
+      sdid_nday = HDF_SD_CREATE(sdid_outfile1, 'Number of Day', [a(1),a(2)], /byte)
+      sdid_flag = HDF_SD_CREATE(sdid_outfile1, 'FLAG', [a(1),a(2)], /byte)
+      sdid_redtoc = HDF_SD_CREATE(sdid_outfile1, 'BRF TOC RED', [a(1),a(2)], /float)
+      sdid_nirtoc = HDF_SD_CREATE(sdid_outfile1, 'BRF TOC NIR', [a(1),a(2)], /float)
+      sdid_qa =  HDF_SD_CREATE(sdid_outfile1, 'JRC QA', [a(1),a(2)], /byte)
+      ;
+      ; data_tc= {Composite, day: bytarr(7200,3600), $
+      ;   nday: bytarr(7200,3600), $
+      ;   fapar: fltarr(7200,3600), $
+      ;   dev_temp: fltarr(7200,3600), $
+      ;   sigma: fltarr(7200,3600), $
+      ;   red: fltarr(7200,3600), $
+      ;   dev_red_temp: fltarr(7200,3600), $
+      ;   sigma_red:fltarr(7200,3600), $
+      ;   nir: fltarr(7200,3600), $
+      ;   dev_nir_temp: fltarr(7200,3600), $
+      ;     sigma_nir: fltarr(7200,3600), $
+      ;         flag: bytarr(7200,3600), $
+      ;   toc_red: fltarr(7200,3600), $
+      ;   toc_nir: fltarr(7200,3600), $
+      ;   qa: bytarr(7200,3600)}
+      ;
+      HDF_SD_ADDDATA, sdid_fpar, val_comp.fapar
+      HDF_SD_ADDDATA, sdid_uncert, val_comp.sigma
+      HDF_SD_ADDDATA, sdid_delta, val_comp.dev_temp
+      HDF_SD_ADDDATA, sdid_red, val_comp.red
+      HDF_SD_ADDDATA, sdid_uncert_red, val_comp.sigma_red
+      HDF_SD_ADDDATA, sdid_delta_red, val_comp.dev_red_temp
+      HDF_SD_ADDDATA, sdid_nir, val_comp.nir
+      HDF_SD_ADDDATA, sdid_uncert_nir, val_comp.sigma_nir
+      HDF_SD_ADDDATA, sdid_delta_nir, val_comp.dev_nir_temp
+      HDF_SD_ADDDATA, sdid_day, val_comp.day
+      HDF_SD_ADDDATA, sdid_nday,val_comp.nday
+      HDF_SD_ADDDATA, sdid_flag, val_comp.flag
+      HDF_SD_ADDDATA, sdid_redtoc, val_comp.toc_red
+      HDF_SD_ADDDATA, sdid_nirtoc, val_comp.toc_nir
+      HDF_SD_ADDDATA, sdid_qa, val_comp.qa
+      HDF_SD_END, sdid_outfile1
+      ;
+    endfor
+  endfor
+  ;
+  ;
+end

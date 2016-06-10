@@ -60,15 +60,33 @@ function getSensorCoeffs, sensor, sensorCode
     END
     'AVHRR' : BEGIN
       res=getNOAAcoeff(sensorCode)
-      print,'Coefficients for '+sensor+' '+sensorCode
+      print,'looking for Coefficients for '+sensor+' '+string(sensorCode)
       ; MM 20160506 coeffs from table 9 pag. 28
       coeffInfo.G0coeffs=[res.g0Coeff1,res.g0Coeff2,res.g0Coeff3,res.g0Coeff4,res.g0Coeff5,res.g0Coeff6]
 
       ; MM 20160506 coeffs from table 8 pag. 28
-      coeffInfo.RahmanCoeffs_RED =[res.kiband1,res.ThetahgBand1,res.PicBand1]
-      coeffInfo.RahmanCoeffs_NIR =[res.kiband2,res.ThetahgBand2,res.PicBand2]
+      ; k, theta, rho
+      coeffInfo.RahmanCoeffs_RED =[res.kiband1,res.ThetahgBand1,res.RhoicBand1]
+      coeffInfo.RahmanCoeffs_NIR =[res.kiband2,res.ThetahgBand2,res.RhoicBand2]
 
+      ; MM 20160531 coeffs from table 8 pag. 28
+      coeffInfo.soilCoeffs=[res.bareSoilsAs,res.bareSoilsBs]
     END
+    'AVH09C1': BEGIN
+      res=getNOAAcoeff(sensorCode)
+      print,'looking for Coefficients for '+sensor+' '+string(sensorCode)
+      ; MM 20160506 coeffs from table 9 pag. 28
+      coeffInfo.G0coeffs=[res.g0Coeff1,res.g0Coeff2,res.g0Coeff3,res.g0Coeff4,res.g0Coeff5,res.g0Coeff6]
+
+      ; MM 20160506 coeffs from table 8 pag. 28
+      ; k, theta, rho
+      coeffInfo.RahmanCoeffs_RED =[res.kiband1,res.ThetahgBand1,res.RhoicBand1]
+      coeffInfo.RahmanCoeffs_NIR =[res.kiband2,res.ThetahgBand2,res.RhoicBand2]
+
+      ; MM 20160531 coeffs from table 8 pag. 28
+      coeffInfo.soilCoeffs=[res.bareSoilsAs,res.bareSoilsBs]
+    END
+
   endcase
   return, coeffInfo 
 end

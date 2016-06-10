@@ -55,7 +55,6 @@ PRO swf_ExtractData, option, in_dir, out_dir, sensorFileFilter, parList, siteInf
   if sitelon gt 150 and sitelon lt 180.2 then HOUR_SHIFT=12
   if sitelon gt -180.1 and sitelon lt -150 then HOUR_SHIFT=-12
   satInfo=replicate(getSatInfoStruct(), NbFiles)
-  filenameList=allFilenameList
 
   ;for j=0, n_elements(yearList)-1 do begin
   ;thisYear=YearList[j]

@@ -3,10 +3,10 @@ function getPGEInfo, dir, file, globDim=globDim, FORCEREAD=FORCEREAD, opObj=opOb
   COMMON storePGE, BRDF_params, GlobInfo
   
   ; check if already loaded in this session
-  ;if n_elements(BRDF_params) eq 1 and ~keyword_set(FORCEREAD) then begin
-  ;  globDim=n_elements(BRDF_params.slope_v1)
-  ;  return, BRDF_params
-  ;endif
+  if n_elements(BRDF_params) eq 1 and ~keyword_set(FORCEREAD) then begin
+    globDim=n_elements(BRDF_params.slope_v1)
+    return, BRDF_params
+  endif
 
   if obj_valid(opObj) then op=opObj else op=obj_new('GenericOperator')  
   if obj_valid(fsObj) then fs=fsObj else fs=obj_new('FileSystem', /STAND)

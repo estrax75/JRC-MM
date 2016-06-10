@@ -1,14 +1,14 @@
-pro get_current_date, year=year, month=month, day=day, dayoftheyear=dayoftheyear, dayoftheweek=dayoftheweek
+pro get_current_date, year=year, month=month, day=day, weekday=weekday, hourdetails=hourdetails
 
   ;DOW MON DD HH:MM:SS YEAR
   systemdate = SYSTIME(0)
-  dayoftheyear = STRMID(systemdate, 0, 3)
   dayoftheweek_name = STRMID(systemdate, 0, 3)
   day = STRMID(systemdate, 9, 2)
   month_name = STRMID(systemdate, 4, 3)
   year = STRMID(systemdate, 20, 4)
+  hourdetails=STRMID(systemdate, 0, 3)
 
-  dow_name_to_dow, dayoftheweek_name, dayoftheweek 
+  dow_name_to_dow, dayoftheweek_name, weekday
   month_name_to_month, month_name, month
   ;PRINT, 'year: ', year
   ;PRINT, 'month: ', month

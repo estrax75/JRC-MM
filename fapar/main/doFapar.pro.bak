@@ -1,5 +1,5 @@
 ;function makeitglob_new, sensor, noaanumber, year, month, day
-@../../Library/library/jrc_core/mapQualityFlags
+;@../../Library/library/jrc_core/mapQualityFlags
 ;@../../Library/library/jrc_core/mapQualityFlags
 function doFapar, sensor, resolution, missionName, mainVarName, missionCode, year, month, day, $
   sourceDir, outputDir, tempdir, $
@@ -74,42 +74,6 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   output.nir(*,*)=255
   output.sigma_nir(*,*)=255
   noaanumber=missionCode
-  ;
-  ;
-  ;
-  ;if noaanumber eq '16' then dirroot='/net/netsea2/vol/vol06/data/projects/QA4ECV/WP4/AVHRR/AVHRR/'
-  ;if noaanumber eq '14' then dirroot='/net/netseA2/vol/vol24_h07/archive-from-oldstorage/froz/vol07/gobrona/LDTR/AVHRR/BRDF/'
-  ;dirout='/net/netsea2/vol/vol06/data/projects/QA4ECV/WP4/AVHRR/FAPAR/'
-
-  ;if noaanumber eq '16' then dirroot='E:\mariomi\Documents\projects\LDTR\data\input\AVHRR\2003\'
-  ;if noaanumber eq '14' then dirroot='E:\mariomi\Documents\projects\LDTR\data\input\BRDF\1999\'
-  ;dirout='E:\mariomi\Documents\projects\LDTR\data\output\FAPAR_COEFF'
-
-
-  ;
-  ;====================================================================
-  ;
-  ; should be only once for all outside the program
-  ;
-  ; retrieve the scale_factor and offset
-  ;
-  ;  if noaanumber eq '16' then begin
-  ;    file_sds='GLOBAL_L3_GEOG_0.05DEG_001-001_03.NOAA-16.hdf'
-  ;    read_data, dirroot, file_sds,'RHO1', red_avhrr, slope_red, offset_red
-  ;    read_data, dirroot, file_sds,'RHO2', nir_avhrr, slope_nir, offset_nir
-  ;    ;
-  ;    read_data, dirroot, file_sds,'TS', ts_avhrr, slope_ts, offset_ts
-  ;    read_data, dirroot, file_sds,'TV', tv_avhrr, slope_tv, offset_tv
-  ;    read_data, dirroot, file_sds,'PHI', phi_avhrr, slope_phi, offset_phi
-  ;  endif
-  ;
-  ;
-  ;=================================================================================
-  ;readFileName=buildBrfFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName, 'nc')
-  ;fName='AVHRR_'+'GEOG_0.05DEG'+'_'+years+'_'+months+'_'+days+'_NOAA-N'+strcompress(noaaCode, /REMOVE)+'_BRF'
-
-
-  ;
 
   red_avhrr=data.red_avhrr & slope_red=data.slope_red & offset_red=data.offset_red
   nir_avhrr=data.nir_avhrr & slope_nir=data.slope_nir & offset_nir=data.offset_nir
@@ -119,11 +83,8 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   qa_avhrr=data.brdf_qa_avhrr & slope_brdf_qa=data.slope_qa & offset_brdf_qa=data.offset_qa
   ;save memory
   data=0
-  avhrrdays=julday(month,day,year)-julday(01,01,year)+1
-  ;print, avhrrdays
   ;
 
-  ;if strlen(file_eric) ge 1 then begin
 
   sizemat=size(red_avhrr)
   ;
@@ -150,6 +111,7 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   ;COS_REL_AZ = cos(RELAZ*!pi/180.)
   ;GOOD_REL_AZ = atan(SIN_REL_AZ, COS_REL_AZ)
   ;angles(*,*,2)=good_rel_az*180./!pi
+  phi_avhrr=phi_avhrr*slope_phi(0)+offset_phi(0)
   angles(*,*,2)=phi_avhrr
   ;
   ;
@@ -164,7 +126,9 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   blu = [0,0,0,1,0.00,1.00,1.,1.00,1.00,0.55,0.80,0.77,0.]
   TVLCT, red*255, gre*255, blu*255
 
-  flag2 = CheckDataTOC(red_avhrr*slope_red(0)+offset_red(0), nir_avhrr*slope_nir(0)+offset_nir(0))
+  coeffInfo=getSensorCoeffs(sensor, missionCode)
+
+  flag2 = CheckDataTOC(red_avhrr*slope_red(0)+offset_red(0), nir_avhrr*slope_nir(0)+offset_nir(0), coeffInfo.soilCoeffs)
   flagstoc=flag2
   ;
   ;stop
@@ -335,7 +299,7 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
       output.fpar(idx_big)=1.0
       flag2(idx_neg)=4.0
       flag2(idx_big)=6.0
-      FAPARCOLOR
+      ;FAPARCOLOR
       ;window, 0, xsize=720*2, ysize=360*2, title='FPAR '+SENSOR
       ;tv, reverse(congrid(output.fpar*250, 720*2,360*2),2)
       ;
@@ -414,56 +378,87 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   ;
   ;, ZEROISNAN=ZEROISNAN, VALUE_BYTES=VALUE_BYTES, DATA_MIN=DATA_MIN, DATA_MAX=DATA_MAX, DATA_NAN_RANGE=DATA_NAN_RANGE
   ZEROISNAN=keyword_set(TYPE1) ;0
+  TWO51_TO_TWO55_ISNAN=keyword_set(TYPE2) ;0
+  bSInfo=getByteScalingSetting(ZEROISNAN=keyword_set(TYPE1), TWO51_TO_TWO55_ISNAN=keyword_set(TYPE2))
   ;byteOutput=dataByteScaling(output.fpar, NAN_BYTE_VALUE=0, VALUE_BYTES=[1,255])
   ;byteOutput=dataByteScaling(output.fpar, NAN_BYTE_VALUE=0, VALUE_BYTES=[1,255])
   ;byteOutput=dataByteScaling(output.fpar, VALUE_BYTES=[0,250])
-  remarkableFlags=[255,254,253]
-  if keyword_set(ZEROISNAN) then begin
-    DATA_NAN=255
-    BYTE_NAN=0
-    BYTE_RANGE=[1,255]
-    remarkableFlags[*]=BYTE_NAN
-  endif else begin
-    DATA_NAN=255
-    BYTE_NAN=255
-    BYTE_RANGE=[0,250]
-  endelse
+  remarkableFlags=bSInfo.remarkableFlags
+  DATA_NAN=bSInfo.DATA_NAN
+  BYTE_NAN=bSInfo.BYTE_NAN
+  BYTE_RANGE=bSInfo.BYTE_RANGE
+;  if keyword_set(ZEROISNAN) then begin
+;    DATA_NAN=255
+;    BYTE_NAN=0
+;    BYTE_RANGE=[1,255]
+;    remarkableFlags[*]=BYTE_NAN
+;  endif else begin
+;    DATA_NAN=255
+;    BYTE_NAN=255
+;    BYTE_RANGE=[0,250]
+;  endelse
+
+  faparDSInfo=getStandardFaparDataSetInfo()
+
+  bandNames=faparDSInfo.bandNames
+  bandSlopes=faparDSInfo.bandSlopes
+  bandMeasureUnits=faparDSInfo.bandMeasureUnits
+  bandDataTypes=faparDSInfo.bandDataTypes
+  bandIntercepts=faparDSInfo.bandIntercepts
+  minMaxs=faparDSInfo.minMaxs
+  nanList=faparDSInfo.nans
+
+  trueSlopes=bandSlopes
+  trueIntercepts=bandIntercepts
+  
 
   res=dataByteScaling(output.fpar, output.flag, FLAG_VALUES=[9,10], $
     DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
-    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE)
+    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
   output.fpar=res.resultData
   output.flag=res.resultFlag
+  trueIntercepts[0]=outIntercept
+  trueSlopes[0]=outSlope
 
   res=dataByteScaling(output.sigma, output.flag, $
     DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
-    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE)
+    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
   output.sigma=res.resultData
   output.flag=res.resultFlag
+  trueIntercepts[1]=outIntercept
+  trueSlopes[1]=outSlope
 
   res=dataByteScaling(output.red, output.flag, FLAG_VALUES=[9,10], $
     DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
-    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE)
+    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
   ;output.red=res.resultData
   output.flag=res.resultFlag
+  ;trueIntercepts[2]=outIntercept
+  ;trueSlopes[2]=outSlope
 
   res=dataByteScaling(OUTPUT.SIGMA_RED, output.flag, $
     DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
-    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE)
+    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
   ;output.sigma_red=res.resultData
   output.flag=res.resultFlag
+  ;trueIntercepts[3]=outIntercept
+  ;trueSlopes[3]=outSlope
 
   res=dataByteScaling(output.nir, output.flag, FLAG_VALUES=[13,14], $
     DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
-    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE)
+    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
   ;output.nir=res.resultData
   output.flag=res.resultFlag
+  ;trueIntercepts[4]=outIntercept
+  ;trueSlopes[4]=outSlope
 
   res=dataByteScaling(output.sigma_nir, output.flag, $
     DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
-    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE)
+    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
   ;output.sigma_nir=res.resultData
   output.flag=res.resultFlag
+  ;trueIntercepts[5]=outIntercept
+  ;trueSlopes[5]=outSlope
 
   flagTags=strupcase(['fpar', 'sigma'])
   tags=tag_names(output)
@@ -516,21 +511,6 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   ; create output file
   ;
   ;
-  bandNames=['FAPAR','Sigma FAPAR', $
-    'RECTIFIED RED', 'Sigma RECTIFIED RED', $
-    'RECTIFIED NIR', 'Sigma RECTIFIED NIR', $
-    'FLAG', $
-    'TS', 'TV', 'PHI', $
-    'BRF TOC RED', 'BRF TOC NIR', $
-    'MASK']
-
-  bandMeasaureUnits=['FAPAR mu','-', $
-    '-', 'RECTIFIED RED mu', $
-    '-', 'RECTIFIED NIR mu', $
-    '-', $
-    'deg','deg','deg', $
-    'BRF TOC RED mu', 'BRF TOC NIR mu', $
-    '-']
   dims=size(output.fpar, /DIMENSIONS)
   if keyword_set(FIRST_LOOK) then begin
     fLookDir='first_look'
@@ -548,13 +528,6 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
     write_gif, fullSampleFName, sampleImg
   endif
 
-  ;  dataSets=[ptr_new(output.fpar, /NO_COPY), ptr_new(output.sigma, /NO_COPY), $
-  ;    ptr_new(output.red, /NO_COPY), ptr_new(output.sigma_red, /NO_COPY), $
-  ;    ptr_new(output.nir, /NO_COPY), ptr_new(output.sigma_nir, /NO_COPY), $
-  ;    ptr_new(output.flag, /NO_COPY), $
-  ;    ptr_new(reform(angles[*,*,0]), /NO_COPY), ptr_new(reform(angles[*,*,1]), /NO_COPY), ptr_new(reform(angles[*,*,2]), /NO_COPY), $
-  ;    ptr_new(reform(reflectance(*,*,0)), /NO_COPY), ptr_new(reform(reflectance(*,*,1)), /NO_COPY), $
-  ;    ptr_new(MASK_avhrr, /NO_COPY)]
   maskMin=min(MASK_avhrr, max=maskMax)
   dataSets=[ptr_new(output.fpar, /NO_COPY), ptr_new(output.sigma, /NO_COPY), $
     ptr_new(output.red, /NO_COPY), ptr_new(output.sigma_red, /NO_COPY), $
@@ -564,87 +537,67 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
     ptr_new(reform(reflectance(*,*,0)), /NO_COPY), ptr_new(reform(reflectance(*,*,1)), /NO_COPY), $
     ptr_new(MASK_avhrr, /NO_COPY)]
 
-  bandSlopes=[1, 1, $
-    10e-05, 10e-05, $
-    10e-05, 10e-05, $
-    1, $
-    10e-03, 10e-03, 10e-03,$
-    10e-05, 10e-05,$
-    1]
-
-  bandDataType=[1,1,$
-    2,2,$
-    2,2,$
-    1,$
-    2,2,2, $
-    2,2,$
-    1]
-
-  bandIntercepts=lonarr(n_elements(bandNames))
-
-  minMaxs=fltarr(n_elements(bandDataType), 2)
-  nanList=fltarr(n_elements(bandDataType))
-
-  minMaxs[*,*]=-1
-  minMaxs[0,*]=DATA_RANGE;minMax[0,*]
-  nanList[0]=BYTE_NAN
-
-  minMaxs[1,*]=DATA_RANGE;minMax[0,*]
-  nanList[1]=BYTE_NAN
-
-  minMaxs[2,*]=DATA_RANGE;minMax[0,*]
-  nanList[2]=INT_NAN
-
-  minMaxs[3,*]=DATA_RANGE;minMax[0,*]
-  nanList[3]=INT_NAN
-
-  minMaxs[4,*]=DATA_RANGE;minMax[0,*]
-  nanList[4]=INT_NAN
-
-  minMaxs[5,*]=DATA_RANGE;minMax[0,*]
-  nanList[5]=INT_NAN
-
-  tempMin=min(output.flag, max=tempMax)
-  minMaxs[6,*]=[tempMin, tempMax]
-  nanList[6]=INT_NAN
-
-  tempMin=min(angles(*,*,0), max=tempMax)
-  minMaxs[7,*]=[0.,90.]
-  nanList[7]=INT_NAN
-
-  tempMin=min(angles(*,*,1), max=tempMax)
-  minMaxs[8,*]=[0.,90.]
-  nanList[8]=INT_NAN
-
-  tempMin=min(angles(*,*,2), max=tempMax)
-  minMaxs[9,*]=[-180,180]
-  nanList[9]=INT_NAN
-
-  tempMin=min(reflectance(*,*,0), max=tempMax)
-  minMaxs[10,*]=[tempMin>0.,tempMax]
-  nanList[10]=INT_NAN
-
-  tempMin=min(reflectance(*,*,1), max=tempMax)
-  minMaxs[11,*]=[tempMin>0.,tempMax]
-  nanList[11]=INT_NAN
-
-
-  minMaxs[12,*]=[maskMin, maskMax]
-  nanList[12]=INT_NAN
+;  minMaxs[*,*]=-1
+;  minMaxs[0,*]=DATA_RANGE;minMax[0,*]
+;  nanList[0]=BYTE_NAN
+;
+;  minMaxs[1,*]=DATA_RANGE;minMax[0,*]
+;  nanList[1]=BYTE_NAN
+;
+;  minMaxs[2,*]=DATA_RANGE;minMax[0,*]
+;  nanList[2]=INT_NAN
+;
+;  minMaxs[3,*]=DATA_RANGE;minMax[0,*]
+;  nanList[3]=INT_NAN
+;
+;  minMaxs[4,*]=DATA_RANGE;minMax[0,*]
+;  nanList[4]=INT_NAN
+;
+;  minMaxs[5,*]=DATA_RANGE;minMax[0,*]
+;  nanList[5]=INT_NAN
+;
+;  tempMin=min(output.flag, max=tempMax)
+;  minMaxs[6,*]=[tempMin, tempMax]
+;  nanList[6]=INT_NAN
+;
+;  tempMin=min(angles(*,*,0), max=tempMax)
+;  minMaxs[7,*]=[0.,90.]
+;  nanList[7]=INT_NAN
+;
+;  tempMin=min(angles(*,*,1), max=tempMax)
+;  minMaxs[8,*]=[0.,90.]
+;  nanList[8]=INT_NAN
+;
+;  tempMin=min(angles(*,*,2), max=tempMax)
+;  minMaxs[9,*]=[-180,180]
+;  nanList[9]=INT_NAN
+;
+;  tempMin=min(reflectance(*,*,0), max=tempMax)
+;  minMaxs[10,*]=[tempMin>0.,tempMax]
+;  nanList[10]=INT_NAN
+;
+;  tempMin=min(reflectance(*,*,1), max=tempMax)
+;  minMaxs[11,*]=[tempMin>0.,tempMax]
+;  nanList[11]=INT_NAN
+;
+;
+;  minMaxs[12,*]=[maskMin, maskMax]
+;  nanList[12]=INT_NAN
 
   boundary=[-180.0, 180.0, -90, 90.]
   filePath=outputDir
   fName=new_file
 
-  write_hdf, hdffilename, $
-    bandNames, bandMeasaureUnits, $
-    dataSets, bandDataType, bandIntercepts, bandSlopes, tempDir, boundary, $
-    trueMinMaxs=minMaxs, nanList=nanList
-
   write_georef_ncdf, ncfilename, $
-    bandNames, bandMeasaureUnits, $
-    dataSets, bandDataType, bandIntercepts, bandSlopes, tempDir, boundary, $
-    /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList
+    bandNames, bandMeasureUnits, $
+    dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
+    /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes
+
+  write_hdf, hdffilename, $
+    bandNames, bandMeasureUnits, $
+    dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
+    trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes
+
 
   ;
   ;PPMSA_ALBEDOCOLOR

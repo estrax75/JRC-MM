@@ -97,7 +97,7 @@ pro runDailyBrdf, confDir, sourceDir, tempDir, outputDir, startYear, endYear, st
         ;file3=file_search(testFile3, count=count3)
         if count ne 1 then begin
           file1=file_search(testFile, count=count, FOLD_CASE=1)
-          if count1 eq 0 then begin
+          if count eq 0 then begin
             print, 'AvhrrLand skip year/month/day', years[y], months[m], thisDay
             ;continue
           endif else begin

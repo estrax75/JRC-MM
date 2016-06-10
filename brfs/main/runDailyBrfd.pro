@@ -5,7 +5,7 @@
 ;@/colors/compile
 ;@/avhrr/compile
 ;@/main/fapar_uncertainties.pro
-pro runDailyBrdf, confDir, sourceDir, tempDir, outputDir, startYear, endYear, startMonth, endMonth
+pro runDailyBrdf, confDir, sourceDir, tempDir, outputDir, startYear, endYear, startMonth, endMonth, SWITCH_TS_TV=SWITCH_TS_TV
 
   ;confDir='E:\mariomi\Documents\projects\LDTR\data\AVHRR\data'
 
@@ -99,7 +99,7 @@ pro runDailyBrdf, confDir, sourceDir, tempDir, outputDir, startYear, endYear, st
           file1=file_search(testFile, count=count, FOLD_CASE=1)
           if count eq 0 then begin
             print, 'AvhrrLand skip year/month/day', years[y], months[m], thisDay
-            ;continue
+            continue
           endif else begin
             file1=file1[0]
           endelse
@@ -139,7 +139,9 @@ pro runDailyBrdf, confDir, sourceDir, tempDir, outputDir, startYear, endYear, st
 ;        print, 'file1: ', file1
 ;        print, 'file2: ', file2
         print, 'file: ', file
-        resFile=doBrf(file, confDir, thisYear, thisMonth, thisDay, sensor, missionCode, noaanumber, resolution, mainVar, outputDir, operatorObj, fsObj, tempDir, testFile=testFile)
+        ;resFile=doBrf(file, confDir, thisYear, thisMonth, thisDay, sensor, missionCode, noaanumber, resolution, mainVar, outputDir, operatorObj, fsObj, tempDir, testFile=testFile, /OVERWRITE)
+        resFile=doBrf(file, confDir, thisYear, thisMonth, thisDay, sensor, missionCode, noaanumber, resolution, mainVar, outputDir, operatorObj, fsObj, tempDir, $
+          testFile=testFile, SWITCH_TS_TV=SWITCH_TS_TV)
         ;resFile=AVH01_merge_BRFGlob(file1, file2, file3, confDir, thisYear, thisMonth, thisDay, noaanumber, operatorObj, fsObj, tempDir, testFile=testFile)
         ;resFile=merge_BRFGlob(file1, file2, file3, confDir, thisYear, thisMonth, thisDay, noaanumber, operatorObj, fsObj, tempDir, testFile=testFile)
         print, '... done'

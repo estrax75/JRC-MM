@@ -1,6 +1,6 @@
-pro write_georef_ncdf, fileName, bandNames, bandunits, bandList, bandDataType, bandIntercepts, bandSlopes, tempDir, boundaryInfo, $
+pro write_georef_ncdf, fileName, bandNames, bandLongNames, bandunits, bandList, bandDataType, bandIntercepts, bandSlopes, tempDir, boundaryInfo, $
   postcompression=postcompression, gzipLevel=gzipLevel, NOREVERSE=NOREVERSE, trueMinMaxs=trueMinMaxs, nanlist=nanlist, $
-  trueSlopes=trueSlopes, trueIntercepts=trueIntercepts
+  trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, versionDate=versionDate, versionNumber=versionNumber
   ; procedure to read a geoTiff and export an a new one
 
   nvar=n_elements(bandNames)
@@ -52,10 +52,11 @@ pro write_georef_ncdf, fileName, bandNames, bandunits, bandList, bandDataType, b
   NCDF_ATTPUT,ncid,latid,'units','degrees_north'
 
   varnames=bandNames
-  varlongnames=bandNames
+  varlongnames=bandLongNames
   varunits=bandunits
-  version='1.1'
-  creation_date='31/5/2016'
+  version='1.1';VersionNumber+' - '+VersionDate
+  ;get_current_date, year=year, month=month, day=day, hourdetails=hourdetails
+  creation_date='2016-06-06';year+month+day+hourdetails
   ncvarid = lonarr(nvar)
   ;NAN=-9999.
   FOR v = 0,nvar-1 DO BEGIN
@@ -83,7 +84,7 @@ pro write_georef_ncdf, fileName, bandNames, bandunits, bandList, bandDataType, b
     NCDF_ATTPUT, ncid, ncvarid[v], 'intercept', trueIntercepts[v]
     NCDF_ATTPUT, ncid, ncvarid[v], 'true min', minMaxs[v,0]
     NCDF_ATTPUT, ncid, ncvarid[v], 'true max', minMaxs[v,1]
-    NCDF_ATTPUT, ncid, ncvarid[v], 'minmax comment', 'If true min eq true max skip information (not available)'
+    ;NCDF_ATTPUT, ncid, ncvarid[v], 'minmax comment', 'If true min eq true max skip information (not available)'
     ;count = [onx,ony] & stride = [1,1] & offset=[0,0]
     ;NCDF_VARPUT, ncid, ncvarid[v], *(bandList[v]), count=count, offset=offset;, stride=stride
   ENDFOR

@@ -5,8 +5,10 @@
 ;@../Library/library/objects/FileSystem.pro
 function readBRF, folder, fileName, FOUND=FOUND
 
-  avBandNames=['BRF_BAND_1', 'BRF_BAND_2', 'SIGMA_BRF_BAND_1', 'SIGMA_BRF_BAND_2', $
-    'TS', 'TV', 'PHI', 'QA', 'Q1', 'Q2']
+;  avBandNames=['BRF_BAND_1', 'BRF_BAND_2', 'SIGMA_BRF_BAND_1', 'SIGMA_BRF_BAND_2', $
+;    'TS', 'TV', 'PHI', 'QA', 'Q1', 'Q2']
+  brfsDSInfo=getStandardBrfDataSetInfo()
+  avBandNames=brfsDSInfo.bandNames
   ; 0, 1, 4,5,6,7
 
   if ~obj_valid(operatorObj) then operatorObj=obj_new('GenericOperator')
@@ -57,7 +59,12 @@ function readBRF, folder, fileName, FOUND=FOUND
     brdf_qa_avhrr=dataSet.data
     slope_qa=dataSet.slope
     offset_qa=dataSet.intercept
-  endif
+  endif else begin
+    dataSet=operatorObj->readNcdfVar(fullFileName, 'QA', FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
+    brdf_qa_avhrr=dataSet.data
+    slope_qa=dataSet.slope
+    offset_qa=dataSet.intercept
+  endelse
 
   allData=0
   if keyword_set(FOUND) then allData={red_avhrr:red_avhrr, nir_avhrr:nir_avhrr,$

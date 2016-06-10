@@ -382,16 +382,24 @@ function doBRF, sourceFile, confDir, year, month, day, sensor, missionCode, noaa
   satDate=utils->getSysTime(/SATFORMAT)
 
 
-  bandNames=['BRF_BAND_1', 'BRF_BAND_2', 'SIGMA_BRF_BAND_1', 'SIGMA_BRF_BAND_2', $
-    'TS', 'TV', 'PHI', 'QA', 'Q1', 'Q2']
+  ;  bandNames=['BRF_BAND_1', 'BRF_BAND_2', 'SIGMA_BRF_BAND_1', 'SIGMA_BRF_BAND_2', $
+  ;    'TS', 'TV', 'PHI', 'QA', 'Q1', 'Q2']
+  ;
+  ;  bandMeasaureUnits=    ['-', '-', '-', '-', $
+  ;    'deg', 'deg', 'deg', '-', '-', '-']
+  brfDSInfo=getStandardBrfDataSetInfo()
+  bandNames=brfDSInfo.bandNames
+  bandMeasureUnits=brfDSInfo.bandMeasureUnits
+  bandIntercepts=brfDSInfo.bandIntercepts
+  bandSlopes=brfDSInfo.bandSlopes
+  bandDataTypes=brfDSInfo.bandDataTypes
+  nanList=brfDSInfo.nanS
+  trueminMaxs=brfDSInfo.minMaxs
 
-  bandMeasaureUnits=    ['-', '-', '-', '-', $
-    'deg', 'deg', 'deg', '-', '-', '-']
-
-  bandIntercepts=lonarr(n_elements(bandNames))
-  bandSlopes=[10e-05, 10e-05, 10e-05, 10e-05,$
-    10e-03, 10e-03, 10e-03, $
-    1, 1, 1]
+  ;  bandIntercepts=lonarr(n_elements(bandNames))
+  ;  bandSlopes=[10e-05, 10e-05, 10e-05, 10e-05,$
+  ;    10e-03, 10e-03, 10e-03, $
+  ;    1, 1, 1]
 
   dataSets=[ptr_new(red_brf, /NO_COPY), ptr_new(nir_brf, /NO_COPY), $
     ptr_new(sigma_red, /NO_COPY), ptr_new(sigma_nir, /NO_COPY), $
@@ -405,69 +413,70 @@ function doBRF, sourceFile, confDir, year, month, day, sensor, missionCode, noaa
   ;    bandNames, bandMeasaureUnits, $
   ;    dataSets, bandIntercepts, bandSlopes, tempDir, boundary
 
-  bandDataType=[2,2,2,2,2,2,2,2,1,1]
+  ;bandDataType=[2,2,2,2,2,2,2,2,1,1]
 
   ;;
   ;
   ;
-  minMaxs=fltarr(n_elements(bandDataType), 2)
-  nanList=fltarr(n_elements(bandDataType))
-
-  minMaxs[*,*]=-1
-
-  red_brf=*dataSets[0]
-  tempMin=min(red_brf>0, max=tempMax)
-  minMaxs[0,*]=[tempMin,tempMax]
-  nanList[0]=INT_NAN
-
-  nir_brf=*dataSets[1]
-  tempMin=min(nir_brf>0, max=tempMax)
-  minMaxs[1,*]=[tempMin,tempMax]
-  nanList[1]=INT_NAN
-
-  sigma_red=*dataSets[2]
-  tempMin=min((-5.0 > sigma_red) < 5.0, max=tempMax)
-  minMaxs[2,*]=[tempMin,tempMax]
-  nanList[2]=INT_NAN
-
-  sigma_nir=*dataSets[3]
-  tempMin=min((-5.0 > sigma_nir) < 5.0, max=tempMax)
-  minMaxs[3,*]=[tempMin,tempMax]
-  nanList[3]=INT_NAN
-
-  ;ts=*dataSets[4]
-  minMaxs[4,*]=[0.,90.];DATA_RANGE;minMax[0,*]
-  nanList[4]=INT_NAN
-
-  ;tv=*dataSets[5]
-  minMaxs[5,*]=[0.,90.];DATA_RANGE;minMax[0,*]
-  nanList[5]=INT_NAN
-
-  ;phi=*dataSets[6]
-  minMaxs[6,*]=[-180,180]
-  nanList[6]=INT_NAN
-
-  qa=*dataSets[7]
-  tempMin=min(qa, max=tempMax)
-  minMaxs[7,*]=[tempMin, tempMax]
-  nanList[7]=INT_NAN
-
-  cMask1=*dataSets[8]
-  tempMin=min(cMask1, max=tempMax)
-  minMaxs[8,*]=[tempMin, tempMax]
-  nanList[8]=INT_NAN
-
-  cMask2=*dataSets[9]
-  tempMin=min(cMask2, max=tempMax)
-  minMaxs[9,*]=[tempMin, tempMax]
-  nanList[9]=INT_NAN
-  ;trueMinMaxs=minMaxs
+  ;  minMaxs=fltarr(n_elements(bandDataType), 2)
+  ;  nanList=fltarr(n_elements(bandDataType))
+  ;
+  ;  minMaxs[*,*]=-1
+  ;
+  ;  red_brf=*dataSets[0]
+  ;  tempMin=min(red_brf>0, max=tempMax)
+  ;  minMaxs[0,*]=[tempMin,tempMax]
+  ;  nanList[0]=INT_NAN
+  ;
+  ;  nir_brf=*dataSets[1]
+  ;  tempMin=min(nir_brf>0, max=tempMax)
+  ;  minMaxs[1,*]=[tempMin,tempMax]
+  ;  nanList[1]=INT_NAN
+  ;
+  ;  sigma_red=*dataSets[2]
+  ;  tempMin=min((-5.0 > sigma_red) < 5.0, max=tempMax)
+  ;  minMaxs[2,*]=[tempMin,tempMax]
+  ;  nanList[2]=INT_NAN
+  ;
+  ;  sigma_nir=*dataSets[3]
+  ;  tempMin=min((-5.0 > sigma_nir) < 5.0, max=tempMax)
+  ;  minMaxs[3,*]=[tempMin,tempMax]
+  ;  nanList[3]=INT_NAN
+  ;
+  ;  ;ts=*dataSets[4]
+  ;  minMaxs[4,*]=[0.,90.];DATA_RANGE;minMax[0,*]
+  ;  nanList[4]=INT_NAN
+  ;
+  ;  ;tv=*dataSets[5]
+  ;  minMaxs[5,*]=[0.,90.];DATA_RANGE;minMax[0,*]
+  ;  nanList[5]=INT_NAN
+  ;
+  ;  ;phi=*dataSets[6]
+  ;  minMaxs[6,*]=[-180,180]
+  ;  nanList[6]=INT_NAN
+  ;
+  ;  qa=*dataSets[7]
+  ;  tempMin=min(qa, max=tempMax)
+  ;  minMaxs[7,*]=[tempMin, tempMax]
+  ;  nanList[7]=INT_NAN
+  ;
+  ;  cMask1=*dataSets[8]
+  ;  tempMin=min(cMask1, max=tempMax)
+  ;  minMaxs[8,*]=[tempMin, tempMax]
+  ;  nanList[8]=INT_NAN
+  ;
+  ;  cMask2=*dataSets[9]
+  ;  tempMin=min(cMask2, max=tempMax)
+  ;  minMaxs[9,*]=[tempMin, tempMax]
+  ;  nanList[9]=INT_NAN
+  ;  ;trueMinMaxs=minMaxs
 
   ;;
   write_georef_ncdf, resFileNC, $
-    bandNames, bandMeasaureUnits, $
-    dataSets, bandDataType, bandIntercepts, bandSlopes, tempDir, boundary, $
-    postcompression=postcompression, gzipLevel=gzipLevel, NOREVERSE=NOREVERSE, trueMinMaxs=minMaxs, nanlist=nanlist
+    bandNames, bandMeasureUnits, $
+    dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
+    postcompression=postcompression, gzipLevel=gzipLevel, NOREVERSE=NOREVERSE, trueMinMaxs=trueMinMaxs, nanlist=nanlist, $
+    trueSlopes=trueSlopes, trueIntercepts=trueIntercepts
   print, '****'
   print, resFileNC
   print, 'done'

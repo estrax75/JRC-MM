@@ -1,9 +1,10 @@
 pro write_georef_ncdf, fileName, bandNames, bandunits, bandList, bandDataType, bandIntercepts, bandSlopes, tempDir, boundaryInfo, $
-  postcompression=postcompression, gzipLevel=gzipLevel, NOREVERSE=NOREVERSE, trueMinMaxs=trueMinMaxs, nanlist=nanlist
+  postcompression=postcompression, gzipLevel=gzipLevel, NOREVERSE=NOREVERSE, trueMinMaxs=trueMinMaxs, nanlist=nanlist, $
+  trueSlopes=trueSlopes, trueIntercepts=trueIntercepts
   ; procedure to read a geoTiff and export an a new one
 
   nvar=n_elements(bandNames)
-  if n_elements(trueMinMaxs) ne nvar*2 then minMaxs=fltarr(2,nvar) else minMaxs=trueMinMaxs 
+  if n_elements(trueMinMaxs) ne nvar*2 then minMaxs=fltarr(nvar,2) else minMaxs=trueMinMaxs 
   
   fs=obj_new('FileSystem', /STAND)
   utils=obj_new('Utility')
@@ -26,6 +27,9 @@ pro write_georef_ncdf, fileName, bandNames, bandunits, bandList, bandDataType, b
   endif else begin
     tempFileName=fileName
   endelse
+
+  if n_elements(trueSlopes) ne n_elements(bandSlopes) then trueSlopes=bandSlopes
+  if n_elements(trueIntercepts) ne n_elements(bandIntercepts) then trueIntercepts=bandIntercepts
 
   dims=size(*bandList[0],/DIM)
   onx = dims[0];360
@@ -51,7 +55,7 @@ pro write_georef_ncdf, fileName, bandNames, bandunits, bandList, bandDataType, b
   varlongnames=bandNames
   varunits=bandunits
   version='1.1'
-  creation_date='12/5/2016'
+  creation_date='31/5/2016'
   ncvarid = lonarr(nvar)
   ;NAN=-9999.
   FOR v = 0,nvar-1 DO BEGIN
@@ -73,8 +77,10 @@ pro write_georef_ncdf, fileName, bandNames, bandunits, bandList, bandDataType, b
     NCDF_ATTPUT, ncid, ncvarid[v], 'units', varunits[v]
     NCDF_ATTPUT, ncid, ncvarid[v], 'version', version
     NCDF_ATTPUT, ncid, ncvarid[v], 'prod_date', creation_date
-    NCDF_ATTPUT, ncid, ncvarid[v], 'slope', bandSlopes[v]
-    NCDF_ATTPUT, ncid, ncvarid[v], 'intercept', bandIntercepts[v]
+    ;NCDF_ATTPUT, ncid, ncvarid[v], 'slope', bandSlopes[v]
+    ;NCDF_ATTPUT, ncid, ncvarid[v], 'intercept', bandIntercepts[v]
+    NCDF_ATTPUT, ncid, ncvarid[v], 'slope', trueSlopes[v]
+    NCDF_ATTPUT, ncid, ncvarid[v], 'intercept', trueIntercepts[v]
     NCDF_ATTPUT, ncid, ncvarid[v], 'true min', minMaxs[v,0]
     NCDF_ATTPUT, ncid, ncvarid[v], 'true max', minMaxs[v,1]
     NCDF_ATTPUT, ncid, ncvarid[v], 'minmax comment', 'If true min eq true max skip information (not available)'

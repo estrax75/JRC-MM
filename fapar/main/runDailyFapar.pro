@@ -1,5 +1,5 @@
-pro runDailyFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, startMonth, endMonth, TYPE1=TYPE1, TYPE2=TYPE2, $
-  NC=NC, HDF=HDF, SWITCH_TS_TV=SWITCH_TS_TV
+pro runDailyFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, startMonth, endMonth, $
+  TYPE1=TYPE1, TYPE2=TYPE2, OVERWRITE=OVERWRITE, NC=NC, HDF=HDF, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX;, SWITCH_TS_TV=SWITCH_TS_TV
 
   ;confDir='E:\mariomi\Documents\projects\LDTR\data\AVHRR\data'
 
@@ -24,6 +24,7 @@ pro runDailyFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, s
   for y=0, n_elements(years)-1 do begin
     thisYear=years[y]
     missionCode=getAVHRRNOAANumber(thisYear, undef)
+    if n_elements(noaanumber) gt 1 then noaanumber=noaanumber[MISSIONOVERLAPINDEX]
     for m=0, n_elements(months)-1 do begin
       monthDays=utility->calcDayOfMonth([years[y],months[m],1,0])
       ;monthDays=6
@@ -102,10 +103,12 @@ pro runDailyFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, s
         ;        print, 'file1: ', file1
         ;        print, 'file2: ', file2
         ;        print, 'file3: ', file3
-
+        if n_elements(missionCode) gt 1 then missionCode=missionCode[MISSIONOVERLAPINDEX]
         resFile=doFapar(sensor, resolution, missionName, mainVarName, missionCode, thisyear, thismonth, thisday, $
           sourceDir, outputDir, tempdir, $
-          /FIRST, TYPE1=TYPE1, TYPE2=TYPE2, NC=NC, HDF=HDF, SWITCH_TS_TV=SWITCH_TS_TV )
+          /FIRST, TYPE1=TYPE1, TYPE2=TYPE2, NC=NC, HDF=HDF, $
+          OVERWRITE=OVERWRITE, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
+          SWITCH_TS_TV=SWITCH_TS_TV )
         ;/OVERWRITE, /FIRST, TYPE1=TYPE1, TYPE2=TYPE2 )
         if resFile eq -1 then print, thisyear, thismonth, thisday, ' skip (already exists or missing/corrupted source file)
         ;resFile=AVH01_merge_BRFGlob(file1, file2, file3, confDir, thisYear, thisMonth, thisDay, noaanumber, operatorObj, fsObj, tempDir, testFile=testFile)

@@ -1,5 +1,5 @@
 function buildAvhFileName_D, sensor, missionCode, year, month, day, archivedir, FULLPATH=FULLPATH, $
-  JULDAY=JULDAY, INTERVAL=INTERVAL, TEMPDIR=TEMPDIR, NOTFOUND=NOTFOUND, OUTFILEDIR=OUTFILEDIR, YEARFOLDER=YEARFOLDER, MISSIONNUMBER=MISSIONNUMBER
+  JULDAY=JULDAY, INTERVAL=INTERVAL, TEMPDIR=TEMPDIR, NOTFOUND=NOTFOUND, OUTFILEDIR=OUTFILEDIR, YEARFOLDER=YEARFOLDER
 
   ;AVH09C1.A2003001.N16.004.2014111105754
   fileType='.hdf'
@@ -8,7 +8,6 @@ function buildAvhFileName_D, sensor, missionCode, year, month, day, archivedir, 
 
   expectedRetrieveOrbitCode=''
   for i=1, 2 do expectedRetrieveOrbitCode=expectedRetrieveOrbitCode+'?'
-  if n_elements(MISSIONNUMBER) ne 0 then expectedRetrieveOrbitCode=string(MISSIONNUMBER, format='(I02)')
 
   expectedRetrieveOrbitSuffix=''
   for i=1, 3 do expectedRetrieveOrbitSuffix=expectedRetrieveOrbitSuffix+'?'

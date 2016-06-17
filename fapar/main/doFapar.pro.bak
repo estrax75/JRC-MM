@@ -3,7 +3,8 @@
 ;@../../Library/library/jrc_core/mapQualityFlags
 function doFapar, sensor, resolution, missionName, mainVarName, missionCode, year, month, day, $
   sourceDir, outputDir, tempdir, $
-  OVERWRITE=OVERWRITE, FIRST_LOOK=FIRST_LOOK, TYPE1=TYPE1, TYPE2=TYPE2
+  OVERWRITE=OVERWRITE, FIRST_LOOK=FIRST_LOOK, $
+  TYPE1=TYPE1, TYPE2=TYPE2, NC=NC, HDF=HDF, SWITCH_TS_TV=SWITCH_TS_TV
 
 
   if ~obj_valid(operatorObj) then operatorObj=obj_new('GenericOperator')
@@ -24,23 +25,37 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
 
   ;resFName='AVHRR_'+'GEOG_0.05DEG'+'_'+years+'_'+months+'_'+days+'_NOAA-N'+strcompress(noaaCode, /REMOVE)+'_BRF'
   ;sourceFileNC=fsObj->addFileExtension(sourceDir+sourceFileName, 'nc')
+  if keyword_set(SWITCH_TS_TV) then extraName='' else extraName='noswitch' 
   sourceFileNC=fsObj->addFileExtension(sourceFileName, 'nc')
   ncfilename=fsObj->addFileExtension(outputDir+new_file, 'NC')
   hdffilename=fsObj->addFileExtension(outputDir+new_file, 'HDF')
   ;resFileHDF=fsObj->addFileExtension(filePath+resFName, 'hdf')
 
   checkInput=file_info(sourceDir+sourceFileNC)
-  checkOutput1=file_info(ncfilename)
-  checkOutput2=file_info(hdffilename)
+  checkNC=file_info(ncfilename)
+  checkHDF=file_info(hdffilename)
 
   if checkInput[0].size eq 0 then NOHDFAVAILABLE=1
-  if checkOutput1[0].size ne 0 and ~keyword_set(OVERWRITE) then NOWRITENC=1
-  if checkOutput2[0].size ne 0 and ~keyword_set(OVERWRITE) then NOWRITEHDF=1
+  ;print, '******'
+  ;print, 'write nc?', (checkOutput1[0].size ne 0 and ~keyword_set(OVERWRITE)) and ~keyword_set(NC)
+  ;print, 'write hdf?', (checkOutput2[0].size ne 0 and ~keyword_set(OVERWRITE)) and ~keyword_set(HDF)
+  ;print, '******'
+  if keyword_set(NC) and ((checkNC[0].size eq 0) or keyword_set(OVERWRITE)) then NOWRITENC=0 else NOWRITENC=1
+  if keyword_set(HDF) and ((checkHDF[0].size ne 0) or keyword_set(OVERWRITE)) then NOWRITEHDF=0 else NOWRITEHDF=1
+  ;if (checkOutput1[0].size ne 0 and ~keyword_set(OVERWRITE)) and ~keyword_set(NC) then NOWRITENC=1
+  ;if (checkOutput2[0].size ne 0 and ~keyword_set(OVERWRITE)) and ~keyword_set(HDF) then NOWRITEHDF=1
   ;if checkHDF[0].size ne 0 and ~keyword_set(OVERWRITE) then NONCWRITE=1
 
+  if keyword_set(SWITCH_TS_TV) then begin
+    switch_ts_tv_FAPAR, ncfilename, tempDir, outputDir, operatorObj, fsObj, NC=checkNC[0].size ne 0, HDF=checkHDF[0].size ne 0
+    switch_ts_tv_FAPAR, hdffilename, tempDir, outputDir, operatorObj, fsObj, NC=checkHDF[0].size ne 0, HDF=checkHDF[0].size ne 0
+    return, 0
+  endif
   if keyword_set(NOHDFAVAILABLE) or (keyword_set(NOHDFWRITE) and keyword_set(NOHDFWRITE)) then return, -1
 
-  data=readBRF(sourceDir, sourceFileNC, FOUND=FOUND)
+  data=readBRF(sourceDir, sourceFileNC, FOUND=FOUND, SWITCH_TS_TV=SWITCH_TS_TV)
+  ; temporary switch TS and TV (wrong naming on brf program
+  ;end
 
   if ~keyword_set(FOUND) then return, -1
 
@@ -271,6 +286,10 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
     idx=where(flag2 eq 0)
     ;NOAString=strcompress(noaanumber, /REMOVE)
     NOAString=string(noaanumber, format='(I02)')
+    ;window,4, title='sza '+extraName 
+    ;tv, rebin(bytscl(sza), 720, 360)
+    ;window,5, title='vza '+extraName
+    ;tv, rebin(bytscl(vza), 720, 360)
     if idx(0) ge 0 then begin
 
       FAPAR,'AVHRR', NOAString,sza(idx),vza(idx),saa(idx),vaa(idx),$
@@ -279,7 +298,17 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
         rhoRED, rhoNIR, D_rhoRED, D_rhoNIR, $
         D_rhotildeBLUE, D_rhotildeRED, D_rhotildeNIR, VI, D_VI, /TOC
       ;
+      ;window,6, title='fapar '+extraName
       output.fpar(idx)=vi
+      ;tv, rebin(bytscl(output.fpar), 720, 360)
+      ;if extraname eq '' then begin
+      ;  fpr=output.fpar
+      ;  save, fpr, filename='fpr'+extraName+'.sav'
+      ;endif else begin
+      ;  fpr_switch=output.fpar
+      ;  save, fpr_switch, filename='fpr'+extraName+'.sav'
+      ;endelse
+      ;stop
       output.sigma(idx)=d_vi
       output.red(idx)=rhoRED
       output.nir(idx)=rhoNIR
@@ -295,6 +324,7 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
 
       idx_neg=where(output.fpar le 0.0)
       output.fpar(idx_neg)=0.0
+      
       idx_big=where(output.fpar ge 1.0 and output.fpar le 10.0)
       output.fpar(idx_big)=1.0
       flag2(idx_neg)=4.0
@@ -329,7 +359,7 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   ;stop
   ; make the process of rectifed only over bare soil
   ;
-  idx_soil=where(flag2 eq 4)
+  idx_soil=where(flag2 eq 4.0)
 
   if idx_soil(0) ge 0 then begin
     ;
@@ -348,6 +378,7 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
       rhoRED_S, rhoNIR_S, D_rhoRED_S, D_rhoNIR_S, $
       D_rhotildeBLUE_S, D_rhotildeRED_S, D_rhotildeNIR_S, vi_s, d_vis, /TOC
     ;;
+    ; flag = 3 overwrite
     output.fpar(idx_soil)=0.0
     output.sigma(idx_soil)=0.0
     output.red(idx_soil)=rhoRED_S
@@ -366,11 +397,14 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   ;PPMSA_ALBEDOCOLOR
   ;	window, 4, xsize=720, ysize=360, title='Rectified Red '+SENSOR
   ;    	tv, reverse(congrid(bytscl(output.red, min=0., max=0.6), 720,360),2)
+  ; overwrite with sea flag layer?!?
+  flag2(idx_sea)=3
   output.flag=flag2
   ;
   idx_1 = where (flag2 eq 1)
   idx_2 = where (flag2 eq 2)
   idx_3 = where (flag2 eq 3)
+  
   ;
   ;idx_4 = where (flag_angles eq 1)
   ;idx_5 = where (flag_angles eq 2)
@@ -401,6 +435,7 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   faparDSInfo=getStandardFaparDataSetInfo()
 
   bandNames=faparDSInfo.bandNames
+  bandLongNames=faparDSInfo.bandLongNames
   bandSlopes=faparDSInfo.bandSlopes
   bandMeasureUnits=faparDSInfo.bandMeasureUnits
   bandDataTypes=faparDSInfo.bandDataTypes
@@ -410,8 +445,9 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
 
   trueSlopes=bandSlopes
   trueIntercepts=bandIntercepts
+  versionDate=faparDSInfo.versionDate
+  versionNumber=faparDSInfo.versionNumber
   
-
   res=dataByteScaling(output.fpar, output.flag, FLAG_VALUES=[9,10], $
     DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
     DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
@@ -459,6 +495,7 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   output.flag=res.resultFlag
   ;trueIntercepts[5]=outIntercept
   ;trueSlopes[5]=outSlope
+  output.flag[idx_sea]=3
 
   flagTags=strupcase(['fpar', 'sigma'])
   tags=tag_names(output)
@@ -532,10 +569,10 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   dataSets=[ptr_new(output.fpar, /NO_COPY), ptr_new(output.sigma, /NO_COPY), $
     ptr_new(output.red, /NO_COPY), ptr_new(output.sigma_red, /NO_COPY), $
     ptr_new(output.nir, /NO_COPY), ptr_new(output.sigma_nir, /NO_COPY), $
-    ptr_new(output.flag, /NO_COPY), $
+    ptr_new(qa_avhrr, /NO_COPY), $
     ptr_new(reform(angles[*,*,0]), /NO_COPY), ptr_new(reform(angles[*,*,1]), /NO_COPY), ptr_new(reform(angles[*,*,2]), /NO_COPY), $
     ptr_new(reform(reflectance(*,*,0)), /NO_COPY), ptr_new(reform(reflectance(*,*,1)), /NO_COPY), $
-    ptr_new(MASK_avhrr, /NO_COPY)]
+    ptr_new(output.flag, /NO_COPY)];MASK_avhrr
 
 ;  minMaxs[*,*]=-1
 ;  minMaxs[0,*]=DATA_RANGE;minMax[0,*]
@@ -589,14 +626,16 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   fName=new_file
 
   write_georef_ncdf, ncfilename, $
-    bandNames, bandMeasureUnits, $
+    bandNames, bandLongNames, bandMeasureUnits, $
     dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
-    /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes
+    /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes, $
+    versionDate=versionDate, versionNumber=versionNumber
 
   write_hdf, hdffilename, $
-    bandNames, bandMeasureUnits, $
+    bandNames, bandLongNames, bandMeasureUnits, $
     dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
-    trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes
+    trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes, $
+    versionDate=versionDate, versionNumber=versionNumber
 
 
   ;

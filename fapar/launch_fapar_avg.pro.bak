@@ -1,4 +1,4 @@
-pro launch_fapar, startYear, endYear, startMonth, endMonth, type, format, SWITCH_TS_TV=SWITCH_TS_TV
+pro launch_fapar_images, startYear, endYear, startMonth, endMonth, type, format, SWITCH_TS_TV=SWITCH_TS_TV
 
   confDir='/space3/storage/products/scripts/data'
   ;rootDir1=''

@@ -1,11 +1,14 @@
-pro write_georef_ncdf, fileName, bandNames, bandLongNames, bandunits, bandList, bandDataType, bandIntercepts, bandSlopes, tempDir, boundaryInfo, $
-  postcompression=postcompression, gzipLevel=gzipLevel, NOREVERSE=NOREVERSE, trueMinMaxs=trueMinMaxs, nanlist=nanlist, $
-  trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, versionDate=versionDate, versionNumber=versionNumber
+pro write_georef_ncdf, fileName, bandNames, bandStandardNames, bandLongNames, $
+  bandunits, bandList, bandDataType, bandIntercepts, bandSlopes, $
+  tempDir, boundaryInfo, $
+  postcompression=postcompression, gzipLevel=gzipLevel, trueMinMaxs=trueMinMaxs, nanlist=nanlist, $
+  trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, $
+  header=header, NOREVERSE=NOREVERSE
   ; procedure to read a geoTiff and export an a new one
 
   nvar=n_elements(bandNames)
-  if n_elements(trueMinMaxs) ne nvar*2 then minMaxs=fltarr(nvar,2) else minMaxs=trueMinMaxs 
-  
+  if n_elements(trueMinMaxs) ne nvar*2 then minMaxs=fltarr(nvar,2) else minMaxs=trueMinMaxs
+
   fs=obj_new('FileSystem', /STAND)
   utils=obj_new('Utility')
   tempDir=fs->adjustDirSep(tempDir, /ADD)
@@ -45,18 +48,19 @@ pro write_georef_ncdf, fileName, bandNames, bandLongNames, bandunits, bandList, 
 
   lonid = NCDF_VARDEF(ncid, 'lon', [londim], /DOUBLE, gzip=gzipLevel)
   NCDF_ATTPUT,ncid,lonid,'long_name','Longitude'
+  NCDF_ATTPUT,ncid,lonid,'standard_name','Longitude'
   NCDF_ATTPUT,ncid,lonid,'units','degrees_east'
 
   latid = NCDF_VARDEF(ncid, 'lat', [latdim], /DOUBLE, gzip=gzipLevel)
   NCDF_ATTPUT,ncid,latid,'long_name','Latitude'
+  NCDF_ATTPUT,ncid,lonid,'standard_name','Latitude'
   NCDF_ATTPUT,ncid,latid,'units','degrees_north'
 
   varnames=bandNames
   varlongnames=bandLongNames
+  varstandardnames=bandStandardNames
   varunits=bandunits
-  version='1.1';VersionNumber+' - '+VersionDate
-  ;get_current_date, year=year, month=month, day=day, hourdetails=hourdetails
-  creation_date='2016-06-06';year+month+day+hourdetails
+
   ncvarid = lonarr(nvar)
   ;NAN=-9999.
   FOR v = 0,nvar-1 DO BEGIN
@@ -75,30 +79,32 @@ pro write_georef_ncdf, fileName, bandNames, bandLongNames, bandunits, bandList, 
     NCDF_ATTPUT, ncid, ncvarid[v], '_FillValue',convertDataType(nanList[v], bandDataType[v])
     NCDF_ATTPUT, ncid, ncvarid[v], 'axis','YX'
     NCDF_ATTPUT, ncid, ncvarid[v], 'long_name',varlongnames[v]
+    NCDF_ATTPUT, ncid, ncvarid[v], 'standard_name',varstandardnames[v]
     NCDF_ATTPUT, ncid, ncvarid[v], 'units', varunits[v]
-    NCDF_ATTPUT, ncid, ncvarid[v], 'version', version
-    NCDF_ATTPUT, ncid, ncvarid[v], 'prod_date', creation_date
+    NCDF_ATTPUT, ncid, ncvarid[v], 'version', header.versionNumber
+    NCDF_ATTPUT, ncid, ncvarid[v], 'prod_date', header.versionDate
     ;NCDF_ATTPUT, ncid, ncvarid[v], 'slope', bandSlopes[v]
     ;NCDF_ATTPUT, ncid, ncvarid[v], 'intercept', bandIntercepts[v]
     NCDF_ATTPUT, ncid, ncvarid[v], 'slope', trueSlopes[v]
     NCDF_ATTPUT, ncid, ncvarid[v], 'intercept', trueIntercepts[v]
     NCDF_ATTPUT, ncid, ncvarid[v], 'true min', minMaxs[v,0]
     NCDF_ATTPUT, ncid, ncvarid[v], 'true max', minMaxs[v,1]
+    
+    if n_elements(sdn_parameter_urn) eq nvar then value=sdn_parameter_urn[v] else value='n_a'  
+    NCDF_ATTPUT, ncid, ncvarid[v], 'sdn_parameter_urn', value
+    if n_elements(sdn_parameter_name) eq nvar then value=sdn_parameter_name[v] else value='n_a'
+    NCDF_ATTPUT, ncid, ncvarid[v], 'sdn_parameter_name', value
+    if n_elements(sdn_uom_urn) eq nvar then value=sdn_uom_urn[v] else value='n_a'
+    NCDF_ATTPUT, ncid, ncvarid[v], 'sdn_uom_urn', value
+    if n_elements(sdn_uom_name) eq nvar then value=sdn_uom_name[v] else value='n_a'
+    NCDF_ATTPUT, ncid, ncvarid[v], 'sdn_uom_name', value
     ;NCDF_ATTPUT, ncid, ncvarid[v], 'minmax comment', 'If true min eq true max skip information (not available)'
     ;count = [onx,ony] & stride = [1,1] & offset=[0,0]
     ;NCDF_VARPUT, ncid, ncvarid[v], *(bandList[v]), count=count, offset=offset;, stride=stride
   ENDFOR
 
-  title='BRF'
-  technique=' ' & contact=' ' & telephone=' ' & facsimile=' ' & internet=' ' & post_processing=' ' & technique=' '
-  ;; create global attributes
-  NCDF_ATTPUT, ncid, /GLOBAL,'title',title
-  NCDF_ATTPUT, ncid, /GLOBAL,'technique',technique
-  NCDF_ATTPUT, ncid, /GLOBAL,'contact',contact
-  NCDF_ATTPUT, ncid, /GLOBAL,'telephone',telephone
-  NCDF_ATTPUT, ncid, /GLOBAL,'facsimile',facsimile
-  NCDF_ATTPUT, ncid, /GLOBAL,'internet',internet
-  NCDF_ATTPUT, ncid, /GLOBAL,'post-processing',post_processing
+  ;; set global attributes from a structure (map tag to tag)
+  fillHeaderInfo, ncid, header
 
   ;; Put file in data mode.
   NCDF_CONTROL, ncid, /ENDEF

@@ -5,7 +5,9 @@
 ;@/colors/compile
 ;@/avhrr/compile
 ;@/main/fapar_uncertainties.pro
-pro runDailyBrdf, confDir, sourceDir, tempDir, outputDir, startYear, endYear, startMonth, endMonth, SWITCH_TS_TV=SWITCH_TS_TV
+pro runDailyBrdf, confDir, sourceDir, tempDir, outputDir, startYear, endYear, startMonth, endMonth, $
+  SWITCH_TS_TV=SWITCH_TS_TV, OVERWRITE=OVERWRITE, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
+  HDF=HDF, NC=NC
 
   ;confDir='E:\mariomi\Documents\projects\LDTR\data\AVHRR\data'
 
@@ -62,6 +64,7 @@ pro runDailyBrdf, confDir, sourceDir, tempDir, outputDir, startYear, endYear, st
   for y=0, n_elements(years)-1 do begin
     thisYear=years[y]
     noaanumber=getAVHRRNOAANumber(thisYear, undef)
+    if n_elements(noaanumber) gt 1 then noaanumber=noaanumber[MISSIONOVERLAPINDEX]
     for m=0, n_elements(months)-1 do begin
       monthDays=utility->calcDayOfMonth([years[y],months[m],1,0])
       for d=startDay, monthDays do begin
@@ -73,7 +76,7 @@ pro runDailyBrdf, confDir, sourceDir, tempDir, outputDir, startYear, endYear, st
         yearDay=utility->calcDayOfYear([thisYear,thisMonth,thisDay,0])+1
         print, 'working on', thisYear, thisMonth, thisDay, '...'
         ;testFile1=buildAvhrrLandFileName_D(sensor1, missionCode1, thisYear, thisMonth, thisDay, rootDir1, /full)
-        testFile=buildAvhFileName_D(sensor, missionCode, thisYear, thisMonth, yearDay, sourceDir, /full, /JULDAY)
+        testFile=buildAvhFileName_D(sensor, missionCode, thisYear, thisMonth, yearDay, sourceDir, /full, /JULDAY, MISSIONNUMBER=noaanumber)
         ;noaanumber=16
         ;testFile3=buildAvhrrGlobFileName_D(sensor3, missionCode3, thisYear, thisMonth, yearDay, rootDir3, /full, /JULDAY)
 ;        testFile='GLOBAL_L3_GEOG_0.05DEG_001-001_03.NOAA-16.hdf'
@@ -141,7 +144,7 @@ pro runDailyBrdf, confDir, sourceDir, tempDir, outputDir, startYear, endYear, st
         print, 'file: ', file
         ;resFile=doBrf(file, confDir, thisYear, thisMonth, thisDay, sensor, missionCode, noaanumber, resolution, mainVar, outputDir, operatorObj, fsObj, tempDir, testFile=testFile, /OVERWRITE)
         resFile=doBrf(file, confDir, thisYear, thisMonth, thisDay, sensor, missionCode, noaanumber, resolution, mainVar, outputDir, operatorObj, fsObj, tempDir, $
-          testFile=testFile, SWITCH_TS_TV=SWITCH_TS_TV)
+          testFile=testFile, OVERWRITE=OVERWRITE, HDF=HDF, NC=NC);, SWITCH_TS_TV=SWITCH_TS_TV
         ;resFile=AVH01_merge_BRFGlob(file1, file2, file3, confDir, thisYear, thisMonth, thisDay, noaanumber, operatorObj, fsObj, tempDir, testFile=testFile)
         ;resFile=merge_BRFGlob(file1, file2, file3, confDir, thisYear, thisMonth, thisDay, noaanumber, operatorObj, fsObj, tempDir, testFile=testFile)
         print, '... done'

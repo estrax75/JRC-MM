@@ -1,5 +1,6 @@
-FUNCTION doFaparTC, sensor, resolution, missionName, confDir, sourceDir, tempDir, outputDir, year, month, $
-  MONTHLY=MONTHLY, TENDAYS=TENDAYS, SIXTEENDAYS=SIXTEENDAYS, ELAB_TC=ELAB_TC, ELAB_MEAN=ELAB_MEAN
+FUNCTION doFaparComposite, sensor, resolution, missionName, confDir, sourceDir, tempDir, outputDir, year, month, $
+  MONTHLY=MONTHLY, TENDAYS=TENDAYS, SIXTEENDAYS=SIXTEENDAYS, FIVEDAYS=FIVEDAYS, $
+  ELAB_TC=ELAB_TC, ELAB_MEAN=ELAB_MEAN
   ;
   ;
   ;COMMON bigData
@@ -22,6 +23,11 @@ FUNCTION doFaparTC, sensor, resolution, missionName, confDir, sourceDir, tempDir
   dir_in=sourceDir
   dirout=outputDir
 
+
+  if KEYWORD_SET(FIVEDAYS) then begin
+    first=[01,06,11,16,21,26]
+    last=[5,10,15,20,25,utils->calcDayOfMonth([year,month,1,0])]
+  endif
   if KEYWORD_SET(TENDAYS) then begin
     first=[01,11,21]
     last=[10,20,utils->calcDayOfMonth([year,month,1,0])]
@@ -93,7 +99,13 @@ FUNCTION doFaparTC, sensor, resolution, missionName, confDir, sourceDir, tempDir
         print, '*********'
         faparData=readFAPAR(dir_in, ncfilename, FOUND=FOUND)
         faparData.valid=1
+        histoData=histogram(faparData.fapar)
         faparData.fapar=1.*faparData.fapar*faparData.slope_fapar+faparData.offset_fapar
+
+        ;true_single_fapar=faparData.fapar
+        ;save, true_single_fapar,fileName=tempDir+ncfilename+'_SINGLE.sav'
+        ;true_single_fapar=0
+
         faparData.nir=1.*faparData.nir*faparData.slope_nir+faparData.offset_nir
         faparData.red=1.*faparData.red*faparData.slope_red+faparData.offset_red
         checkFirst=0
@@ -111,18 +123,22 @@ FUNCTION doFaparTC, sensor, resolution, missionName, confDir, sourceDir, tempDir
       ;fullDayInfo={}
       for d=firstDay+1, last[type] do begin
 
-        if sensor eq 'AVH09C1' then sourceFileName=buildAVHRRFAPARFileName_D(sensor, resolution, year, month, d, missionName, missionCode, mainVarName)
-        if sensor eq 'MODIS' then sourceFileName=buildMODISFAPARFileName_D(sensor, resolution, year, month, d, missionName, missionCode, mainVarName)
+        ;if sensor eq 'AVH09C1' then sourceFileName=buildAVHRRFAPARFileName_D(sensor, resolution, year, month, d, missionName, missionCode, mainVarName)
+        ;if sensor eq 'MODIS' then sourceFileName=buildMODISFAPARFileName_D(sensor, resolution, year, month, d, missionName, missionCode, mainVarName)
+        if sensor eq 'AVH09C1' then nsourceFileName=buildAVHRRFAPARFileName_D(sensor, resolution, year, month, d, missionName, missionCode, mainVarName)
+        if sensor eq 'MODIS' then nsourceFileName=buildMODISFAPARFileName_D(sensor, resolution, year, month, d, missionName, missionCode, mainVarName)
 
-        ncfilename=fsObj->addFileExtension(sourceFileName, 'NC'); nc
+        nncfilename=fsObj->addFileExtension(sourceFileName, 'NC'); nc
         ;hdffilename=fsObj->addFileExtension(new_file, 'HDF'); hdf
 
+        ;remove for testing...
         ff1 = FILE_SEARCH(dir_in+ncfilename, COUNT=cnt1);, /FULL_QUALIFY)
         ;ff2 = FILE_SEARCH(dir_in+hdffilename, COUNT=cnt2)
         print, '*********'
         print, 'day-->', d
         print, 'file-->', ff1
         print, '*********'
+        ;faparData=readFAPAR(dir_in, ncfilename, FOUND=FOUND)
         faparData=readFAPAR(dir_in, ncfilename, FOUND=FOUND)
         if keyword_set(FOUND) then begin
           foundDays++
@@ -146,26 +162,29 @@ FUNCTION doFaparTC, sensor, resolution, missionName, confDir, sourceDir, tempDir
         destncfilename=fsObj->addFileExtension(destTCFile, 'NC'); nc
         desthdffilename=fsObj->addFileExtension(destTCFile, 'HDF'); hdf
         print, '*********'
-        print, 'building mean file: ', destTCFile
+        print, 'building mean file: ', outputDir+destTCFile
         print, '*********'
 
+        starttime=systime(1)
         compute_mean, expectedDays, data_day1, data_tc
-        avgIdx=[2,5,8]
-        
-        faparTCDSInfo=getStandardFaparTCDataSetInfo_new()
-        bandNames=(faparTCDSInfo.bandNames)[avgIdx]
-        bandLongNames=(faparTCDSInfo.bandLongNames)[avgIdx]
-        bandSlopes=(faparTCDSInfo.bandSlopes)[avgIdx]
-        bandMeasureUnits=(faparTCDSInfo.bandMeasureUnits)[avgIdx]
-        bandDataTypes=(faparTCDSInfo.bandDataTypes)[avgIdx]
-        bandIntercepts=(faparTCDSInfo.bandIntercepts)[avgIdx]
-        minMaxs=(faparTCDSInfo.minMaxs)[avgIdx,*]
-        nanList=(faparTCDSInfo.nans)[avgIdx]
+        endTime=systime(1)-starttime
+        print, 'computed in about:', strcompress(endTime), 'seconds'
+        ;avgIdx=[2,5,8,11]
+
+        faparTCDSInfo=getStandardFaparMeanDataSetInfo()
+        bandNames=(faparTCDSInfo.bandNames);[avgIdx]
+        bandLongNames=(faparTCDSInfo.bandLongNames);[avgIdx]
+        bandStandardNames=(faparTCDSInfo.bandStandardNames);[avgIdx]
+        bandSlopes=(faparTCDSInfo.bandSlopes);[avgIdx]
+        bandMeasureUnits=(faparTCDSInfo.bandMeasureUnits);[avgIdx]
+        bandDataTypes=(faparTCDSInfo.bandDataTypes);[avgIdx]
+        bandIntercepts=(faparTCDSInfo.bandIntercepts);[avgIdx]
+        minMaxs=(faparTCDSInfo.minMaxs);[avgIdx,*]
+        nanList=(faparTCDSInfo.nans);[avgIdx]
+        header=faparTCDSInfo.header
 
         trueSlopes=bandSlopes
         trueIntercepts=bandIntercepts
-        versionDate=faparTCDSInfo.versionDate
-        versionNumber=faparTCDSInfo.versionNumber
 
         TYPE1=1
         ZEROISNAN=keyword_set(TYPE1) ;0
@@ -178,7 +197,12 @@ FUNCTION doFaparTC, sensor, resolution, missionName, confDir, sourceDir, tempDir
         DATA_NAN=bSInfo.DATA_NAN
         BYTE_NAN=bSInfo.BYTE_NAN
         BYTE_RANGE=bSInfo.BYTE_RANGE
-        res=dataByteScaling(data_tc.fapar, data_tc.flag, FLAG_VALUES=[9,10], $
+
+        ;true_mean_fapar=data_tc.fapar
+        ;save, true_mean_fapar, fileName=tempDir+destncfilename+'_MEAN.sav'
+        ;true_mean_fapar=0
+
+        res=dataByteScaling(data_tc.fapar, data_tc.flag, $
           DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
           DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
         data_tc.fapar=res.resultData
@@ -186,86 +210,94 @@ FUNCTION doFaparTC, sensor, resolution, missionName, confDir, sourceDir, tempDir
         trueSlopes[0]=outSlope
         ;output.flag=res.resultFlag
 
-;        ;tv, rebin(bytscl(data_tc.sigma), 720, 360) ;*
-;        res=dataByteScaling(data_tc.sigma, data_tc.flag, $
-;          DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
-;          DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
-;        data_tc.sigma=res.resultData
-;        trueIntercepts[1]=outIntercept
-;        trueSlopes[1]=outSlope
+        ;        ;tv, rebin(bytscl(data_tc.sigma), 720, 360) ;*
+        ;        res=dataByteScaling(data_tc.sigma, data_tc.flag, $
+        ;          DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
+        ;          DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
+        ;        data_tc.sigma=res.resultData
+        ;        trueIntercepts[1]=outIntercept
+        ;        trueSlopes[1]=outSlope
         ;data_tc.flag=res.resultFlag
 
         ;tv, rebin(bytscl(data_tc.dev_temp), 720, 360) ;*
-;        res=dataByteScaling(data_tc.dev_temp, data_tc.flag, $
-;          DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
-;          DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
-;        data_tc.dev_temp=res.resultData;data_tc.sigma=res.resultData
-;        trueIntercepts[2]=outIntercept
-;        trueSlopes[2]=outSlope
-;        flagTags=strupcase(['fapar', 'sigma', 'dev_temp'])
-;        tags=tag_names(data_tc)
-;
-;        idx_1 = where (data_tc.flag eq 1, c1)
-;        idx_2 = where (data_tc.flag eq 2, c2)
-;        idx_3 = where (data_tc.flag eq 3, c3)
-;
-;        waterIdxs=where(data_day[0].flag eq 3, watCount)
-;        for i=0, n_elements(flagTags)-1 do begin
-;          thisIdx=(where(flagTags[i] eq tags, count))[0]
-;          if count eq 1 then begin
-;            if c1 gt 0 then data_tc.(thisIdx)=mapQualityFlags(data_tc.(thisIdx), idx_1, remarkableFlags[0])
-;            if c2 gt 0 then data_tc.(thisIdx)=mapQualityFlags(data_tc.(thisIdx), idx_2, remarkableFlags[1])
-;            if c3 gt 0 then data_tc.(thisIdx)=mapQualityFlags(data_tc.(thisIdx), idx_3, remarkableFlags[2])
-;            if watCount gt 0 then data_tc.(thisIdx)=mapQualityFlags(data_tc.(thisIdx), waterIdxs, remarkableFlags[2])
-;          endif
-;        endfor
+        ;        res=dataByteScaling(data_tc.dev_temp, data_tc.flag, $
+        ;          DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
+        ;          DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
+        ;        data_tc.dev_temp=res.resultData;data_tc.sigma=res.resultData
+        ;        trueIntercepts[2]=outIntercept
+        ;        trueSlopes[2]=outSlope
+        ;        flagTags=strupcase(['fapar', 'sigma', 'dev_temp'])
+        ;        tags=tag_names(data_tc)
+        ;
+        ;        idx_1 = where (data_tc.flag eq 1, c1)
+        ;        idx_2 = where (data_tc.flag eq 2, c2)
+        ;        idx_3 = where (data_tc.flag eq 3, c3)
+        ;
+        ;        waterIdxs=where(data_day[0].flag eq 3, watCount)
+        ;        for i=0, n_elements(flagTags)-1 do begin
+        ;          thisIdx=(where(flagTags[i] eq tags, count))[0]
+        ;          if count eq 1 then begin
+        ;            if c1 gt 0 then data_tc.(thisIdx)=mapQualityFlags(data_tc.(thisIdx), idx_1, remarkableFlags[0])
+        ;            if c2 gt 0 then data_tc.(thisIdx)=mapQualityFlags(data_tc.(thisIdx), idx_2, remarkableFlags[1])
+        ;            if c3 gt 0 then data_tc.(thisIdx)=mapQualityFlags(data_tc.(thisIdx), idx_3, remarkableFlags[2])
+        ;            if watCount gt 0 then data_tc.(thisIdx)=mapQualityFlags(data_tc.(thisIdx), waterIdxs, remarkableFlags[2])
+        ;          endif
+        ;        endfor
 
         ;map -9999 on int data
-        flagTags=strupcase(['red', 'nir', 'sigma_red', 'sigma_nir', 'dev_red_temp', 'dev_nir_temp'])
+        ;flagTags=strupcase(['red', 'nir'])
+        byteFlagTags=['fapar', 'sigma', 'dev_temp']
+        intFlagTags=['red', 'nir']
         tags=tag_names(data_tc)
 
-        idx_1 = where (data_tc.flag eq 1, c1)
-        idx_2 = where (data_tc.flag eq 2, c2)
-        idx_3 = where (data_tc.flag eq 3, c3)
-
-        waterIdxs=where(data_day[0].flag eq 3, watCount)
+        ; flag 6 where water/snow/ice/cloud
+        waterIdxs=where(data_tc.flag eq 6, watCount)
         for i=0, n_elements(flagTags)-1 do begin
-          thisIdx=(where(flagTags[i] eq tags, count))[0]
-          nanIdxs=where(data_tc.(thisIdx) gt 250, count)
-          ;nanIdxs = where (data_tc.flag eq 3, c3)
-          if count gt 0 then data_tc.(thisIdx)=mapQualityFlags(data_tc.(thisIdx), nanIdxs, INT_NAN)
-          if watCount gt 0 then data_tc.(thisIdx)=mapQualityFlags(data_tc.(thisIdx), waterIdxs, INT_NAN)
+          thisIntIdx=(where(intFlagTags[i] eq tags, countInt))[0]
+          thisByteIdx=(where(byteFlagTags[i] eq tags, countByte))[0]
+          if watCount gt 0 then begin
+            if countInt eq 1 then data_tc.(thisIntIdx)=mapQualityFlags(data_tc.(thisIntIdx), waterIdxs, INT_NAN)
+            if countByte eq 1 then data_tc.(thisByteIdx)=mapQualityFlags(data_tc.(thisByteIdx), waterIdxs, BYTE_NAN)
+          endif
         endfor
 
-;        dataSets=[ptr_new(data_tc.day, /NO_COPY),ptr_new(data_tc.nday, /NO_COPY), $
-;          ptr_new(data_tc.fapar, /NO_COPY), ptr_new(data_tc.sigma, /NO_COPY), ptr_new(data_tc.dev_temp, /NO_COPY), $
-;          ptr_new(data_tc.red, /NO_COPY), ptr_new(data_tc.sigma_red, /NO_COPY), ptr_new(data_tc.dev_red_temp, /NO_COPY) ,$
-;          ptr_new(data_tc.nir, /NO_COPY), ptr_new(data_tc.sigma_nir, /NO_COPY), ptr_new(data_tc.dev_red_temp, /NO_COPY), $
-;          ptr_new(data_tc.flag, /NO_COPY), $
-;          ptr_new(data_tc.toc_red, /NO_COPY), ptr_new(data_tc.toc_nir, /NO_COPY), $
-;          ptr_new(data_tc.nday, /NO_COPY)]
+        ;        dataSets=[ptr_new(data_tc.day, /NO_COPY),ptr_new(data_tc.nday, /NO_COPY), $
+        ;          ptr_new(data_tc.fapar, /NO_COPY), ptr_new(data_tc.sigma, /NO_COPY), ptr_new(data_tc.dev_temp, /NO_COPY), $
+        ;          ptr_new(data_tc.red, /NO_COPY), ptr_new(data_tc.sigma_red, /NO_COPY), ptr_new(data_tc.dev_red_temp, /NO_COPY) ,$
+        ;          ptr_new(data_tc.nir, /NO_COPY), ptr_new(data_tc.sigma_nir, /NO_COPY), ptr_new(data_tc.dev_red_temp, /NO_COPY), $
+        ;          ptr_new(data_tc.flag, /NO_COPY), $
+        ;          ptr_new(data_tc.toc_red, /NO_COPY), ptr_new(data_tc.toc_nir, /NO_COPY), $
+        ;          ptr_new(data_tc.nday, /NO_COPY)]
         dataSets=[ptr_new(data_tc.fapar, /NO_COPY), $
           ptr_new(data_tc.red, /NO_COPY),$
-          ptr_new(data_tc.nir, /NO_COPY)]
+          ptr_new(data_tc.nir, /NO_COPY), $
+          ptr_new(data_tc.flag, /NO_COPY)]
 
         boundary=[-180.0, 180.0, -90, 90.]
 
         destncfilename=outputDir+destncfilename
         desthdffilename=outputDir+desthdffilename
+        title='fapar average'
+
         write_georef_ncdf, destncfilename, $
-          bandNames, bandLongNames, bandMeasureUnits, $
+          bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
           dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
           /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, $
-          trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, versionDate=versionDate, versionNumber=versionNumber
+          trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, $
+          header=header
         write_hdf, desthdffilename, $
-          bandNames, bandLongNames, bandMeasureUnits, $
+          bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
           dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
           /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, $
-          trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, versionDate=versionDate, versionNumber=versionNumber
+          trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, $
+          header=header
 
       endif else begin
 
+        starttime=systime(1)
         call_composite, expectedDays, data_day1, data_tc
+        endTime=systime(1)-starttime
+        print, 'computed in about:', strcompress(endTime), 'seconds'
 
         if sensor eq 'AVH09C1' then destTCFile=buildAVHRRFAPARFileName_TC(sensor, resolution, year, month, first[type], missionName, missionCode, mainVarName, startDay=first[type], endDay=last[type])
         if sensor eq 'MODIS' then destTCFile=buildMODISFAPARFileName_TC(sensor, resolution, year, month, first[type], missionName, missionCode, mainVarName, startDay=first[type], endDay=last[type])
@@ -275,9 +307,10 @@ FUNCTION doFaparTC, sensor, resolution, missionName, confDir, sourceDir, tempDir
         print, 'building tc file: ', destTCFile
         print, '*********'
 
-        faparTCDSInfo=getStandardFaparTCDataSetInfo_new()
+        faparTCDSInfo=getStandardFaparTCDataSetInfo()
         bandNames=faparTCDSInfo.bandNames
         bandLongNames=faparTCDSInfo.bandLongNames
+        bandStandardNames=faparTCDSInfo.bandStandardNames
         bandSlopes=faparTCDSInfo.bandSlopes
         bandMeasureUnits=faparTCDSInfo.bandMeasureUnits
         bandDataTypes=faparTCDSInfo.bandDataTypes
@@ -287,8 +320,11 @@ FUNCTION doFaparTC, sensor, resolution, missionName, confDir, sourceDir, tempDir
 
         trueSlopes=bandSlopes
         trueIntercepts=bandIntercepts
-        versionDate=faparTCDSInfo.versionDate
-        versionNumber=faparTCDSInfo.versionNumber
+        header=faparTCDSInfo.header
+
+        ;true_tc_fapar=data_tc.fapar
+        ;save, true_tc_fapar, fileName=tempDir+ncfilename+'_TC.sav'
+        ;true_tc_fapar=0
 
         TYPE1=1
         ZEROISNAN=keyword_set(TYPE1) ;0
@@ -301,7 +337,7 @@ FUNCTION doFaparTC, sensor, resolution, missionName, confDir, sourceDir, tempDir
         DATA_NAN=bSInfo.DATA_NAN
         BYTE_NAN=bSInfo.BYTE_NAN
         BYTE_RANGE=bSInfo.BYTE_RANGE
-        res=dataByteScaling(data_tc.fapar, data_tc.flag, FLAG_VALUES=[9,10], $
+        res=dataByteScaling(data_tc.fapar, data_tc.flag, $
           DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
           DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
         data_tc.fapar=res.resultData
@@ -325,56 +361,45 @@ FUNCTION doFaparTC, sensor, resolution, missionName, confDir, sourceDir, tempDir
         data_tc.dev_temp=res.resultData;data_tc.sigma=res.resultData
         trueIntercepts[2]=outIntercept
         trueSlopes[2]=outSlope
-        flagTags=strupcase(['fapar', 'sigma', 'dev_temp'])
+
+        byteFlagTags=['fapar', 'sigma', 'dev_temp']
+        intFlagTags=['red', 'nir']
         tags=tag_names(data_tc)
 
-        idx_1 = where (data_tc.flag eq 1, c1)
-        idx_2 = where (data_tc.flag eq 2, c2)
-        idx_3 = where (data_tc.flag eq 3, c3)
-
-        waterIdxs=where(data_day[0].flag eq 3, watCount)
+        waterIdxs=where(data_tc.flag eq 6, watCount)
         for i=0, n_elements(flagTags)-1 do begin
-          thisIdx=(where(flagTags[i] eq tags, count))[0]
-          if count eq 1 then begin
-            if c1 gt 0 then data_tc.(thisIdx)=mapQualityFlags(data_tc.(thisIdx), idx_1, remarkableFlags[0])
-            if c2 gt 0 then data_tc.(thisIdx)=mapQualityFlags(data_tc.(thisIdx), idx_2, remarkableFlags[1])
-            if c3 gt 0 then data_tc.(thisIdx)=mapQualityFlags(data_tc.(thisIdx), idx_3, remarkableFlags[2])
-            if watCount gt 0 then data_tc.(thisIdx)=mapQualityFlags(data_tc.(thisIdx), waterIdxs, remarkableFlags[2])
+          thisIntIdx=(where(intFlagTags[i] eq tags, countInt))[0]
+          thisByteIdx=(where(byteFlagTags[i] eq tags, countByte))[0]
+          if watCount gt 0 then begin
+            if countInt eq 1 then data_tc.(thisIntIdx)=mapQualityFlags(data_tc.(thisIntIdx), waterIdxs, INT_NAN)
+            if countByte eq 1 then data_tc.(thisByteIdx)=mapQualityFlags(data_tc.(thisByteIdx), waterIdxs, BYTE_NAN)
           endif
         endfor
 
-        ;map -9999 on int data
-        flagTags=strupcase(['red', 'nir', 'sigma_red', 'sigma_nir', 'dev_red_temp', 'dev_nir_temp'])
-        for i=0, n_elements(flagTags)-1 do begin
-          thisIdx=(where(flagTags[i] eq tags, count))[0]
-          nanIdxs=where(data_tc.(thisIdx) gt 250, count)
-          ;nanIdxs = where (data_tc.flag eq 3, c3)
-          if count gt 0 then data_tc.(thisIdx)=mapQualityFlags(data_tc.(thisIdx), nanIdxs, INT_NAN)
-          if watCount gt 0 then data_tc.(thisIdx)=mapQualityFlags(data_tc.(thisIdx), waterIdxs, INT_NAN)
-        endfor
-
         dataSets=[ptr_new(data_tc.day, /NO_COPY),ptr_new(data_tc.nday, /NO_COPY), $
-          ptr_new(data_tc.fapar, /NO_COPY), ptr_new(data_tc.sigma, /NO_COPY), ptr_new(data_tc.dev_temp, /NO_COPY), $
-          ptr_new(data_tc.red, /NO_COPY), ptr_new(data_tc.sigma_red, /NO_COPY), ptr_new(data_tc.dev_red_temp, /NO_COPY) ,$
-          ptr_new(data_tc.nir, /NO_COPY), ptr_new(data_tc.sigma_nir, /NO_COPY), ptr_new(data_tc.dev_red_temp, /NO_COPY), $
+          ptr_new(data_tc.fapar, /NO_COPY), ptr_new(data_tc.dev_temp, /NO_COPY), ptr_new(data_tc.sigma, /NO_COPY), $
+          ptr_new(data_tc.red, /NO_COPY), ptr_new(data_tc.dev_red_temp, /NO_COPY), ptr_new(data_tc.sigma_red, /NO_COPY) ,$
+          ptr_new(data_tc.nir, /NO_COPY), ptr_new(data_tc.dev_nir_temp, /NO_COPY), ptr_new(data_tc.sigma_nir, /NO_COPY), $
           ptr_new(data_tc.flag, /NO_COPY), $
           ptr_new(data_tc.toc_red, /NO_COPY), ptr_new(data_tc.toc_nir, /NO_COPY), $
-          ptr_new(data_tc.nday, /NO_COPY)]
+          ptr_new(data_tc.qa, /NO_COPY)]
 
         boundary=[-180.0, 180.0, -90, 90.]
 
         destncfilename=outputDir+destncfilename
         desthdffilename=outputDir+desthdffilename
         write_georef_ncdf, destncfilename, $
-          bandNames, bandLongNames, bandMeasureUnits, $
+          bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
           dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
           /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, $
-          trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, versionDate=versionDate, versionNumber=versionNumber
+          trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, $
+          header=header
         write_hdf, desthdffilename, $
-          bandNames, bandLongNames, bandMeasureUnits, $
+          bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
           dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
           /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, $
-          trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, versionDate=versionDate, versionNumber=versionNumber
+          trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, $
+          header=header
 
       endelse
     endfor

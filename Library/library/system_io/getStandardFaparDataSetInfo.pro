@@ -1,5 +1,8 @@
 function getStandardFaparDataSetInfo, Type=Type
 
+  infoHeader=getJRCHeader()
+  infoHeader.title='FAPar'
+
   INT_NAN=-9999
   BYTE_NAN=255
 
@@ -16,6 +19,14 @@ function getStandardFaparDataSetInfo, Type=Type
     'JRC_FLAG']
 
   bandLongNames=['Fraction of Absorbed Photosynthetically Active Radiation','Uncertainties of FAPAR', $
+    'Rectified Reflectance in Band 1', 'Uncertainties of Rectified Reflectance in Band 1', $
+    'Rectified Reflectance in Band 2', 'Uncertainties of Rectified Reflectance in Band 2', $
+    'LDTR_FLAG', $
+    'Solar Zenith Angle', 'View Zenith Angle', 'Relative Azimuth Angle', $
+    'Surface Bidirectional Reflectance Factor Band 1', 'Surface Bidirectional Reflectance Factor Band 2', $
+    'JRC_FLAG']
+
+  bandStandardNames=['Fraction of Absorbed Photosynthetically Active Radiation','Uncertainties of FAPAR', $
     'Rectified Reflectance in Band 1', 'Uncertainties of Rectified Reflectance in Band 1', $
     'Rectified Reflectance in Band 2', 'Uncertainties of Rectified Reflectance in Band 2', $
     'LDTR_FLAG', $
@@ -96,10 +107,10 @@ function getStandardFaparDataSetInfo, Type=Type
 
 
   return, { $
-    versionNumber: '1.1', $
-    versionDate: '2016/06/06', $
+    header: infoHeader, $
     bandNames: bandNames, $
     bandLongNames:bandLongNames, $
+    bandStandardNames:bandStandardNames, $
     bandMeasureUnits: bandMeasureUnits, $
     bandDataTypes: bandDataType, $
     bandSlopes: bandSlopes, $

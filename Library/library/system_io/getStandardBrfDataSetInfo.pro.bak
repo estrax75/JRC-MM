@@ -10,15 +10,18 @@ function getStandardBrfDataSetInfo
   bandNames=['BRF_BAND_1', 'BRF_BAND_2', 'SIGMA_BRF_BAND_1', 'SIGMA_BRF_BAND_2', $
     'TS', 'TV', 'PHI', $
     'LDTR_FLAG', 'Q1', 'Q2']
-  bandLongNames=bandNames
+
+  bandLongNames=['Bidirectional Reflectance Factor Band 1', 'Bidirectional Reflectance Factor Band 2', 'Uncertainties of Bidirectional Reflectance Factor Band 1', 'Uncertainties of Bidirectional Reflectance Factor Band 2', $
+    'Solar Zenith Angle', 'View Zenith Angle', 'Relative Azimuth Angle', $
+    'LDTR_FLAG', 'Internal JRC Flag (1) for BRFs calculations for Band 1', 'Internal JRC Flag (2) for BRFs calculations for Band 1']
   
   bandSlopes=[10e-05, 10e-05, 10e-05, 10e-05,$
     10e-03, 10e-03, 10e-03, $
     1, 1, 1]
     
   bandMeasureUnits=['-','-', '-', '-', $
-    'deg','deg','deg', $
-    '-', '-', '-' $
+    'degree','degree','degree', $
+    '-','-', '-' $
     ]
   
   bandIntercepts=fltarr(n_elements(bandSlopes))
@@ -51,19 +54,23 @@ function getStandardBrfDataSetInfo
   minMaxs[6,*]=ANGLES_DATA_RANGE2
   nanList[6]=INT_NAN
 
-  ;manual setting???
-  ;minMaxs[10,*]=[tempMin>0.,tempMax]
-  ;nanList[10]=INT_NAN
+;  minMaxs[7,*]=[1, 14]
+;  nanList[7]=BYTE_NAN
+
+  minMaxs[7,*]=[-32640, 32640]
+  nanList[7]=INT_NAN
 
   ;manual setting???
-  ;minMaxs[11,*]=[tempMin>0.,tempMax]
-  ;nanList[11]=INT_NAN
-
+  minMaxs[8,*]=[1,2]
+  nanList[8]=BYTE_NAN
 
   ;manual setting???
-  ;nanList[12]=INT_NAN
+  minMaxs[9,*]=[1,2]
+  nanList[9]=BYTE_NAN
 
   return, { $
+    version: '1.1', $
+    versionDate: '2016/06/06', $
     bandNames: bandNames, $
     bandLongNames:bandLongNames, $
     bandMeasureUnits: bandMeasureUnits, $

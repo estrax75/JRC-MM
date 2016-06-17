@@ -1,5 +1,8 @@
 function getStandardBrfDataSetInfo
 
+  infoHeader=getJRCHeader()
+  infoHeader.title='BRFs'
+  
   INT_NAN=-9999
   BYTE_NAN=255
 
@@ -12,6 +15,10 @@ function getStandardBrfDataSetInfo
     'LDTR_FLAG', 'Q1', 'Q2']
 
   bandLongNames=['Bidirectional Reflectance Factor Band 1', 'Bidirectional Reflectance Factor Band 2', 'Uncertainties of Bidirectional Reflectance Factor Band 1', 'Uncertainties of Bidirectional Reflectance Factor Band 2', $
+    'Solar Zenith Angle', 'View Zenith Angle', 'Relative Azimuth Angle', $
+    'LDTR_FLAG', 'Internal JRC Flag (1) for BRFs calculations for Band 1', 'Internal JRC Flag (2) for BRFs calculations for Band 1']
+
+  bandStandardNames=['Bidirectional Reflectance Factor Band 1', 'Bidirectional Reflectance Factor Band 2', 'Uncertainties of Bidirectional Reflectance Factor Band 1', 'Uncertainties of Bidirectional Reflectance Factor Band 2', $
     'Solar Zenith Angle', 'View Zenith Angle', 'Relative Azimuth Angle', $
     'LDTR_FLAG', 'Internal JRC Flag (1) for BRFs calculations for Band 1', 'Internal JRC Flag (2) for BRFs calculations for Band 1']
   
@@ -69,10 +76,10 @@ function getStandardBrfDataSetInfo
   nanList[9]=BYTE_NAN
 
   return, { $
-    version: '1.1', $
-    versionDate: '2016/06/06', $
+    header: infoHeader, $
     bandNames: bandNames, $
     bandLongNames:bandLongNames, $
+    bandStandardNames:bandStandardNames, $
     bandMeasureUnits: bandMeasureUnits, $
     bandDataTypes: bandDataType, $
     bandSlopes: bandSlopes, $

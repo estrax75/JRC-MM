@@ -1,7 +1,7 @@
-function getStandardFaparTCDataSetInfo
+function getStandardFaparMeanDataSetInfo
 
   infoHeader=getJRCHeader()
-  infoHeader.title='FAPar_TC'
+  infoHeader.title='FAPar_Mean'
 
   INT_NAN=-9999
   BYTE_NAN=255
@@ -113,7 +113,7 @@ function getStandardFaparTCDataSetInfo
   nanList[11]=INT_NAN
 
   ;'TOC_RED','TOC_RED', $
-  minMaxs[12]=GENERIC_DATA_RANGE;minMax[0,*]
+  minMaxs[12,*]=GENERIC_DATA_RANGE;minMax[0,*]
   nanList[12]=INT_NAN
   
   minMaxs[13]=GENERIC_DATA_RANGE;minMax[0,*]
@@ -121,7 +121,15 @@ function getStandardFaparTCDataSetInfo
 
   ;'LDTR_FLAG'
   ;nanList[14]=INT_NAN
-
+  avgIdx=[2,5,8,11]
+  bandNames=bandNames[avgIdx]
+  bandLongNames=bandLongNames[avgIdx]
+  bandMeasureUnits=bandMeasureUnits[avgIdx]
+  bandDataTypes=bandDataTypes[avgIdx]
+  bandSlopes=bandSlopes[avgIdx]
+  bandIntercepts=bandIntercepts[avgIdx]
+  nanList=nanList[avgIdx]
+  minMaxs=minMaxs[[avgIdx],*]
 
   return, { $
     header: infoHeader, $

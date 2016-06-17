@@ -1,6 +1,6 @@
 
 function doBRF, sourceFile, confDir, year, month, day, sensor, missionCode, noaaCode, resolution, mainVar, outputDir, operatorObj, fsObj, tempDir, $
-  testFile=testFile, OVERWRITE=OVERWRITE, SWITCH_TS_TV=SWITCH_TS_TV
+  testFile=testFile, OVERWRITE=OVERWRITE, HDF=HDF, NC=NC;, SWITCH_TS_TV=SWITCH_TS_TV
 
   ;Catch, theError
   ;IF theError NE 0 THEN BEGIN
@@ -9,7 +9,6 @@ function doBRF, sourceFile, confDir, year, month, day, sensor, missionCode, noaa
   ;  RETURN, -1
   ;ENDIF
 
-  stop
   if ~obj_valid(operatorObj) then operatorObj=obj_new('GenericOperator')
   if ~obj_valid(fsObj) then fsObj=obj_new('FileSystem', /STAND)
   ;NaN=-9999 ;!VALUES.F_NAN
@@ -32,13 +31,16 @@ function doBRF, sourceFile, confDir, year, month, day, sensor, missionCode, noaa
   checkNC=file_info(resFileNC)
   checkHDF=file_info(resFileHDF)
 
-  if checkNC[0].size ne 0 and ~keyword_set(OVERWRITE) then NOHDFWRITE=1
-  if checkHDF[0].size ne 0 and ~keyword_set(OVERWRITE) then NONCWRITE=1
+  if checkNC[0].size ne 0 and ~keyword_set(OVERWRITE) then NONCWRITE=1
+  if checkHDF[0].size ne 0 and ~keyword_set(OVERWRITE) then NOHDFWRITE=1
+  if ~keyword_set(HDF) then NOHDFWRITE=1
+  if ~keyword_set(NC) then NONCWRITE=1
 
-  if keyword_set(SWITCH_TS_TV) then begin
-    switch_ts_tv_BRF, resFileNC, tempDir, outputDir, operatorObj, fsObj, NC=checkNC[0].size ne 0, HDF=checkHDF[0].size ne 0
-    return, 0
-  endif
+  ;  if keyword_set(SWITCH_TS_TV) then begin
+  ;    switch_ts_tv_BRF, resFileNC, tempDir, outputDir, operatorObj, fsObj, NC=checkNC[0].size ne 0, HDF=checkHDF[0].size ne 0
+  ;    return, 0
+  ;  endif
+  ;if keyword_set(NONCWRITE) then return, -1
   if keyword_set(NONCWRITE) and keyword_set(NOHDFWRITE) then return, -1
 
   BRDF_params=getPGEInfo(confDir, file, globDim=globDim, opObj=operatorObj, fsObj=fsObj)
@@ -194,8 +196,7 @@ function doBRF, sourceFile, confDir, year, month, day, sensor, missionCode, noaa
     validCount1, complement=nanidxs1)
   validCount=validCount1
   validIdxs=validIdxs1
-  validCount=1
-  
+
   for j=0, validCount-1 do begin
     ;for j=0, totData-1 do begin
     checkIndex=validIdxs[j]
@@ -397,14 +398,14 @@ function doBRF, sourceFile, confDir, year, month, day, sensor, missionCode, noaa
   brfDSInfo=getStandardBrfDataSetInfo()
   bandNames=brfDSInfo.bandNames
   bandLongNames=brfDSInfo.bandLongNames
+  bandStandardNames=brfDSInfo.bandStandardNames
   bandMeasureUnits=brfDSInfo.bandMeasureUnits
   bandIntercepts=brfDSInfo.bandIntercepts
   bandSlopes=brfDSInfo.bandSlopes
   bandDataTypes=brfDSInfo.bandDataTypes
   nanList=brfDSInfo.nanS
   trueminMaxs=brfDSInfo.minMaxs
-  versionNumber=brfDSInfo.version
-  versionDate=brfDSInfo.versionDate
+  header=brfDSInfo.header
 
   ;  bandIntercepts=lonarr(n_elements(bandNames))
   ;  bandSlopes=[10e-05, 10e-05, 10e-05, 10e-05,$
@@ -419,10 +420,6 @@ function doBRF, sourceFile, confDir, year, month, day, sensor, missionCode, noaa
     ptr_new(cMask1, /NO_COPY), ptr_new(cMask2, /NO_COPY)]
 
   boundary=[-180.0, 180.0, -90, 90.]
-
-  ;  write_hdf, filePath+path_sep()+fName+'.hdf', $
-  ;    bandNames, bandMeasaureUnits, $
-  ;    dataSets, bandIntercepts, bandSlopes, tempDir, boundary
 
   ;bandDataType=[2,2,2,2,2,2,2,2,1,1]
 
@@ -483,11 +480,17 @@ function doBRF, sourceFile, confDir, year, month, day, sensor, missionCode, noaa
   ;  ;trueMinMaxs=minMaxs
 
   ;;
-  write_georef_ncdf, resFileNC, $
-    bandNames, bandLongNames, bandMeasureUnits, $
+  if ~keyword_set(NOHDFWRITE) then write_hdf, resFileHDF, $
+    bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
     dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
     postcompression=postcompression, gzipLevel=gzipLevel, NOREVERSE=NOREVERSE, trueMinMaxs=trueMinMaxs, nanlist=nanlist, $
-    trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, versionNumber=versionNumber, versionDate=versionDate 
+    trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, header=header
+
+  if ~keyword_set(NONCWRITE) then write_georef_ncdf, resFileNC, $
+    bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
+    dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
+    postcompression=postcompression, gzipLevel=gzipLevel, NOREVERSE=NOREVERSE, trueMinMaxs=trueMinMaxs, nanlist=nanlist, $
+    trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, header=header
   print, '****'
   print, resFileNC
   print, 'done'

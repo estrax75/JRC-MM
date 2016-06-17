@@ -8,6 +8,5 @@ launch_fapar_tc, 2003, 2003, 7, 7, 1, '16', 'M'
 launch_fapar_tc, 2003, 2003, 8, 8, 1, '16', 'M'
 launch_fapar_tc, 2003, 2003, 9, 9, 1, '16', 'M'
 launch_fapar_tc, 2003, 2003, 10,10, 1, '16', 'M'
-launch_fapar_tc, 2003, 2003, 11, 11, 1, '16', 'M'
+launch_fapar_tc, 2003, 2003, 11,11, 1, '16', 'M'
 launch_fapar_tc, 2003, 2003, 12,12, 1, '16', 'M'
-

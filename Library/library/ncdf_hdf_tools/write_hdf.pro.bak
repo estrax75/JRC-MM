@@ -1,5 +1,6 @@
-pro write_hdf, fileName, bandNames, bandMU, bandValues, bandDataType, bandIntercepts, bandSlopes, tempDir, boundary, $
-  NOREVERSE=NOREVERSE, trueMinMaxs=trueMinMaxs, reservedvalues=reservedvalues, nanList=nanList, trueSlopes=trueSlopes, trueIntercepts=trueIntercepts 
+pro write_hdf, fileName, bandNames, bandLongNames, bandMU, bandValues, bandDataType, bandIntercepts, bandSlopes, tempDir, boundary, $
+  NOREVERSE=NOREVERSE, trueMinMaxs=trueMinMaxs, reservedvalues=reservedvalues, nanList=nanList, trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, $
+  versionDate=versionDate, versionNumber=versionNumber
 
   nvar=n_elements(bandNames)
   if n_elements(trueMinMaxs) ne nvar*2 then minMaxs=fltarr(2,nvar) else minMaxs=trueMinMaxs 
@@ -59,6 +60,7 @@ pro write_hdf, fileName, bandNames, bandMU, bandValues, bandDataType, bandInterc
 
     HDF_SD_ATTRSET, sdid_thisband, '_FillValue', convertDataType(nanList[i], bandDataType[i]), $
       BYTE=bDataType eq 1, DOUBLE=bDataType eq 5, FLOAT=bDataType eq 4, INT=bDataType eq 2, LONG=bDataType eq 3, STRING=bDataType eq 7
+    HDF_SD_ATTRSET, sdid_thisband, 'long_name', bandLongNames[i], /STRING
     HDF_SD_ATTRSET, sdid_thisband, 'intercept', float(trueIntercepts[i]), $
       BYTE=attrDataType eq 1, DOUBLE=attrDataType eq 5, FLOAT=attrDataType eq 4, INT=attrDataType eq 2, LONG=attrDataType eq 3, STRING=attrDataType eq 7
     HDF_SD_ATTRSET, sdid_thisband, 'slope', float(trueSlopes[i]),$

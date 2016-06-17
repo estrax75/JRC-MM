@@ -32,6 +32,8 @@ PRO FAPAR,sensor,sensorCode,ttasun,ttaview,phisun,phiview,$
   RahmanCoeffs_RED=coeffInfo.RahmanCoeffs_RED
   RahmanCoeffs_NIR=coeffInfo.RahmanCoeffs_NIR
   avTags=strupcase(tag_names(coeffInfo))
+  print, 'veg coeff (b1)-->', RahmanCoeffs_RED
+  print, 'veg coeff (b2)-->', RahmanCoeffs_NIR
   idx=where(strupcase('RahmanCoeffs_BLUE') eq avTags, count)
   if count eq 1 then RahmanCoeffs_BLUE=coeffInfo.RahmanCoeffs_BLUE
   G0coeffs=coeffInfo.G0coeffs

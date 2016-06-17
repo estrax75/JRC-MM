@@ -1,4 +1,4 @@
-function getNOAAcoeff, NOAACode
+function getNOAAcoeff, NOAACode, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX
 
   NoaaCodes=['07', '09', '11', '14', '16']
 
@@ -41,7 +41,8 @@ function getNOAAcoeff, NOAACode
   if noaaCodeType eq 7 then testNoaa=NOAACode
 
   check=where(testNoaa eq NoaaCodes, count)
-  if count ne 1 then message, 'wrong noaa code: '+testNoaa
+  if count lt 1 then message, 'wrong noaa code: '+testNoaa
+  if count gt 1 then check=check[MISSIONOVERLAPINDEX]
 
   res={bareSoilsAs:bareSoilsAs[check], bareSoilsBs:bareSoilsBs[check], $
     baresoilRhoicBand1:baresoilRhoicBand1[check], baresoilRhoicBand2:baresoilRhoicBand2[check], $

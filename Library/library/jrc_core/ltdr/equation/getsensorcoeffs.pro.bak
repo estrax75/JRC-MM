@@ -1,7 +1,7 @@
-function getSensorCoeffs, sensor, sensorCode
+function getSensorCoeffs, sensor, sensorCode, SOIL=SOIL
 
   coeffInfo=getCoeffStruct()
-  
+
   CASE sensor OF
     'SEA' : BEGIN
       print,'Coefficients for seaWiFS '
@@ -62,12 +62,18 @@ function getSensorCoeffs, sensor, sensorCode
       res=getNOAAcoeff(sensorCode)
       print,'looking for Coefficients for '+sensor+' '+string(sensorCode)
       ; MM 20160506 coeffs from table 9 pag. 28
+
       coeffInfo.G0coeffs=[res.g0Coeff1,res.g0Coeff2,res.g0Coeff3,res.g0Coeff4,res.g0Coeff5,res.g0Coeff6]
 
       ; MM 20160506 coeffs from table 8 pag. 28
       ; k, theta, rho
-      coeffInfo.RahmanCoeffs_RED =[res.kiband1,res.ThetahgBand1,res.RhoicBand1]
-      coeffInfo.RahmanCoeffs_NIR =[res.kiband2,res.ThetahgBand2,res.RhoicBand2]
+      if  keyword_set(SOIL) then begin
+        coeffInfo.RahmanCoeffs_RED =[res.baresoilkiband1,res.baresoilThetahgBand1,res.baresoilRhoicBand1]
+        coeffInfo.RahmanCoeffs_NIR =[res.baresoilkiband2,res.baresoilThetahgBand2,res.baresoilRhoicBand2]
+      endif else begin
+        coeffInfo.RahmanCoeffs_RED =[res.kiband1,res.ThetahgBand1,res.RhoicBand1]
+        coeffInfo.RahmanCoeffs_NIR =[res.kiband2,res.ThetahgBand2,res.RhoicBand2]
+      endelse
 
       ; MM 20160531 coeffs from table 8 pag. 28
       coeffInfo.soilCoeffs=[res.bareSoilsAs,res.bareSoilsBs]
@@ -80,13 +86,18 @@ function getSensorCoeffs, sensor, sensorCode
 
       ; MM 20160506 coeffs from table 8 pag. 28
       ; k, theta, rho
-      coeffInfo.RahmanCoeffs_RED =[res.kiband1,res.ThetahgBand1,res.RhoicBand1]
-      coeffInfo.RahmanCoeffs_NIR =[res.kiband2,res.ThetahgBand2,res.RhoicBand2]
+      if  keyword_set(SOIL) then begin
+        coeffInfo.RahmanCoeffs_RED =[res.baresoilkiband1,res.baresoilThetahgBand1,res.baresoilRhoicBand1]
+        coeffInfo.RahmanCoeffs_NIR =[res.baresoilkiband2,res.baresoilThetahgBand2,res.baresoilRhoicBand2]
+      endif else begin
+        coeffInfo.RahmanCoeffs_RED =[res.kiband1,res.ThetahgBand1,res.RhoicBand1]
+        coeffInfo.RahmanCoeffs_NIR =[res.kiband2,res.ThetahgBand2,res.RhoicBand2]
+      endelse
 
       ; MM 20160531 coeffs from table 8 pag. 28
       coeffInfo.soilCoeffs=[res.bareSoilsAs,res.bareSoilsBs]
     END
 
   endcase
-  return, coeffInfo 
+  return, coeffInfo
 end

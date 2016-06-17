@@ -1,4 +1,4 @@
-function getSensorCoeffs, sensor, sensorCode, SOIL=SOIL
+function getSensorCoeffs, sensor, sensorCode, SOIL=SOIL, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX
 
   coeffInfo=getCoeffStruct()
 
@@ -59,7 +59,7 @@ function getSensorCoeffs, sensor, sensorCode, SOIL=SOIL
       ;
     END
     'AVHRR' : BEGIN
-      res=getNOAAcoeff(sensorCode)
+      res=getNOAAcoeff(sensorCode, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX)
       print,'looking for Coefficients for '+sensor+' '+string(sensorCode)
       ; MM 20160506 coeffs from table 9 pag. 28
 
@@ -79,7 +79,7 @@ function getSensorCoeffs, sensor, sensorCode, SOIL=SOIL
       coeffInfo.soilCoeffs=[res.bareSoilsAs,res.bareSoilsBs]
     END
     'AVH09C1': BEGIN
-      res=getNOAAcoeff(sensorCode)
+      res=getNOAAcoeff(sensorCode, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX)
       print,'looking for Coefficients for '+sensor+' '+string(sensorCode)
       ; MM 20160506 coeffs from table 9 pag. 28
       coeffInfo.G0coeffs=[res.g0Coeff1,res.g0Coeff2,res.g0Coeff3,res.g0Coeff4,res.g0Coeff5,res.g0Coeff6]

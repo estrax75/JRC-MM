@@ -27,6 +27,18 @@ PRO GenericOperator::readHdfFullInfoData, fullfilename, name, array, slope, offs
   ;
   ;print, dir+path_sep()+filename
   ;fullfilename
+  ERROR=0
+  catch, error_status
+  FOUND=0
+  res={name:'', idx:0, data:0}
+  if error_status NE 0 THEN BEGIN
+    catch, /CANCEL
+    print, '***Corrupted : ', FULLFILENAME, '  ***'
+    FOUND=0
+    ERROR=1
+    return
+  endif
+
   sd_id=HDF_SD_START(FULLFILENAME,/READ)
   ;
   ;
@@ -64,6 +76,7 @@ PRO GenericOperator::readHdfFullInfoData, fullfilename, name, array, slope, offs
   SDSNo = HDF_SD_NAMETOINDEX(sd_id, name) ;find the SDS offset number
   print, SDSNo
   IF SDSNo NE -1 THEN get_s_hdf_data, sd_id, SDSNo, name, array, dims, chanid, fillvalue, ERROR=ERROR
+  if keyword_set(ERROR) then return
   sds_id = HDF_SD_SELECT(SD_ID, SDSNo)
   aindex = HDF_SD_ATTRFIND(sds_id, 'scale_factor')
 

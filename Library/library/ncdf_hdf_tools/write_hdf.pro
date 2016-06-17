@@ -1,6 +1,9 @@
-pro write_hdf, fileName, bandNames, bandLongNames, bandMU, bandValues, bandDataType, bandIntercepts, bandSlopes, tempDir, boundary, $
-  NOREVERSE=NOREVERSE, trueMinMaxs=trueMinMaxs, reservedvalues=reservedvalues, nanList=nanList, trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, $
-  versionDate=versionDate, versionNumber=versionNumber
+pro write_hdf, fileName, bandNames, bandStandardNames, bandLongNames, $
+  bandunits, bandList, bandDataType, bandIntercepts, bandSlopes, $
+  tempDir, boundaryInfo, $
+  postcompression=postcompression, gzipLevel=gzipLevel, NOREVERSE=NOREVERSE, trueMinMaxs=trueMinMaxs, nanlist=nanlist, $
+  trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, $
+  header=header  
 
   nvar=n_elements(bandNames)
   if n_elements(trueMinMaxs) ne nvar*2 then minMaxs=fltarr(2,nvar) else minMaxs=trueMinMaxs 
@@ -25,15 +28,17 @@ pro write_hdf, fileName, bandNames, bandLongNames, bandMU, bandValues, bandDataT
     tempFileName=utils->getSysTime(/FILECOMPATIBILITY)
     tempFileName=tempDir+tempFileName+strcompress(fix(randomu(seed)*1000), /REMOVE)
   endif else begin
-    tempFileName=tempDir+fileName
+    tempFileName=tempDir+onlyRealFileName
   endelse
 
   sdid_file = HDF_SD_START(tempFileName, /CREATE)
+  fillHeaderInfo, sdid_file, header, TYPE='HDF'
+  
   if n_elements(trueSlopes) ne n_elements(bandSlopes) then trueSlopes=bandSlopes 
   if n_elements(trueIntercepts) ne n_elements(bandIntercepts) then trueIntercepts=bandIntercepts
   
   for i=0, nvar-1 do begin
-    if keyword_set(NOREVERSE) then thisBand=1.*(*(bandValues[i])) else thisBand=reverse(1.*(*(bandValues[i])),2)
+    if keyword_set(NOREVERSE) then thisBand=1.*(*(bandList[i])) else thisBand=reverse(1.*(*(bandList[i])),2)
     
     sizeInfo=size(thisBand, /STRUCT)
     idx=where(sizeInfo.Dimensions ne 0)
@@ -61,16 +66,26 @@ pro write_hdf, fileName, bandNames, bandLongNames, bandMU, bandValues, bandDataT
     HDF_SD_ATTRSET, sdid_thisband, '_FillValue', convertDataType(nanList[i], bandDataType[i]), $
       BYTE=bDataType eq 1, DOUBLE=bDataType eq 5, FLOAT=bDataType eq 4, INT=bDataType eq 2, LONG=bDataType eq 3, STRING=bDataType eq 7
     HDF_SD_ATTRSET, sdid_thisband, 'long_name', bandLongNames[i], /STRING
+    HDF_SD_ATTRSET, sdid_thisband, 'standard_name', bandStandardNames[i], /STRING
     HDF_SD_ATTRSET, sdid_thisband, 'intercept', float(trueIntercepts[i]), $
       BYTE=attrDataType eq 1, DOUBLE=attrDataType eq 5, FLOAT=attrDataType eq 4, INT=attrDataType eq 2, LONG=attrDataType eq 3, STRING=attrDataType eq 7
     HDF_SD_ATTRSET, sdid_thisband, 'slope', float(trueSlopes[i]),$
       BYTE=attrDataType eq 1, DOUBLE=attrDataType eq 5, FLOAT=attrDataType eq 4, INT=attrDataType eq 2, LONG=attrDataType eq 3, STRING=attrDataType eq 7
-    HDF_SD_ATTRSET, sdid_thisband, 'min_real_value', float(minMaxs[i,0]),$
+    HDF_SD_ATTRSET, sdid_thisband, 'true min', float(minMaxs[i,0]),$
       BYTE=attrDataType eq 1, DOUBLE=attrDataType eq 5, FLOAT=attrDataType eq 4, INT=attrDataType eq 2, LONG=attrDataType eq 3, STRING=attrDataType eq 7
-    HDF_SD_ATTRSET, sdid_thisband, 'max_real_value', float(minMaxs[i,1]),$
+    HDF_SD_ATTRSET, sdid_thisband, 'true max', float(minMaxs[i,1]),$
       BYTE=attrDataType eq 1, DOUBLE=attrDataType eq 5, FLOAT=attrDataType eq 4, INT=attrDataType eq 2, LONG=attrDataType eq 3, STRING=attrDataType eq 7
-    HDF_SD_ATTRSET, sdid_thisband, 'measure_unit', bandMU[i], /STRING
-    ;HDF_SD_SETINFO, sdid_thisband, LABEL=bandNames[i], unit=bandMU[i], $
+    HDF_SD_ATTRSET, sdid_thisband, 'measure_unit', bandunits[i], /STRING
+    
+    if n_elements(sdn_parameter_urn) eq nvar then value=sdn_parameter_urn[v] else value='n_a'
+    HDF_SD_ATTRSET, sdid_thisband, 'sdn_parameter_urn', value, /STRING
+    if n_elements(sdn_parameter_name) eq nvar then value=sdn_parameter_name[v] else value='n_a'
+    HDF_SD_ATTRSET, sdid_thisband, 'sdn_parameter_name', value, /STRING
+    if n_elements(sdn_uom_urn) eq nvar then value=sdn_uom_urn[v] else value='n_a'
+    HDF_SD_ATTRSET, sdid_thisband, 'sdn_uom_urn', value, /STRING
+    if n_elements(sdn_uom_name) eq nvar then value=sdn_uom_name[v] else value='n_a'
+    HDF_SD_ATTRSET, sdid_thisband, 'sdn_uom_name', value, /STRING
+    ;HDF_SD_SETINFO, sdid_thisband, LABEL=bandNames[i], unit=bandunits[i], $
     ;  format='IDLCODE-'+strcompress(bDataType, /REMOVE), coordsys='N/A', FILL=nanList[i], $
     ;  RANGE=1d*bandSlopes[i]*minMaxs[i,*], cal=cal
     ;NCDF_ATTPUT, ncid, ncvarid[v], 'true min', minMaxs[v,0]

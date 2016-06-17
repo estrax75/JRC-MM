@@ -1,4 +1,4 @@
-pro launch_brf, startYear, endYear, startMonth, endMonth 
+pro launch_brf, startYear, endYear, startMonth, endMonth, SWITCH_TS_TV=SWITCH_TS_TV
 
  confDir='/space3/storage/products/scripts/data'
  rootDir1=''
@@ -9,6 +9,6 @@ pro launch_brf, startYear, endYear, startMonth, endMonth
  outputDir='/space3/storage/products/results/BRFs'
  tempDir='/space3/storage/products/results/temp'
  
- runDailyBrdf, confDir, rootDir2, tempDir, outputDir, startYear, endYear, startMonth, endMonth
+ runDailyBrdf, confDir, rootDir2, tempDir, outputDir, startYear, endYear, startMonth, endMonth, SWITCH_TS_TV=SWITCH_TS_TV
 
 end

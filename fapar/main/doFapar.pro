@@ -4,7 +4,8 @@
 function doFapar, sensor, resolution, missionName, mainVarName, missionCode, year, month, day, $
   sourceDir, outputDir, tempdir, $
   OVERWRITE=OVERWRITE, FIRST_LOOK=FIRST_LOOK, $
-  TYPE1=TYPE1, TYPE2=TYPE2, NC=NC, HDF=HDF, SWITCH_TS_TV=SWITCH_TS_TV
+  TYPE1=TYPE1, TYPE2=TYPE2, NC=NC, HDF=HDF, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $ 
+  SWITCH_TS_TV=SWITCH_TS_TV
 
 
   if ~obj_valid(operatorObj) then operatorObj=obj_new('GenericOperator')
@@ -20,6 +21,7 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   dayS=string(day, format='(I02)')
 
   sourceFileName=buildBrfFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName)
+  if n_elements(sourceFileName) gt 1 then sourceFileName=sourceFileName[MISSIONOVERLAPINDEX]
   if sensor eq 'AVH09C1' then new_file=buildAVHRRFAPARFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName)
   if sensor eq 'MODIS' then new_file=buildMODISFAPARFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName)
 
@@ -48,7 +50,7 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
 
   if keyword_set(SWITCH_TS_TV) then begin
     switch_ts_tv_FAPAR, ncfilename, tempDir, outputDir, operatorObj, fsObj, NC=checkNC[0].size ne 0, HDF=checkHDF[0].size ne 0
-    switch_ts_tv_FAPAR, hdffilename, tempDir, outputDir, operatorObj, fsObj, NC=checkHDF[0].size ne 0, HDF=checkHDF[0].size ne 0
+    ;switch_ts_tv_FAPAR, hdffilename, tempDir, outputDir, operatorObj, fsObj, NC=checkHDF[0].size ne 0, HDF=checkHDF[0].size ne 0
     return, 0
   endif
   if keyword_set(NOHDFAVAILABLE) or (keyword_set(NOHDFWRITE) and keyword_set(NOHDFWRITE)) then return, -1
@@ -296,7 +298,8 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
         red(idx),red(idx),nir(idx),$
         D_BRF_ToA_RED(idx),D_BRF_ToA_RED(idx),D_BRF_ToA_NIR(idx), $
         rhoRED, rhoNIR, D_rhoRED, D_rhoNIR, $
-        D_rhotildeBLUE, D_rhotildeRED, D_rhotildeNIR, VI, D_VI, /TOC
+        D_rhotildeBLUE, D_rhotildeRED, D_rhotildeNIR, VI, D_VI, /TOC,$
+        MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX
       ;
       ;window,6, title='fapar '+extraName
       output.fpar(idx)=vi
@@ -436,6 +439,7 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
 
   bandNames=faparDSInfo.bandNames
   bandLongNames=faparDSInfo.bandLongNames
+  bandStandardNames=faparDSInfo.bandStandardNames
   bandSlopes=faparDSInfo.bandSlopes
   bandMeasureUnits=faparDSInfo.bandMeasureUnits
   bandDataTypes=faparDSInfo.bandDataTypes
@@ -445,8 +449,7 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
 
   trueSlopes=bandSlopes
   trueIntercepts=bandIntercepts
-  versionDate=faparDSInfo.versionDate
-  versionNumber=faparDSInfo.versionNumber
+  header=faparDSInfo.header
   
   res=dataByteScaling(output.fpar, output.flag, FLAG_VALUES=[9,10], $
     DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
@@ -625,17 +628,17 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   filePath=outputDir
   fName=new_file
 
-  write_georef_ncdf, ncfilename, $
-    bandNames, bandLongNames, bandMeasureUnits, $
+  if keyword_set(NC) then write_georef_ncdf, ncfilename, $
+    bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
     dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
     /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes, $
-    versionDate=versionDate, versionNumber=versionNumber
+    header=header
 
-  write_hdf, hdffilename, $
-    bandNames, bandLongNames, bandMeasureUnits, $
+  if keyword_set(HDF) then write_hdf, hdffilename, $
+    bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
     dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
     trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes, $
-    versionDate=versionDate, versionNumber=versionNumber
+    header=header
 
 
   ;

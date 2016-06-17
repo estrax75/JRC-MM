@@ -1,7 +1,7 @@
 @../ncdf_tools/ncdf_routines
 @../core/structure_definition
 
-PRO GenericOperator::readHdfFullInfoData, fullfilename, name, array, slope, offset, fillvalue, info=INFO
+PRO GenericOperator::readHdfFullInfoData, fullfilename, name, array, slope, offset, fillvalue, info=INFO, ERROR=ERROR
   ;
   ;
   ; Inputs:
@@ -63,7 +63,7 @@ PRO GenericOperator::readHdfFullInfoData, fullfilename, name, array, slope, offs
   ;stop
   SDSNo = HDF_SD_NAMETOINDEX(sd_id, name) ;find the SDS offset number
   print, SDSNo
-  IF SDSNo NE -1 THEN GETDATA, sd_id, SDSNo, name, array, dims, chanid, fillvalue
+  IF SDSNo NE -1 THEN get_s_hdf_data, sd_id, SDSNo, name, array, dims, chanid, fillvalue, ERROR=ERROR
   sds_id = HDF_SD_SELECT(SD_ID, SDSNo)
   aindex = HDF_SD_ATTRFIND(sds_id, 'scale_factor')
 

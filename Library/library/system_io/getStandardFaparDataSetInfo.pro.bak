@@ -8,19 +8,25 @@ function getStandardFaparDataSetInfo, Type=Type
   ANGLES_DATA_RANGE2=[-180., 180.]
 
   bandNames=['FAPAR','Sigma_FAPAR', $
-    'RECTIFIED RED', 'Sigma_RECTIFIED_RED', $
-    'RECTIFIED NIR', 'Sigma_RECTIFIED_NIR', $
-    'JRC_MASK', $
+    'RECTIFIED_BAND_1', 'Sigma_RECTIFIED_BAND_1', $
+    'RECTIFIED_BAND_2', 'Sigma_RECTIFIED_BAND_2', $
+    'LDTR_FLAG', $
     'TS', 'TV', 'PHI', $
-    'BRF_TOC_RED', 'BRF_TOC_NIR', $
+    'BRF_TOC_BAND_1', 'BRF_TOC_BAND_2', $
     'JRC_FLAG']
 
-  bandLongNames=bandNames
+  bandLongNames=['Fraction of Absorbed Photosynthetically Active Radiation','Uncertainties of FAPAR', $
+    'Rectified Reflectance in Band 1', 'Uncertainties of Rectified Reflectance in Band 1', $
+    'Rectified Reflectance in Band 2', 'Uncertainties of Rectified Reflectance in Band 2', $
+    'LDTR_FLAG', $
+    'Solar Zenith Angle', 'View Zenith Angle', 'Relative Azimuth Angle', $
+    'Surface Bidirectional Reflectance Factor Band 1', 'Surface Bidirectional Reflectance Factor Band 2', $
+    'JRC_FLAG']
 
   bandSlopes=[1, 1, $
     10e-05, 10e-05, $
     10e-05, 10e-05, $
-    1, $
+    2, $
     10e-03, 10e-03, 10e-03,$
     10e-05, 10e-05,$
     1]
@@ -29,7 +35,7 @@ function getStandardFaparDataSetInfo, Type=Type
     '-', '-', $
     '-', '-', $
     '-', $
-    'deg','deg','deg', $
+    'degree','degree','degree', $
     '-', '-', $
     '-']
 
@@ -67,8 +73,8 @@ function getStandardFaparDataSetInfo, Type=Type
 
   ;manual setting???
   ;tempMin=min(output.flag, max=tempMax)
-  ;minMaxs[6,*]=[tempMin, tempMax]
-  nanList[6]=INT_NAN
+  minMaxs[6,*]=[-32640, 32640]
+  nanList[6]=-1
 
   minMaxs[7,*]=ANGLES_DATA_RANGE1
   nanList[7]=INT_NAN
@@ -79,20 +85,19 @@ function getStandardFaparDataSetInfo, Type=Type
   minMaxs[9,*]=ANGLES_DATA_RANGE2
   nanList[9]=INT_NAN
 
-  ;manual setting???
-  ;minMaxs[10,*]=[tempMin>0.,tempMax]
+  minMaxs[10,*]=GENERIC_DATA_RANGE
   nanList[10]=INT_NAN
 
-  ;manual setting???
-  ;minMaxs[11,*]=[tempMin>0.,tempMax]
+  minMaxs[11,*]=GENERIC_DATA_RANGE
   nanList[11]=INT_NAN
 
-
-  ;manual setting???
-  nanList[12]=INT_NAN
+  minMaxs[12,*]=[0b,14b]
+  nanList[12]=BYTE_NAN
 
 
   return, { $
+    versionNumber: '1.1', $
+    versionDate: '2016/06/06', $
     bandNames: bandNames, $
     bandLongNames:bandLongNames, $
     bandMeasureUnits: bandMeasureUnits, $

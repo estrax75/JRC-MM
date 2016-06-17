@@ -1,4 +1,4 @@
-pro launch_brf, startYear, endYear, startMonth, endMonth, SWITCH_TS_TV=SWITCH_TS_TV
+pro launch_brf, startYear, endYear, startMonth, endMonth, format, SWITCH_TS_TV=SWITCH_TS_TV
 
  confDir='/space3/storage/products/scripts/data'
  rootDir1=''
@@ -8,7 +8,14 @@ pro launch_brf, startYear, endYear, startMonth, endMonth, SWITCH_TS_TV=SWITCH_TS
  tempDir=''
  outputDir='/space3/storage/products/results/BRFs'
  tempDir='/space3/storage/products/results/temp'
+ MISSIONOVERLAPINDEX=0
  
- runDailyBrdf, confDir, rootDir2, tempDir, outputDir, startYear, endYear, startMonth, endMonth, SWITCH_TS_TV=SWITCH_TS_TV
+ if n_elements(format) eq 0 then format='NC'
+ HDF=strpos(strupcase(format), 'HDF') ge 0 ? 1 : 0
+ NC=strpos(strupcase(format), 'NC') ge 0 ? 1 : 0
+ if HDF+NC eq 0 then NC=1
+
+ runDailyBrdf, confDir, rootDir2, tempDir, outputDir, startYear, endYear, startMonth, endMonth, $
+  HDF=HDF, NC=NC, SWITCH_TS_TV=SWITCH_TS_TV, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, /OVERWRITE
 
 end

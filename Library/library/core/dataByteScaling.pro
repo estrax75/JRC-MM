@@ -6,7 +6,7 @@ FUNCTION dataByteScaling, data, flagMatrix, FLAG_VALUES=FLAG_VALUES, $
   resData=data
 
   outInterval=(BYTE_RANGE[1]-BYTE_RANGE[0])
-  stepRange=(DATA_RANGE[1]-DATA_RANGE[0])/(outInterval)
+  stepRange=(1d*DATA_RANGE[1]-1d*DATA_RANGE[0])/(outInterval)
   nanIdxs=where(data eq DATA_NAN, preNanCount, complement=validIdxs)
 
   resData=bytscl(resData, MIN=DATA_RANGE[0], MAX=DATA_RANGE[1], TOP=outInterval);+VALUE_BYTES[0]
@@ -31,6 +31,7 @@ FUNCTION dataByteScaling, data, flagMatrix, FLAG_VALUES=FLAG_VALUES, $
   ;aa=where(resdata eq 200)
   ;idx=aa[0]
   ;print, resdata[idx], resdata[idx]*outSlope+outIntercept, data[idx]
+  if n_elements(flagMatrix) eq 0 then flagMatrix=resdata
   return, {resultData:resdata, resultFlag:flagMatrix}
 
 

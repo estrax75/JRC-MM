@@ -1,7 +1,8 @@
-;launch_fapar_ta_composite, 2003, 2003, 3, 3, 1, 'M'
-pro launch_fapar_tc, startYear, endYear, startMonth, endMonth, sourceformattype, aggregationType, computationType
+;launch_fapar_tc, 2003, 2003, 7, 7, 'L2', 1, TC_TYPE='MONTHLY', TA_TYPE='TC'
+;launch_fapar_tc, 2003, 2003, 7, 7, 'L2', 1, TC_TYPE='MONTHLY', TA_TYPE='MEAN'
+pro launch_fapar_tc, startYear, endYear, startMonth, endMonth, level, sourceformattype, TC_TYPE=TC_TYPE, TA_TYPE=TA_TYPE
 
-  confDir='/space3/storage/products/scripts/data'
+  confDir='/home/mariomi/config'
   ;rootDir1=''
   ;sourceDir2='/space3/storage/products/AVHRR_LDTR'
   ;sourceDir3='/space3/storage/products/results/BRFs'
@@ -12,37 +13,17 @@ pro launch_fapar_tc, startYear, endYear, startMonth, endMonth, sourceformattype,
     if sourceformattype eq 2 then TYPE2=1
   endif
   TYPE2=1-keyword_set(TYPE1)
+  if keyword_set(TYPE1) then typeFolder='type1' else typeFolder='type2'
 
-  if keyword_set(TYPE1) then begin
-    ;outputDir='/space3/storage/products/results/FAPAR/TC/type1/'
-    sourceDir='/space3/storage/products/results/FAPAR/DAILY/type1/'
-  endif
-  if keyword_set(TYPE2) then begin
-    ;outputDir='/space3/storage/products/results/FAPAR/TC/type2/'
-    sourceDir='/space3/storage/products/results/FAPAR/DAILY/type2/'
-  endif
-
-  aggType='M'
-  if n_elements(aggregationType) eq 1 then begin
-    if aggregationType eq '5' then aggType='5D' 
-    if aggregationType eq '10' then aggType='10D'
-    if aggregationType eq '16' then aggType='16D'
-  endif
+  sourceDir1='/space3/storage/products/'
+  sourceDir2='/space4/storage/products/'
+  outputDir1='/space3/storage/products/'
+  outputDir2='/space4/storage/products/'
   
-  ELAB_TC=1
-  outputDir='/space3/storage/products/results/FAPAR/TC/'
-  if n_elements(computationType) eq 1 then begin
-    if computationType eq 'M' then begin
-      ELAB_TC=0
-      outputDir='/space3/storage/products/results/FAPAR/MEAN/'
-      if keyword_set(TYPE1) then outputDir=outputDir+path_sep()+'type1' else outputDir=outputDir+path_sep()+'type2' 
-    endif
-  endif
-  tempDir='/space3/storage/products/results/temp/'
+  tempDir='/home/mariomi/temp'
 
   ;runDailyFapar, confDir, sourceDir3, tempDir, outputDir, startYear, endYear, startMonth, endMonth, TYPE2=TYPE2, TYPE1=TYPE1
-  runTCFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, startMonth, endMonth, $
-    MONTHLY=aggType eq 'M', FIVEDAYS=aggType eq '5D', TENDAYS=aggType eq '10D', SIXTEENDAYS=aggType eq '16D', $
-    ELAB_TC=ELAB_TC, ELAB_MEAN=1-ELAB_TC
-
+  runTCFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, startMonth, endMonth, level, $
+    TA_TYPE=TA_TYPE, TC_TYPE=TC_TYPE
+    
 end

@@ -1,6 +1,8 @@
 pro PlotScat, v0, v1, bin1=bin1, bin2=bin2, max1=max1, max2=max2, xtitle=xtitle, ytitle=ytitle, title=title, filename=filename, $
 wix=wix, thresh=thresh, print=print, hbin=hbin, min1=min1, min2=min2, binMax=binMax, stem=stem, rcol=rcol, stat=stat, hist=HIST
 
+if n_elements(filename) ne 0 then print=1
+
 loadct,12
 if not(keyword_set(wix)) then wix = 0
 if not(keyword_set(bin1)) then bin1=0.004
@@ -52,8 +54,8 @@ scat[ix]=255
 ;
 ;
 if keyword_set(print) then begin
-    set_plot,'win'
-    ;set_plot,'x'
+    ;set_plot,'win'
+    if !VERSION.OS_FAMILY eq 'unix' then set_plot, 'x' else set_plot, 'win' 
     resX=!d.x_px_cm
     resY=!d.y_px_cm
     set_plot, 'ps'
@@ -94,7 +96,7 @@ xyouts, (xs+xb/4)/xsize, max2-15*max2/100.,'rmse='+strcompress(string(rmse, form
 	;xyouts, (xs+x4/2)/xsize, max2-15*max2/100. , 'sigma='+strcompress(string(sigma, format='(f10.5)'),/remove_all),CHARSIZE=1.00
 	;xyouts, (xs+xb/2)/xsize, max2-20*max2/100. ,'a='+strcompress(string(corr, format='(f10.3)'),/remove_all)+', b='+strcompress(string(const, format='(f10.3)'),/remove_all),CHARSIZE=1.00
 	;draw the line y=ax+b
-	;oplot, [0.,1.],[const,corr+const],linestyle=0
+oplot, [0.,1.],[const,corr+const],linestyle=0
 ;
 ; compute rms
 ;
@@ -170,8 +172,7 @@ endif
 
 if keyword_set(print) then begin
     device, /close
-    set_plot, 'win'
-    ;set_plot, 'x'
+    if !VERSION.OS_FAMILY eq 'unix' then set_plot, 'x' else set_plot, 'win' 
 endif
    
 

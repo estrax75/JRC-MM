@@ -28,7 +28,7 @@ function getAVHRRNOAANumber, year, noaacode, RECENT=RECENT
   fullNoaaCode=[fullNoaaCode,noaaCode]
 
   sYear=1995
-  eYear=1999
+  eYear=2000
   nYears=eYear-sYear+1
   set14=indgen(nYears)+sYear
   noaaCode=intarr(nYears)
@@ -37,7 +37,7 @@ function getAVHRRNOAANumber, year, noaacode, RECENT=RECENT
   fullNoaaCode=[fullNoaaCode,noaaCode]
 
   sYear=2000
-  eYear=2005
+  eYear=2006
   nYears=eYear-sYear+1
   set16=indgen(nYears)+sYear
   noaaCode=intarr(nYears)
@@ -46,7 +46,7 @@ function getAVHRRNOAANumber, year, noaacode, RECENT=RECENT
   fullNoaaCode=[fullNoaaCode,noaaCode]
 
   sYear=2005
-  eYear=2009
+  eYear=2013
   nYears=eYear-sYear+1
   set18=indgen(nYears)+sYear
   noaaCode=intarr(nYears)

@@ -1,43 +1,66 @@
 ;function makeitglob_new, sensor, noaanumber, year, month, day
 ;@../../Library/library/jrc_core/mapQualityFlags
 ;@../../Library/library/jrc_core/mapQualityFlags
-function doFapar, sensor, resolution, missionName, mainVarName, missionCode, year, month, day, $
+function doFapar, instrument, indicator, spatialResolution, level, missionName, mainVarName, missionCode, year, month, day, $
   sourceDir, outputDir, tempdir, $
-  OVERWRITE=OVERWRITE, FIRST_LOOK=FIRST_LOOK, $
-  TYPE1=TYPE1, TYPE2=TYPE2, NC=NC, HDF=HDF, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $ 
-  SWITCH_TS_TV=SWITCH_TS_TV
+  FIRST_LOOK=FIRST_LOOK, $
+  TYPE1=TYPE1, TYPE2=TYPE2, NC=NC, HDF=HDF, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
+  OVERWRITE=OVERWRITE, TC_TYPE=TC_TYPE
 
+  COMMON singleTons, ST_utils, ST_operator, ST_fileSystem
 
-  if ~obj_valid(operatorObj) then operatorObj=obj_new('GenericOperator')
-  if ~obj_valid(fsObj) then fsObj=obj_new('FileSystem', /STAND)
+  declareSingleTons
+
   ;NaN=-9999 ;!VALUES.F_NAN
-
-  outputDir=fsObj->adjustDirSep(outputDir, /ADD)
-  sourceDir=fsObj->adjustDirSep(sourceDir, /ADD)
-  tempDir=fsObj->adjustDirSep(tempDir, /ADD)
+  outputDir=ST_fileSystem->adjustDirSep(outputDir, /ADD)
+  sourceDir=ST_fileSystem->adjustDirSep(sourceDir, /ADD)
+  tempDir=ST_fileSystem->adjustDirSep(tempDir, /ADD)
 
   yearS=string(year, format='(I04)')
   monthS=string(month, format='(I02)')
   dayS=string(day, format='(I02)')
 
-  sourceFileName=buildBrfFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName)
-  if n_elements(sourceFileName) gt 1 then sourceFileName=sourceFileName[MISSIONOVERLAPINDEX]
-  if sensor eq 'AVH09C1' then new_file=buildAVHRRFAPARFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName)
-  if sensor eq 'MODIS' then new_file=buildMODISFAPARFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName)
+  ;old version
+  ;sourceFileName=buildBrfFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName)
+  ;if n_elements(sourceFileName) gt 1 then sourceFileName=sourceFileName[MISSIONOVERLAPINDEX]
+  ;if sensor eq 'AVH09C1' then new_file=buildAVHRRFAPARFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName, level, VERSION='01')
+  ;if sensor eq 'MODIS' then new_file=buildMODISFAPARFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName, level)
+  ;end
+  ; new filename convention
+  ;instrument='AVH'
+  version='N'+string(missionCode, format='(I02)');version='001'
 
-  ;resFName='AVHRR_'+'GEOG_0.05DEG'+'_'+years+'_'+months+'_'+days+'_NOAA-N'+strcompress(noaaCode, /REMOVE)+'_BRF'
-  ;sourceFileNC=fsObj->addFileExtension(sourceDir+sourceFileName, 'nc')
-  if keyword_set(SWITCH_TS_TV) then extraName='' else extraName='noswitch' 
-  sourceFileNC=fsObj->addFileExtension(sourceFileName, 'nc')
-  ncfilename=fsObj->addFileExtension(outputDir+new_file, 'NC')
-  hdffilename=fsObj->addFileExtension(outputDir+new_file, 'HDF')
-  ;resFileHDF=fsObj->addFileExtension(filePath+resFName, 'hdf')
+  sourceFileInfo=build_JRC_BRDF_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
+    product, version, 'NC',  indicator=indicator, level, projection=projection)
 
-  checkInput=file_info(sourceDir+sourceFileNC)
-  checkNC=file_info(ncfilename)
-  checkHDF=file_info(hdffilename)
+  ;if n_elements(sourceFileName) gt 1 then sourceFileName=sourceFileName[MISSIONOVERLAPINDEX]
+  ;sourceFileName=buildBrfFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName)
+  if instrument eq 'AVH' then begin
+    ncFileInfo=build_JRC_FPA_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
+      product, version, 'NC',  indicator=indicator, level, projection=projection)
+    hdfFileInfo=build_JRC_FPA_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
+      product, version, 'HDF',  indicator=indicator, level, projection=projection)
+  endif
+  sourceDir=sourceDir+sourceFileInfo.filePath
+  sourceDir=ST_fileSystem->adjustDirSep(sourceDir, /ADD)
+  sourceFileName=sourceDir+sourceFileInfo.fileName
 
-  if checkInput[0].size eq 0 then NOHDFAVAILABLE=1
+  destDir=outputDir+hdfFileInfo.filePath
+  destDir=ST_fileSystem->adjustDirSep(sourceDir, /ADD)
+  resFileNC=destDir+ncFileInfo.fileName
+  resFileHDF=destDir+hdfFileInfo.fileName
+
+  sourceFullFileName = (file_search(sourceDir, sourceFileInfo.fileName, COUNT=count))[0];, /FULL_QUALIFY)
+  ;  if count eq 0 then begin
+  ;    sourceFullFileName = (file_search(sourceDir+TC_TYPE, sourceFileNC, COUNT=count))[0];, /FULL_QUALIFY)
+  ;  endif
+  ;  
+  ;  sourceDir=filePath
+
+  checkNC=file_info(resFileNC)
+  checkHDF=file_info(resFileHDF)
+
+  if count ne 1 then NOSOURCEAVAILABLE=1
   ;print, '******'
   ;print, 'write nc?', (checkOutput1[0].size ne 0 and ~keyword_set(OVERWRITE)) and ~keyword_set(NC)
   ;print, 'write hdf?', (checkOutput2[0].size ne 0 and ~keyword_set(OVERWRITE)) and ~keyword_set(HDF)
@@ -48,26 +71,15 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   ;if (checkOutput2[0].size ne 0 and ~keyword_set(OVERWRITE)) and ~keyword_set(HDF) then NOWRITEHDF=1
   ;if checkHDF[0].size ne 0 and ~keyword_set(OVERWRITE) then NONCWRITE=1
 
-  if keyword_set(SWITCH_TS_TV) then begin
-    switch_ts_tv_FAPAR, ncfilename, tempDir, outputDir, operatorObj, fsObj, NC=checkNC[0].size ne 0, HDF=checkHDF[0].size ne 0
-    ;switch_ts_tv_FAPAR, hdffilename, tempDir, outputDir, operatorObj, fsObj, NC=checkHDF[0].size ne 0, HDF=checkHDF[0].size ne 0
-    return, 0
-  endif
-  if keyword_set(NOHDFAVAILABLE) or (keyword_set(NOHDFWRITE) and keyword_set(NOHDFWRITE)) then return, -1
+  if keyword_set(NOSOURCEAVAILABLE) or (keyword_set(NOHDFWRITE) and keyword_set(NOHDFWRITE)) then return, -1
 
-  data=readBRF(sourceDir, sourceFileNC, FOUND=FOUND, SWITCH_TS_TV=SWITCH_TS_TV)
-  ; temporary switch TS and TV (wrong naming on brf program
-  ;end
+  data=readBRF(sourceDir, sourceFileInfo.fileName, FOUND=FOUND)
 
   if ~keyword_set(FOUND) then return, -1
 
   INT_NAN=-9999
   DATA_RANGE=[0., 1.]
   DATA_NAN=255
-
-
-  ;ncfilename=sourceDir+new_file+'.NC'
-  ;print, dirout+new_file
 
   output={  ExpId_t, $
     fpar: fltarr(7200,3600), $
@@ -143,7 +155,7 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   blu = [0,0,0,1,0.00,1.00,1.,1.00,1.00,0.55,0.80,0.77,0.]
   TVLCT, red*255, gre*255, blu*255
 
-  coeffInfo=getSensorCoeffs(sensor, missionCode)
+  coeffInfo=getSensorCoeffs(instrument, missionCode)
 
   flag2 = CheckDataTOC(red_avhrr*slope_red(0)+offset_red(0), nir_avhrr*slope_nir(0)+offset_nir(0), coeffInfo.soilCoeffs)
   flagstoc=flag2
@@ -233,9 +245,6 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   idx_mask2 = where(rr21 eq 1 or rr22 eq 1)		;----> invalid
   IDX_SEA=  where(rr3 eq 1)
 
-
-
-
   flag2(idxbad)=7.0		;	< bad
 
 
@@ -248,7 +257,8 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   ;flag2(idx_mask)=2.0
 
   MASK_AVHRR(IDX_SEA)= 3
-  flag2(idx_sea)=3.0
+  ;flag2[idx_mask]=2
+  flag2[idx_sea]=3.0
   ;window, 11, xsize=720, ysize=360, title='QA '+SENSOR
   ;tv, reverse(congrid(MASK_avhrr, 720,360),2)
 
@@ -264,7 +274,7 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   ;
   ;
 
-  if sensor eq 'AVH09C1' then begin
+  if instrument eq 'AVH' then begin
     ;if sensor eq 'AVHRR' then begin
     sza=angles[*,*,0] ;/180.*!pi
     vza=angles[*,*,1] ;/180.*!pi
@@ -288,7 +298,7 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
     idx=where(flag2 eq 0)
     ;NOAString=strcompress(noaanumber, /REMOVE)
     NOAString=string(noaanumber, format='(I02)')
-    ;window,4, title='sza '+extraName 
+    ;window,4, title='sza '+extraName
     ;tv, rebin(bytscl(sza), 720, 360)
     ;window,5, title='vza '+extraName
     ;tv, rebin(bytscl(vza), 720, 360)
@@ -327,7 +337,7 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
 
       idx_neg=where(output.fpar le 0.0)
       output.fpar(idx_neg)=0.0
-      
+
       idx_big=where(output.fpar ge 1.0 and output.fpar le 10.0)
       output.fpar(idx_big)=1.0
       flag2(idx_neg)=4.0
@@ -407,7 +417,7 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   idx_1 = where (flag2 eq 1)
   idx_2 = where (flag2 eq 2)
   idx_3 = where (flag2 eq 3)
-  
+
   ;
   ;idx_4 = where (flag_angles eq 1)
   ;idx_5 = where (flag_angles eq 2)
@@ -424,16 +434,16 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   DATA_NAN=bSInfo.DATA_NAN
   BYTE_NAN=bSInfo.BYTE_NAN
   BYTE_RANGE=bSInfo.BYTE_RANGE
-;  if keyword_set(ZEROISNAN) then begin
-;    DATA_NAN=255
-;    BYTE_NAN=0
-;    BYTE_RANGE=[1,255]
-;    remarkableFlags[*]=BYTE_NAN
-;  endif else begin
-;    DATA_NAN=255
-;    BYTE_NAN=255
-;    BYTE_RANGE=[0,250]
-;  endelse
+  ;  if keyword_set(ZEROISNAN) then begin
+  ;    DATA_NAN=255
+  ;    BYTE_NAN=0
+  ;    BYTE_RANGE=[1,255]
+  ;    remarkableFlags[*]=BYTE_NAN
+  ;  endif else begin
+  ;    DATA_NAN=255
+  ;    BYTE_NAN=255
+  ;    BYTE_RANGE=[0,250]
+  ;  endelse
 
   faparDSInfo=getStandardFaparDataSetInfo()
 
@@ -450,7 +460,7 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   trueSlopes=bandSlopes
   trueIntercepts=bandIntercepts
   header=faparDSInfo.header
-  
+
   res=dataByteScaling(output.fpar, output.flag, FLAG_VALUES=[9,10], $
     DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
     DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
@@ -528,7 +538,6 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   ;
   ;
 
-  print,'Write the results in ',outputDir+new_file
   ;
   ;
   ;
@@ -552,6 +561,8 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
   ;
   ;
   dims=size(output.fpar, /DIMENSIONS)
+  sourceFileName=ST_fileSystem->getFileNameInfo(resFileNC, filePath=filePath, extension=extension)
+  ;FIRST_LOOK=0
   if keyword_set(FIRST_LOOK) then begin
     fLookDir='first_look'
     ;cd, dirout
@@ -561,80 +572,81 @@ function doFapar, sensor, resolution, missionName, mainVarName, missionCode, yea
     sampleImg=rebin(output.fpar, dims[0]/10,dims[1]/10)
     minvalue=min(output.fpar, max=maxvalue)
     sampleImg=bytscl(sampleImg)
-    samplefilename='fl_'+new_file+'.gif'
+    samplefilename='fl_'+sourceFileName+'.gif'
     fullSampleFName=firstLookDir+path_sep()+samplefilename
     LOADCT, 14
     print, 'sampleImage-->', fullSampleFName
     write_gif, fullSampleFName, sampleImg
   endif
 
-  maskMin=min(MASK_avhrr, max=maskMax)
   dataSets=[ptr_new(output.fpar, /NO_COPY), ptr_new(output.sigma, /NO_COPY), $
     ptr_new(output.red, /NO_COPY), ptr_new(output.sigma_red, /NO_COPY), $
     ptr_new(output.nir, /NO_COPY), ptr_new(output.sigma_nir, /NO_COPY), $
     ptr_new(qa_avhrr, /NO_COPY), $
     ptr_new(reform(angles[*,*,0]), /NO_COPY), ptr_new(reform(angles[*,*,1]), /NO_COPY), ptr_new(reform(angles[*,*,2]), /NO_COPY), $
     ptr_new(reform(reflectance(*,*,0)), /NO_COPY), ptr_new(reform(reflectance(*,*,1)), /NO_COPY), $
-    ptr_new(output.flag, /NO_COPY)];MASK_avhrr
+    ptr_new(MASK_AVHRR, /NO_COPY)]
+  ;ptr_new(output.flag, /NO_COPY)]
 
-;  minMaxs[*,*]=-1
-;  minMaxs[0,*]=DATA_RANGE;minMax[0,*]
-;  nanList[0]=BYTE_NAN
-;
-;  minMaxs[1,*]=DATA_RANGE;minMax[0,*]
-;  nanList[1]=BYTE_NAN
-;
-;  minMaxs[2,*]=DATA_RANGE;minMax[0,*]
-;  nanList[2]=INT_NAN
-;
-;  minMaxs[3,*]=DATA_RANGE;minMax[0,*]
-;  nanList[3]=INT_NAN
-;
-;  minMaxs[4,*]=DATA_RANGE;minMax[0,*]
-;  nanList[4]=INT_NAN
-;
-;  minMaxs[5,*]=DATA_RANGE;minMax[0,*]
-;  nanList[5]=INT_NAN
-;
-;  tempMin=min(output.flag, max=tempMax)
-;  minMaxs[6,*]=[tempMin, tempMax]
-;  nanList[6]=INT_NAN
-;
-;  tempMin=min(angles(*,*,0), max=tempMax)
-;  minMaxs[7,*]=[0.,90.]
-;  nanList[7]=INT_NAN
-;
-;  tempMin=min(angles(*,*,1), max=tempMax)
-;  minMaxs[8,*]=[0.,90.]
-;  nanList[8]=INT_NAN
-;
-;  tempMin=min(angles(*,*,2), max=tempMax)
-;  minMaxs[9,*]=[-180,180]
-;  nanList[9]=INT_NAN
-;
-;  tempMin=min(reflectance(*,*,0), max=tempMax)
-;  minMaxs[10,*]=[tempMin>0.,tempMax]
-;  nanList[10]=INT_NAN
-;
-;  tempMin=min(reflectance(*,*,1), max=tempMax)
-;  minMaxs[11,*]=[tempMin>0.,tempMax]
-;  nanList[11]=INT_NAN
-;
-;
-;  minMaxs[12,*]=[maskMin, maskMax]
-;  nanList[12]=INT_NAN
+  ;  minMaxs[*,*]=-1
+  ;  minMaxs[0,*]=DATA_RANGE;minMax[0,*]
+  ;  nanList[0]=BYTE_NAN
+  ;
+  ;  minMaxs[1,*]=DATA_RANGE;minMax[0,*]
+  ;  nanList[1]=BYTE_NAN
+  ;
+  ;  minMaxs[2,*]=DATA_RANGE;minMax[0,*]
+  ;  nanList[2]=INT_NAN
+  ;
+  ;  minMaxs[3,*]=DATA_RANGE;minMax[0,*]
+  ;  nanList[3]=INT_NAN
+  ;
+  ;  minMaxs[4,*]=DATA_RANGE;minMax[0,*]
+  ;  nanList[4]=INT_NAN
+  ;
+  ;  minMaxs[5,*]=DATA_RANGE;minMax[0,*]
+  ;  nanList[5]=INT_NAN
+  ;
+  ;  tempMin=min(output.flag, max=tempMax)
+  ;  minMaxs[6,*]=[tempMin, tempMax]
+  ;  nanList[6]=INT_NAN
+  ;
+  ;  tempMin=min(angles(*,*,0), max=tempMax)
+  ;  minMaxs[7,*]=[0.,90.]
+  ;  nanList[7]=INT_NAN
+  ;
+  ;  tempMin=min(angles(*,*,1), max=tempMax)
+  ;  minMaxs[8,*]=[0.,90.]
+  ;  nanList[8]=INT_NAN
+  ;
+  ;  tempMin=min(angles(*,*,2), max=tempMax)
+  ;  minMaxs[9,*]=[-180,180]
+  ;  nanList[9]=INT_NAN
+  ;
+  ;  tempMin=min(reflectance(*,*,0), max=tempMax)
+  ;  minMaxs[10,*]=[tempMin>0.,tempMax]
+  ;  nanList[10]=INT_NAN
+  ;
+  ;  tempMin=min(reflectance(*,*,1), max=tempMax)
+  ;  minMaxs[11,*]=[tempMin>0.,tempMax]
+  ;  nanList[11]=INT_NAN
+  ;
+  ;
+  ;  minMaxs[12,*]=[maskMin, maskMax]
+  ;  nanList[12]=INT_NAN
 
   boundary=[-180.0, 180.0, -90, 90.]
-  filePath=outputDir
-  fName=new_file
 
-  if keyword_set(NC) then write_georef_ncdf, ncfilename, $
+  if n_elements(resFileNC) eq 1 then print,'Write the results in: ',resFileNC
+  if n_elements(resFileHDF) eq 1 then print,'Write the results in: ',resFileHDF
+
+  if keyword_set(NC) then write_georef_ncdf, resFileNC, $
     bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
     dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
     /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes, $
     header=header
 
-  if keyword_set(HDF) then write_hdf, hdffilename, $
+  if keyword_set(HDF) then write_hdf, resFileHDF, $
     bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
     dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
     trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes, $

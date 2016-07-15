@@ -78,7 +78,7 @@ function getSensorCoeffs, sensor, sensorCode, SOIL=SOIL, MISSIONOVERLAPINDEX=MIS
       ; MM 20160531 coeffs from table 8 pag. 28
       coeffInfo.soilCoeffs=[res.bareSoilsAs,res.bareSoilsBs]
     END
-    'AVH09C1': BEGIN
+    'AVH': BEGIN
       res=getNOAAcoeff(sensorCode, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX)
       print,'looking for Coefficients for '+sensor+' '+string(sensorCode)
       ; MM 20160506 coeffs from table 9 pag. 28

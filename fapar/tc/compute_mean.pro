@@ -40,18 +40,24 @@ PRO compute_mean, daysNumber, data_day, data_tc
   starttime=systime(1)
   n_elems=n_elements(data_day(0).fapar)
   nPics=n_elements(data_day)
-  for i=0, n_elems-1 do begin
+  ;percs=(dindgen(10)*7200*3600)/(7200d*3600)*10
+  percs=(dindgen(10)/10.*7200*3600)
+  for i=0l, n_elems-1 do begin
     data_tc.fapar[i]=mean(data_day[*].fapar[i], /NAN)
     data_tc.nir[i]=mean(data_day[*].nir[i], /NAN)
     data_tc.red[i]=mean(data_day[*].red[i], /NAN)
     array=data_day[*].flag[i]
     ;flagArr=array[UNIQ(array, SORT(array))]
-    ;checkWater=where(data_day[*].flag[i] eq 3, countWater) ; water: input 3 --> res 6 
+    ;checkWater=where(data_day[*].flag[i] eq 3, countWater) ; water: input 3 --> res 6
+    aa=where(i eq percs, countPerc)
+    if countPerc eq 1 then print, 'progress...', string(percs[aa[0]]/(7200d*3600)*100, format='(I02)'), '% ...'   
     checkBareSoil=where(data_day[*].flag[i] eq 6, countBareSoil) ; bare soil: input 6 --> res 4
+    checkClouds=where(data_day[*].flag[i] eq 2, countClouds) ; clouds: input 2 --> res 2
     checkVegetation=where(data_day[*].flag[i] eq 0, countVegetation) ; vegetation: input 0 --> res 0  
     ; water/Nan by default
     data_tc.flag[i]=6
     if countVegetation gt nPics/2 then data_tc.flag[i]=0
+    if countClouds gt nPics/2 then data_tc.flag[i]=2
     if countBareSoil gt nPics/2 then data_tc.flag[i]=4
   endfor
   endTime=systime(1)-starttime

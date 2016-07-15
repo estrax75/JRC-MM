@@ -1,5 +1,5 @@
-pro runTCFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, startMonth, endMonth, $
-  MONTHLY=MONTHLY, FIVEDAYS=FIVEDAYS, TENDAYS=TENDAYS, SIXTEENDAYS=SIXTEENDAYS, ELAB_TC=ELAB_TC, ELAB_MEAN=ELAB_MEAN
+pro runTCFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, startMonth, endMonth, level, $
+  TA_TYPE=TA_TYPE, TC_TYPE=TC_TYPE
 
   ;confDir='E:\mariomi\Documents\projects\LDTR\data\AVHRR\data'
 
@@ -94,9 +94,8 @@ pro runTCFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, star
       ;        print, 'file2: ', file2
       ;        print, 'file3: ', file3
 
-      resFile=doFaparComposite(sensor, resolution, missionName, confDir, sourceDir, tempDir, outputDir, thisYear, thisMonth, $
-        MONTHLY=MONTHLY, TENDAYS=TENDAYS, SIXTEENDAYS=SIXTEENDAYS, FIVEDAYS=FIVEDAYS, $
-        ELAB_TC=ELAB_TC, ELAB_MEAN=ELAB_MEAN)
+      resFile=doFaparComposite(sensor, resolution, missionName, level, confDir, sourceDir, tempDir, outputDir, thisYear, thisMonth, $
+        TC_TYPE=TC_TYPE, TA_TYPE=TA_TYPE)
       if resFile eq -1 then print, thisyear, thismonth, ' skip (already exists or missing/corrupted source file)
       ;resFile=AVH01_merge_BRFGlob(file1, file2, file3, confDir, thisYear, thisMonth, thisDay, noaanumber, operatorObj, fsObj, tempDir, testFile=testFile)
       ;resFile=merge_BRFGlob(file1, file2, file3, confDir, thisYear, thisMonth, thisDay, noaanumber, operatorObj, fsObj, tempDir, testFile=testFile)

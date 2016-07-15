@@ -1,5 +1,6 @@
-pro runDailyFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, startMonth, endMonth, $
-  TYPE1=TYPE1, TYPE2=TYPE2, OVERWRITE=OVERWRITE, NC=NC, HDF=HDF, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX;, SWITCH_TS_TV=SWITCH_TS_TV
+pro runDailyFapar, confDir, tempDir, startYear, endYear, startMonth, endMonth, $
+  TYPE1=TYPE1, TYPE2=TYPE2, NC=NC, HDF=HDF, outputDir=outputDir, $
+  OVERWRITE=OVERWRITE, TC_TYPE=TC_TYPE, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX;, SWITCH_TS_TV=SWITCH_TS_TV
 
   ;confDir='E:\mariomi\Documents\projects\LDTR\data\AVHRR\data'
 
@@ -7,11 +8,13 @@ pro runDailyFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, s
   months=indgen(endMonth-startMonth+1)+startMonth
 
   ;sensor='AVHRR'
-  sensor='AVH09C1'
-  resolution='GEOG_0.05DEG'
+  ;sensor='AVH09C1'
+  instrument='AVH'
+  indicator='LAN'
+  spatialResolution='0005D'
+  level='L2'
   missionName='N'
   ;missionName='NOAA-N'
-  mainVarName='BRF'
 
   ;years3=[2006]
   ;months2=indgen(12)+1
@@ -104,11 +107,13 @@ pro runDailyFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, s
         ;        print, 'file2: ', file2
         ;        print, 'file3: ', file3
         if n_elements(missionCode) gt 1 then missionCode=missionCode[MISSIONOVERLAPINDEX]
-        resFile=doFapar(sensor, resolution, missionName, mainVarName, missionCode, thisyear, thismonth, thisday, $
+        sourceDir=getsourcedir_by_year(thisYear)
+        if n_elements(outputDir) eq 0 then outputDir=sourceDir
+        resFile=doFapar(instrument, indicator, spatialResolution, level, missionName, mainVarName, missionCode, thisyear, thismonth, thisday, $
           sourceDir, outputDir, tempdir, $
-          /FIRST, TYPE1=TYPE1, TYPE2=TYPE2, NC=NC, HDF=HDF, $
-          OVERWRITE=OVERWRITE, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
-          SWITCH_TS_TV=SWITCH_TS_TV )
+          TYPE1=TYPE1, TYPE2=TYPE2, NC=NC, HDF=HDF, $; /FIRST, 
+          MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
+          OVERWRITE=OVERWRITE, TC_TYPE=TC_TYPE )
         ;/OVERWRITE, /FIRST, TYPE1=TYPE1, TYPE2=TYPE2 )
         if resFile eq -1 then print, thisyear, thismonth, thisday, ' skip (already exists or missing/corrupted source file)
         ;resFile=AVH01_merge_BRFGlob(file1, file2, file3, confDir, thisYear, thisMonth, thisDay, noaanumber, operatorObj, fsObj, tempDir, testFile=testFile)

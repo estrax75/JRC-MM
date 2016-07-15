@@ -127,6 +127,7 @@ function getStandardFaparTCDataSetInfo
     header: infoHeader, $
     bandNames: bandNames, $
     bandLongNames:bandLongNames, $
+    bandStandardNames:bandStandardNames, $
     bandMeasureUnits: bandMeasureUnits, $
     bandDataTypes: bandDataTypes, $
     bandSlopes: bandSlopes, $

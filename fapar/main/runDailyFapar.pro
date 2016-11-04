@@ -1,4 +1,4 @@
-pro runDailyFapar, confDir, tempDir, startYear, endYear, startMonth, endMonth, $
+pro runDailyFapar, confDir, tempDir, startYear, endYear, startMonth, endMonth, missionIndex, $
   TYPE1=TYPE1, TYPE2=TYPE2, NC=NC, HDF=HDF, outputDir=outputDir, $
   OVERWRITE=OVERWRITE, TC_TYPE=TC_TYPE, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX;, SWITCH_TS_TV=SWITCH_TS_TV
 
@@ -12,7 +12,7 @@ pro runDailyFapar, confDir, tempDir, startYear, endYear, startMonth, endMonth, $
   instrument='AVH'
   indicator='LAN'
   spatialResolution='0005D'
-  level='L2'
+  level='L1'
   missionName='N'
   ;missionName='NOAA-N'
 
@@ -26,8 +26,13 @@ pro runDailyFapar, confDir, tempDir, startYear, endYear, startMonth, endMonth, $
 
   for y=0, n_elements(years)-1 do begin
     thisYear=years[y]
-    missionCode=getAVHRRNOAANumber(thisYear, undef)
-    if n_elements(noaanumber) gt 1 then noaanumber=noaanumber[MISSIONOVERLAPINDEX]
+    if n_elements(missionIndex) eq 0 then begin
+      noaanumber=getAVHRRNOAANumber(thisYear, undef)
+      if n_elements(noaanumber) gt 1 then noaanumber=noaanumber[MISSIONOVERLAPINDEX]
+      noaanumber=noaanumber[0]
+    endif else begin
+      noaanumber=fix(missionIndex)
+    endelse
     for m=0, n_elements(months)-1 do begin
       monthDays=utility->calcDayOfMonth([years[y],months[m],1,0])
       ;monthDays=6
@@ -106,10 +111,9 @@ pro runDailyFapar, confDir, tempDir, startYear, endYear, startMonth, endMonth, $
         ;        print, 'file1: ', file1
         ;        print, 'file2: ', file2
         ;        print, 'file3: ', file3
-        if n_elements(missionCode) gt 1 then missionCode=missionCode[MISSIONOVERLAPINDEX]
         sourceDir=getsourcedir_by_year(thisYear)
         if n_elements(outputDir) eq 0 then outputDir=sourceDir
-        resFile=doFapar(instrument, indicator, spatialResolution, level, missionName, mainVarName, missionCode, thisyear, thismonth, thisday, $
+        resFile=doFapar(instrument, indicator, spatialResolution, level, missionName, mainVarName, noaanumber, thisyear, thismonth, thisday, $
           sourceDir, outputDir, tempdir, $
           TYPE1=TYPE1, TYPE2=TYPE2, NC=NC, HDF=HDF, $; /FIRST, 
           MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $

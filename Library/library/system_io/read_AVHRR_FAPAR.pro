@@ -34,7 +34,7 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, SWITCH_TS_TV=SWITCH_TS
   if n_elements(varName) eq 1 then begin
     slope=1
     offset=0
-    fillValue=-9999
+    fillValue=2^15
     dataSet=operatorObj->readNcdfVar(fullFileName, varName, slope=slope, intercept=intercept, fillvalue=fillvalue, FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
     if keyword_set(FOUND) then begin
       valid=1

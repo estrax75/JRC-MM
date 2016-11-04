@@ -1,3 +1,8 @@
+; ****************************************
+; exit values of fapar
+; true values from 1 to 255
+; bad value 0
+; *****************************************
 ;function makeitglob_new, sensor, noaanumber, year, month, day
 ;@../../Library/library/jrc_core/mapQualityFlags
 ;@../../Library/library/jrc_core/mapQualityFlags
@@ -20,18 +25,12 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
   monthS=string(month, format='(I02)')
   dayS=string(day, format='(I02)')
 
-  ;old version
-  ;sourceFileName=buildBrfFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName)
-  ;if n_elements(sourceFileName) gt 1 then sourceFileName=sourceFileName[MISSIONOVERLAPINDEX]
-  ;if sensor eq 'AVH09C1' then new_file=buildAVHRRFAPARFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName, level, VERSION='01')
-  ;if sensor eq 'MODIS' then new_file=buildMODISFAPARFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName, level)
-  ;end
-  ; new filename convention
-  ;instrument='AVH'
   version='N'+string(missionCode, format='(I02)');version='001'
 
   sourceFileInfo=build_JRC_BRDF_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
     product, version, 'NC',  indicator=indicator, level, projection=projection)
+  ;sourceFileInfo=build_JRC_BRF_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
+  ;  product, version, 'NC',  indicator=indicator, level, projection=projection)
 
   ;if n_elements(sourceFileName) gt 1 then sourceFileName=sourceFileName[MISSIONOVERLAPINDEX]
   ;sourceFileName=buildBrfFileName_D(sensor, resolution, year, month, day, missionName, missionCode, mainVarName)
@@ -47,39 +46,53 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
 
   destDir=outputDir+hdfFileInfo.filePath
   destDir=ST_fileSystem->adjustDirSep(sourceDir, /ADD)
+  ;insert or remove version here
+  destDir=destDir+'v1.5'+path_sep()
   resFileNC=destDir+ncFileInfo.fileName
   resFileHDF=destDir+hdfFileInfo.fileName
 
-  sourceFullFileName = (file_search(sourceDir, sourceFileInfo.fileName, COUNT=count))[0];, /FULL_QUALIFY)
+  ;sourceFullFileName = (file_search(sourceDir, sourceFileInfo.fileName, COUNT=count))[0];, /FULL_QUALIFY)
+  fInfo=file_info(sourceDir+sourceFileInfo.fileName)
+  count = 0
+  sourceFullFileName = ''
+  if fInfo.size gt 10 then begin
+    count = 1
+    sourceFullFileName = sourceDir+sourceFileInfo.fileName
+  endif
   ;  if count eq 0 then begin
   ;    sourceFullFileName = (file_search(sourceDir+TC_TYPE, sourceFileNC, COUNT=count))[0];, /FULL_QUALIFY)
   ;  endif
-  ;  
+  ;
   ;  sourceDir=filePath
 
   checkNC=file_info(resFileNC)
   checkHDF=file_info(resFileHDF)
+  checkNCzip=file_info(resFileNC+'.gz')
+  checkHDFzip=file_info(resFileHDF+'.gz')
 
   if count ne 1 then NOSOURCEAVAILABLE=1
   ;print, '******'
   ;print, 'write nc?', (checkOutput1[0].size ne 0 and ~keyword_set(OVERWRITE)) and ~keyword_set(NC)
   ;print, 'write hdf?', (checkOutput2[0].size ne 0 and ~keyword_set(OVERWRITE)) and ~keyword_set(HDF)
   ;print, '******'
-  if keyword_set(NC) and ((checkNC[0].size eq 0) or keyword_set(OVERWRITE)) then NOWRITENC=0 else NOWRITENC=1
-  if keyword_set(HDF) and ((checkHDF[0].size ne 0) or keyword_set(OVERWRITE)) then NOWRITEHDF=0 else NOWRITEHDF=1
+  if keyword_set(NC) and ((checkNC[0].size eq 0)  or keyword_set(OVERWRITE)) then NOWRITENC=0 else NOWRITENC=1
+  if keyword_set(HDF) and (((checkHDF[0].size eq 0 ) AND (checkHDFzip[0].size eq 0)) or keyword_set(OVERWRITE)) then NOWRITEHDF=0 else NOWRITEHDF=1
   ;if (checkOutput1[0].size ne 0 and ~keyword_set(OVERWRITE)) and ~keyword_set(NC) then NOWRITENC=1
   ;if (checkOutput2[0].size ne 0 and ~keyword_set(OVERWRITE)) and ~keyword_set(HDF) then NOWRITEHDF=1
   ;if checkHDF[0].size ne 0 and ~keyword_set(OVERWRITE) then NONCWRITE=1
 
-  if keyword_set(NOSOURCEAVAILABLE) or (keyword_set(NOHDFWRITE) and keyword_set(NOHDFWRITE)) then return, -1
+  if keyword_set(NOSOURCEAVAILABLE) or (keyword_set(NOWRITEHDF) and keyword_set(NOWRITENC)) then return, -1
 
+  print, 'start reading source file: ', sourceDir, sourceFileInfo.fileName
   data=readBRF(sourceDir, sourceFileInfo.fileName, FOUND=FOUND)
+  print, 'brf ...done'
 
   if ~keyword_set(FOUND) then return, -1
 
-  INT_NAN=-9999
+  INT_NAN=2^15
   DATA_RANGE=[0., 1.]
-  DATA_NAN=255
+  ;DATA_NAN=255
+  DATA_NAN=-1
 
   output={  ExpId_t, $
     fpar: fltarr(7200,3600), $
@@ -96,12 +109,13 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
   ;
   ; initialization
   ;
-  output.fpar(*,*)=255
-  output.sigma(*,*)=255
-  output.red(*,*)=255
-  output.sigma_red(*,*)=255
-  output.nir(*,*)=255
-  output.sigma_nir(*,*)=255
+  ; MM & NG 21/09/2016
+  output.fpar(*,*)=INT_NAN
+  output.sigma(*,*)=INT_NAN
+  output.red(*,*)=INT_NAN
+  output.sigma_red(*,*)=INT_NAN
+  output.nir(*,*)=INT_NAN
+  output.sigma_nir(*,*)=INT_NAN
   noaanumber=missionCode
 
   red_avhrr=data.red_avhrr & slope_red=data.slope_red & offset_red=data.offset_red
@@ -109,8 +123,12 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
   ts_avhrr=data.ts_avhrr & slope_ts=data.slope_ts & offset_ts=data.offset_ts
   tv_avhrr=data.tv_avhrr & slope_tv=data.slope_tv & offset_tv=data.offset_tv
   phi_avhrr=data.phi_avhrr & slope_phi=data.slope_phi & offset_phi=data.offset_phi
-  qa_avhrr=data.brdf_qa_avhrr & slope_brdf_qa=data.slope_qa & offset_brdf_qa=data.offset_qa
+  qa_avhrr=data.brf_qa_avhrr & slope_brf_qa=data.slope_qa & offset_brf_qa=data.offset_qa
   ;save memory
+  ;where(data.fill_value)
+  anglesNan=where(tv_avhrr eq -9999, cntAnglesNan)
+  ;nan=where(ts_avhrr eq -9999, cnt2)
+  ;nan=where(phi_avhrr eq -9999, cnt3)
   data=0
   ;
 
@@ -154,19 +172,23 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
   gre = [1,0,0,0,0.00,0.00,0.,0.55,0.77,0.66,0.00,0.00,0.]
   blu = [0,0,0,1,0.00,1.00,1.,1.00,1.00,0.55,0.80,0.77,0.]
   TVLCT, red*255, gre*255, blu*255
+  ;PPMSA_ALBEDOCOLOR
 
   coeffInfo=getSensorCoeffs(instrument, missionCode)
 
   flag2 = CheckDataTOC(red_avhrr*slope_red(0)+offset_red(0), nir_avhrr*slope_nir(0)+offset_nir(0), coeffInfo.soilCoeffs)
-  flagstoc=flag2
+  ;flagstoc=flag2
+  sensor='14'
   ;
   ;stop
   ;
   ;flag_angles = CheckAngle(angles(*,*,0), angles(*,*,1))
-  ;window, 10, xsize=720, ysize=360, title='FPAR Angles'+SENSOR
-  ;tv, reverse(congrid(flag_angles, 720,360),2)
+  ;colorset
+  ;TVLCT, red*255, gre*255, blu*255
+  ;window, 0, xsize=720, ysize=360, title='FLAG 0.0'
+  ;tv, congrid(flag2, 720,360)
   ;
-
+  ;  stop
   red_avhrr=0.
   nir_avhrr=0.
   ts_avhrr=0.
@@ -185,20 +207,23 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
 
   ;stop
   ;
-  ;	0      Band 1 BRDF corrected;
+  ;	0      Band 1 BRF corrected;
   ;	       1 -- yes
   ;	       0 -- no
-  ;	5      Band 2 BRDF corrected;
+  ;	5      Band 2 BRF corrected;
   ;	       1 -- yes
   ;	       0 -- no
   ;
   ;
   ;=======================================================================================
 
-  rrq1=cgi_map_bitwise_flag(qa_avhrr,0)
-  rrq2=cgi_map_bitwise_flag(qa_avhrr,5)
+  ; MM & NG
+  ;rrq1=cgi_map_bitwise_flag(qa_avhrr,0)
+  ;rrq2=cgi_map_bitwise_flag(qa_avhrr,5)
   ;
-  idx_nocorr=where (rrq1 eq 0 or rrq2 eq 0)
+  ;idx_nocorr=where (rrq1 eq 0 or rrq2 eq 0)
+  ; end
+  ;
   ;window,0, xsize=720*2, ysize=360*2
   ;tvscl, reverse(congrid(rrq1, 720*2, 360*2), 2)
   ;stop
@@ -211,7 +236,7 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
   ;	       0 -- no
 
   ;rr1=cgi_map_bitwise_flag(qc_avhrr,1)
-  rr1=cgi_map_bitwise_flag(qa_avhrr,1)
+  ;rr1=cgi_map_bitwise_flag(qa_avhrr,1)
   ;
   ;
   ; 2      Pixel contains cloud shadow;
@@ -219,7 +244,7 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
   ;	       0 -- no
   ;
   ;rr2=cgi_map_bitwise_flag(qc_avhrr,2)
-  rr2=cgi_map_bitwise_flag(qa_avhrr,2)
+  ;rr2=cgi_map_bitwise_flag(qa_avhrr,2)
   ;
   ;  9 channel 2 value is invalid 1 = yes, 0 = no
   ;  8 Channel 1 value is invalid 1 = yes, 0 = no
@@ -241,24 +266,27 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
   ;
   ;
   ;
-  idx_mask = where(rr1 eq 1) ; or rr2 eq 1)		;----> cloud
-  idx_mask2 = where(rr21 eq 1 or rr22 eq 1)		;----> invalid
+  ;idx_mask = where(rr1 eq 1) ; or rr2 eq 1)		;----> cloud
+  ;idx_mask2 = where(rr21 eq 1 or rr22 eq 1)		;----> invalid
   IDX_SEA=  where(rr3 eq 1)
 
-  flag2(idxbad)=7.0		;	< bad
+  flag2(idxbad)=1.0		;	< bad
 
-
-  S=SIZE(FLAG2)
-  MASK_AVHRR=BYTARR(S(1),S(2))
+  ;window, 1, xsize=720, ysize=360, title='FLAG 1.0'+SENSOR
+  ;tv, congrid(flag2, 720,360)
+  ;S=SIZE(FLAG2)
+  ;MASK_AVHRR=BYTARR(S(1),S(2))
   ;
-  MASK_AVHRR(IDX_MASK)=2		;----> cloud
+  ;MASK_AVHRR(IDX_MASK)=2		;----> cloud
   ;MASK_AVHRR(IDX_MASK2)=2
   ;MASK_AVHRR(idx_nocorr)= 130
   ;flag2(idx_mask)=2.0
 
-  MASK_AVHRR(IDX_SEA)= 3
+  ;MASK_AVHRR(IDX_SEA)= 3
   ;flag2[idx_mask]=2
   flag2[idx_sea]=3.0
+  ;window, 2, xsize=720, ysize=360, title='FLAG 2.0'+SENSOR
+  ;tv, congrid(flag2, 720,360)
   ;window, 11, xsize=720, ysize=360, title='QA '+SENSOR
   ;tv, reverse(congrid(MASK_avhrr, 720,360),2)
 
@@ -335,13 +363,17 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
       ;for k=0, N_elements(idx)-1, 50 do plots, red(idx(k)), nir(idx(k)), psym=4, col=output.fpar(idx(k))*250.0
       ;stop
 
-      idx_neg=where(output.fpar le 0.0)
+      idx_neg=where(output.fpar le 0.0 and output.fpar gt INT_NAN )
       output.fpar(idx_neg)=0.0
 
       idx_big=where(output.fpar ge 1.0 and output.fpar le 10.0)
       output.fpar(idx_big)=1.0
-      flag2(idx_neg)=4.0
+      ; MM & NG
+      ;flag2(idx_neg)=4.0
+      flag2(idx_neg)=5.0
       flag2(idx_big)=6.0
+      ;window, 3, xsize=720, ysize=360, title='FLAG 3.0'+SENSOR
+      ;tv, congrid(flag2, 720,360)
       ;FAPARCOLOR
       ;window, 0, xsize=720*2, ysize=360*2, title='FPAR '+SENSOR
       ;tv, reverse(congrid(output.fpar*250, 720*2,360*2),2)
@@ -371,8 +403,8 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
   ;
   ;stop
   ; make the process of rectifed only over bare soil
-  ;
-  idx_soil=where(flag2 eq 4.0)
+  ; MM & NG
+  idx_soil=where(flag2 eq 4.0 or flag2 eq 5.0)
 
   if idx_soil(0) ge 0 then begin
     ;
@@ -413,10 +445,12 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
   ; overwrite with sea flag layer?!?
   flag2(idx_sea)=3
   output.flag=flag2
+  ;window, 4, xsize=720, ysize=360, title='FLAG 4.0'+SENSOR
+  ;tv, congrid(output.flag, 720,360)
   ;
-  idx_1 = where (flag2 eq 1)
-  idx_2 = where (flag2 eq 2)
-  idx_3 = where (flag2 eq 3)
+  ;idx_1 = where(flag2 eq 1)Ecco il calendario per le partite fino a dicembre. Spero che ci troveremo tutti...
+  ;idx_2 = where(flag2 eq 2)
+  ;idx_3 = where(flag2 eq 3)
 
   ;
   ;idx_4 = where (flag_angles eq 1)
@@ -455,72 +489,79 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
   bandDataTypes=faparDSInfo.bandDataTypes
   bandIntercepts=faparDSInfo.bandIntercepts
   minMaxs=faparDSInfo.minMaxs
+  scaledminmaxs=faparDSInfo.scaledminmaxs
   nanList=faparDSInfo.nans
 
   trueSlopes=bandSlopes
   trueIntercepts=bandIntercepts
   header=faparDSInfo.header
 
-  res=dataByteScaling(output.fpar, output.flag, FLAG_VALUES=[9,10], $
+  ; 2003 -->
+  res=dataByteScaling(output.fpar, output.flag, $ ;FLAG_VALUES=[9,10], $
     DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
     DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
   output.fpar=res.resultData
-  output.flag=res.resultFlag
+  ;output.flag=res.resultFlag
   trueIntercepts[0]=outIntercept
   trueSlopes[0]=outSlope
 
+  ; convert float to byte [1..255] where 0 is bad
   res=dataByteScaling(output.sigma, output.flag, $
     DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
     DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
   output.sigma=res.resultData
-  output.flag=res.resultFlag
+  ;output.flag=res.resultFlag
   trueIntercepts[1]=outIntercept
   trueSlopes[1]=outSlope
 
-  res=dataByteScaling(output.red, output.flag, FLAG_VALUES=[9,10], $
-    DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
-    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
+  ; convert float to int [-32600..+32600] where -9999 is bad
+  ; now -1 data was bad
+  ; MM
+  ;res=dataByteScaling(output.red, output.flag, $;, FLAG_VALUES=[9,10], $
+  ; DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
+  ; DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
   ;output.red=res.resultData
-  output.flag=res.resultFlag
+  ;output.flag=res.resultFlag
   ;trueIntercepts[2]=outIntercept
   ;trueSlopes[2]=outSlope
 
-  res=dataByteScaling(OUTPUT.SIGMA_RED, output.flag, $
-    DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
-    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
+  ;res=dataByteScaling(OUTPUT.SIGMA_RED, output.flag, $
+  ; DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
+  ; DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
   ;output.sigma_red=res.resultData
-  output.flag=res.resultFlag
+  ;output.flag=res.resultFlag
   ;trueIntercepts[3]=outIntercept
   ;trueSlopes[3]=outSlope
 
-  res=dataByteScaling(output.nir, output.flag, FLAG_VALUES=[13,14], $
-    DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
-    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
+  ;res=dataByteScaling(output.nir, output.flag, $;, FLAG_VALUES=[13,14], $
+  ; DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
+  ; DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
   ;output.nir=res.resultData
-  output.flag=res.resultFlag
+  ;output.flag=res.resultFlag
   ;trueIntercepts[4]=outIntercept
   ;trueSlopes[4]=outSlope
 
-  res=dataByteScaling(output.sigma_nir, output.flag, $
-    DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
-    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
+  ;res=dataByteScaling(output.sigma_nir, output.flag, $
+  ; DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
+  ; DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
   ;output.sigma_nir=res.resultData
-  output.flag=res.resultFlag
+  ;output.flag=res.resultFlag
   ;trueIntercepts[5]=outIntercept
   ;trueSlopes[5]=outSlope
-  output.flag[idx_sea]=3
+  ;output.flag[idx_sea]=3
 
   flagTags=strupcase(['fpar', 'sigma'])
   tags=tag_names(output)
 
-  for i=0, n_elements(flagTags)-1 do begin
-    thisIdx=(where(flagTags[i] eq tags, count))[0]
-    if count eq 1 then begin
-      output.(thisIdx)=mapQualityFlags(output.(thisIdx), idx_1, remarkableFlags[0])
-      output.(thisIdx)=mapQualityFlags(output.(thisIdx), idx_2, remarkableFlags[1])
-      output.(thisIdx)=mapQualityFlags(output.(thisIdx), idx_3, remarkableFlags[2])
-    endif
-  endfor
+  ; check what here... MM
+  ;for i=0, n_elements(flagTags)-1 do begin
+  ;  thisIdx=(where(flagTags[i] eq tags, count))[0]
+  ;  if count eq 1 then begin
+  ;    output.(thisIdx)=mapQualityFlags(output.(thisIdx), idx_1, remarkableFlags[0])
+  ;    output.(thisIdx)=mapQualityFlags(output.(thisIdx), idx_2, remarkableFlags[1])
+  ;    output.(thisIdx)=mapQualityFlags(output.(thisIdx), idx_3, remarkableFlags[2])
+  ;  endif
+  ;endfor
 
   ;map -9999 on int data
   flagTags=strupcase(['red', 'nir', 'sigma_red', 'sigma_nir'])
@@ -579,79 +620,50 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
     write_gif, fullSampleFName, sampleImg
   endif
 
+  ts=reform(angles[*,*,0])
+  tv=reform(angles[*,*,1])
+  phi=reform(angles[*,*,2])
+  if cntAnglesNan ne 0 then begin
+    ;anglesNan=where(tv_avhrr eq -9999, cntAnglesNan)
+    ts[anglesNan]=INT_NAN
+    tv[anglesNan]=INT_NAN
+    phi[anglesNan]=INT_NAN
+  endif
+  
   dataSets=[ptr_new(output.fpar, /NO_COPY), ptr_new(output.sigma, /NO_COPY), $
     ptr_new(output.red, /NO_COPY), ptr_new(output.sigma_red, /NO_COPY), $
     ptr_new(output.nir, /NO_COPY), ptr_new(output.sigma_nir, /NO_COPY), $
     ptr_new(qa_avhrr, /NO_COPY), $
-    ptr_new(reform(angles[*,*,0]), /NO_COPY), ptr_new(reform(angles[*,*,1]), /NO_COPY), ptr_new(reform(angles[*,*,2]), /NO_COPY), $
+    ptr_new(ts, /NO_COPY), ptr_new(tv, /NO_COPY), ptr_new(phi, /NO_COPY), $
     ptr_new(reform(reflectance(*,*,0)), /NO_COPY), ptr_new(reform(reflectance(*,*,1)), /NO_COPY), $
-    ptr_new(MASK_AVHRR, /NO_COPY)]
-  ;ptr_new(output.flag, /NO_COPY)]
-
-  ;  minMaxs[*,*]=-1
-  ;  minMaxs[0,*]=DATA_RANGE;minMax[0,*]
-  ;  nanList[0]=BYTE_NAN
-  ;
-  ;  minMaxs[1,*]=DATA_RANGE;minMax[0,*]
-  ;  nanList[1]=BYTE_NAN
-  ;
-  ;  minMaxs[2,*]=DATA_RANGE;minMax[0,*]
-  ;  nanList[2]=INT_NAN
-  ;
-  ;  minMaxs[3,*]=DATA_RANGE;minMax[0,*]
-  ;  nanList[3]=INT_NAN
-  ;
-  ;  minMaxs[4,*]=DATA_RANGE;minMax[0,*]
-  ;  nanList[4]=INT_NAN
-  ;
-  ;  minMaxs[5,*]=DATA_RANGE;minMax[0,*]
-  ;  nanList[5]=INT_NAN
-  ;
-  ;  tempMin=min(output.flag, max=tempMax)
-  ;  minMaxs[6,*]=[tempMin, tempMax]
-  ;  nanList[6]=INT_NAN
-  ;
-  ;  tempMin=min(angles(*,*,0), max=tempMax)
-  ;  minMaxs[7,*]=[0.,90.]
-  ;  nanList[7]=INT_NAN
-  ;
-  ;  tempMin=min(angles(*,*,1), max=tempMax)
-  ;  minMaxs[8,*]=[0.,90.]
-  ;  nanList[8]=INT_NAN
-  ;
-  ;  tempMin=min(angles(*,*,2), max=tempMax)
-  ;  minMaxs[9,*]=[-180,180]
-  ;  nanList[9]=INT_NAN
-  ;
-  ;  tempMin=min(reflectance(*,*,0), max=tempMax)
-  ;  minMaxs[10,*]=[tempMin>0.,tempMax]
-  ;  nanList[10]=INT_NAN
-  ;
-  ;  tempMin=min(reflectance(*,*,1), max=tempMax)
-  ;  minMaxs[11,*]=[tempMin>0.,tempMax]
-  ;  nanList[11]=INT_NAN
-  ;
-  ;
-  ;  minMaxs[12,*]=[maskMin, maskMax]
-  ;  nanList[12]=INT_NAN
+    ptr_new(output.flag, /NO_COPY)]
 
   boundary=[-180.0, 180.0, -90, 90.]
 
   if n_elements(resFileNC) eq 1 then print,'Write the results in: ',resFileNC
   if n_elements(resFileHDF) eq 1 then print,'Write the results in: ',resFileHDF
+  date_created=ST_utils->getSysTime(/FILECOMPATIBILITY)
+  satellite='NOAA '+strcompress(missionCode, /REMOVE)
+  time_Coverage_Start=ST_utils->formatDate([year, month, day, 0, 0, 0], template='satellite')
+  time_Coverage_End=ST_utils->formatDate([year, month, day, 23, 59, 59], template='satellite')
+  header.cdr_variable=['cdr_variable', 'FAPAR']
+  header.Process=['process', 'JRC FAPAR TOC algorithm - see QA4ECV ATBD']
 
   if keyword_set(NC) then write_georef_ncdf, resFileNC, $
     bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
-    dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
+    dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, scaledminmaxs=scaledminmaxs, $
     /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes, $
-    header=header
+    id=ncFileInfo.filename, satellite=satellite, header=header, $
+    date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End
 
   if keyword_set(HDF) then write_hdf, resFileHDF, $
     bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
-    dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
+    dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, scaledminmaxs=scaledminmaxs, $
     trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes, $
-    header=header
+    id=hdfFileInfo.filename, satellite=satellite, header=header, $
+    date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End
 
+  print, 'done'
 
   ;
   ;PPMSA_ALBEDOCOLOR

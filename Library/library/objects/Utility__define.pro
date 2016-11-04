@@ -35,7 +35,7 @@ FUNCTION Utility::calcDays, yearList, monthList
     endfor
   endfor
   return, totDays
-  
+
 END
 
 FUNCTION Utility::optimalLinearFormatNumber, number, format=format
@@ -51,7 +51,7 @@ FUNCTION Utility::optimalLinearFormatNumber, number, format=format
   decDigit=(decPos > 0) < 3
   num=strnsignif(number, (intDigit+decDigit) > 1)
   return, num
-  
+
 END
 
 FUNCTION Utility::optimalLogFormatNumber, number, format=format
@@ -73,13 +73,13 @@ FUNCTION Utility::optimalLogFormatNumber, number, format=format
     ;if nineClose gt 1 then exitCycle=1
     ;if decimal lt 1 then exitCycle=1
   endwhile
-  
+
   format='(F'+strcompress(fixPart+dec, /REMOVE)+'.'+strcompress(dec, /REMOVE)+')'
   num=STRING(number, FORMAT=format)
   doLog, number, format, '-->', num, LEVEL=4
-  
+
   return, num
-  
+
 END
 
 FUNCTION Utility::optimalFormatNumber, number, format=format, LOGSCALE=LOGSCLAE
@@ -87,7 +87,7 @@ FUNCTION Utility::optimalFormatNumber, number, format=format, LOGSCALE=LOGSCLAE
 
   if keyword_set(LOGSCALE) then return, self->optimalLogFormatNumber(number, format=format) else $
     return, self->optimalLinearFormatNumber(number, format=format)
-    
+
 END
 
 FUNCTION Utility::buildYearMonthTicks, yearList, monthList, MONTH_3_LETTER
@@ -101,7 +101,7 @@ FUNCTION Utility::buildYearMonthTicks, yearList, monthList, MONTH_3_LETTER
     endfor
   endfor
   return, thickList
-  
+
 END
 
 FUNCTION Utility::sortArray, arrayIn, sortArray=sortArray, DESCEND=DESCEND
@@ -110,7 +110,7 @@ FUNCTION Utility::sortArray, arrayIn, sortArray=sortArray, DESCEND=DESCEND
   if keyword_set(DESCEND) then sortArray=reverse(sortArray)
   result=arrayIn[sortArray]
   return, result
-  
+
 END
 
 ;**************************************************************
@@ -122,7 +122,7 @@ FUNCTION Utility::getRandomNumber1to100, STRING=STRING
 
   num=fix(randomu(a)*100)
   if keyword_set(STRING) then return, strcompress(num,/remove) else return, num
-  
+
 END
 
 FUNCTION Utility::convertMonthNumberToName, monthNumber, FULLNAME=FULLNAME, NOUPPERCASE=NOUPPERCASE
@@ -131,7 +131,7 @@ FUNCTION Utility::convertMonthNumberToName, monthNumber, FULLNAME=FULLNAME, NOUP
   if ~keyword_set(NOUPPERCASE) then months=strupcase(months)
   if keyword_set(FULLNAME) then finalIndex=strlen(months[fix(monthNumber)-1]) else finalIndex=3
   return, strmid(months[monthNumber-1], 0, finalIndex)
-  
+
 END
 
 FUNCTION Utility::convertMonthNumber, month, FULLNAME=FULLNAME, NOUPPERCASE=NOUPPERCASE, TONAME=TONAME, TONUMBER=TONUMBER
@@ -150,11 +150,11 @@ FUNCTION Utility::doProjection, projInfo, xS, yS
 
   projInfo.sourceCode=0
   projInfo.destCode=0
-  
+
   if projInfo.sourceCode eq 0 and projInfo.destCode eq 1 then destXY=coordLambertToLatLon(xy, pars)
   if projInfo.sourceCode eq 1 and projInfo.destCode eq 0 then destXY=coordLatLonToLambert(xy, pars)
-  
-  
+
+
   if projInfo.sourceCode ne 0 then begin
     mapInfo=map_proj_init(projInfo.sourceCode)
     latLon=map_proj_inverse( xS, yS, map_structure=mapInfo) ; array (2,n)
@@ -162,16 +162,16 @@ FUNCTION Utility::doProjection, projInfo, xS, yS
     latLon=fltarr(2, n_elements(xS))
     latLon[0,*]=xS & latLon[1,*]=yS
   endelse
-  
+
   if projInfo.destCode ne 0 then begin
     mapInfo=map_proj_init(projInfo.destCode)
     destXY=map_proj_forward(latLon, map_structure=mapInfo) ;array (2,n)
   endif else begin
     destXY=latLon
   endelse
-  
+
   return, destXY
-  
+
 END
 
 FUNCTION Utility::getprojNum, name
@@ -235,7 +235,7 @@ FUNCTION Utility::getprojNum, name
   idx=(where(projnames eq name))[0]
   if idx ne -1 then projN=projnums[idx] else projN=projnums[0]
   return, projN
-  
+
 END
 
 ;**************************************************************
@@ -245,76 +245,76 @@ END
 FUNCTION Utility::getGraphicBackgroundColor
 
   return, getColor(235,235,235)
-  
+
 END
 
 FUNCTION Utility::getGraphicPenColor
 
   return, getColor(100,100,100)
-  
+
 END
 
 FUNCTION Utility::getButtonLabelFont
 
   return, "COURIER*BOLD*9"
-  
+
 END
 
 FUNCTION Utility::getButtonMediumFont
 
   return, "TIMES*BOLD*8"
-  
+
 END
 
 FUNCTION Utility::getCommentLabelFont
 
   return, "TIMES*20*ITALIC"
-  
+
 END
 
 FUNCTION Utility::getStandardLabelFont
 
   return, "COURIER*8"
-  
+
 END
 
 FUNCTION Utility::getStandardTextFont
 
   return, "COURIER*8"
-  
+
 END
 
 FUNCTION Utility::getTitleTextFont
 
   return, "COURIER*BOLD*ITALIC*12"
-  
+
 END
 
 FUNCTION Utility::colorObjLong64, colorObjs
 
   nElem=n_elements(colorObjs)
   destColors=lon64arr(nElem)
-  
+
   for i=0, nElem-1 do begin
     destColors[i]=colorObjs[i]->asLongTrueColor()
   endfor
-  
+
   return, destColors
-  
+
 END
 
 FUNCTION Utility::colorObjToByte, colorObjs
 
   nElem=n_elements(colorObjs)
   destColors=bytarr(nElem, 3)
-  
+
   for i=0, nElem-1 do begin
     colorObjs[i]->getRGB, r, g, b
     destColors[i,*]=[r, g, b]
   endfor
-  
+
   return, destColors
-  
+
 END
 
 FUNCTION Utility::updateColorTable, limits, leaveColor=leaveColor, colors=colors
@@ -332,7 +332,7 @@ FUNCTION Utility::updateColorTable, limits, leaveColor=leaveColor, colors=colors
     for i=0, 29 do usedColors[i]=obj_new('Color', byteColors[i,0], byteColors[i,1], byteColors[i,2])
   endelse
   if limits[1] gt 1e10 then limits[1]=abs(limits[0])*10
-  
+
   nClasses=n_elements(usedColors)
   clss = replicate({ScaleClasses, vMin : 0d, vMax : 0d, label : '', gDesc : obj_new()}, nClasses)
   newLimits=findgen(nClasses)*(limits[1]-limits[0])/float(nClasses)+limits[0]
@@ -347,7 +347,7 @@ FUNCTION Utility::updateColorTable, limits, leaveColor=leaveColor, colors=colors
   clss[0].label = strtrim(newLimits[0], 1)
   clss[0].gDesc = usedColors[0]
   return, clss
-  
+
 END
 
 FUNCTION Utility::buildStandardScaleClasses, limits, colors
@@ -358,32 +358,32 @@ FUNCTION Utility::buildStandardScaleClasses, limits, colors
   clss[0].vMax = limits[0]
   clss[0].label = strtrim(limits[0], 1)
   clss[0].gDesc = obj_new('Color', colors[0,0], colors[0,1], colors[0,2])
-  
+
   for i=1, n_elements(limits)-1 do begin
     clss[i].vMin = limits[i-1]
     clss[i].vMax = limits[i]
     clss[i].label = strtrim(limits[1], 1)
     clss[i].gDesc = obj_new('Color', colors[i,0], colors[i,1], colors[i,2])
   endfor
-  
+
   return, clss
-  
+
 END
 
 FUNCTION Utility::getMultiPlotPosition, index, viewNumber, charsize=charsize, labelPos=labelPos
 
   normpos = fltarr(9,9,4)
-  
+
   ; one view case
   ;[0]=map index, [1] 0->8=map total, [2:5]=position as xstart, ystart, xend, yend
   normpos[0,0,*] = [0.1, 0.1, .93, .93]
-  
+
   ; two view case (split horizontal)
   ; first
   normpos[0,1,*] = [0.1, 0.58, .93, .93]
   ; second
   normpos[1,1,*] = [0.1, 0.1, .93, 0.45]
-  
+
   ; three view case (split horizontal)
   ; first
   normpos[0,2,*] = [0.1, 0.73, .93, .93]
@@ -391,7 +391,7 @@ FUNCTION Utility::getMultiPlotPosition, index, viewNumber, charsize=charsize, la
   normpos[1,2,*] = [0.1, 0.41, .93, 0.61]
   ; third
   normpos[2,2,*] = [0.1, 0.1, .93, 0.3]
-  
+
   ; four view case (2X2)
   ; first
   normpos[0,3,*] = [0.1, .58, .45, .93]
@@ -401,7 +401,7 @@ FUNCTION Utility::getMultiPlotPosition, index, viewNumber, charsize=charsize, la
   normpos[2,3,*] = [0.1, 0.1, 0.45, 0.45]
   ; fourth
   normpos[3,3,*] = [0.58, 0.1, .93, .45]
-  
+
   ; five view case (on 3X2 scheme)
   ; first
   normpos[0,4,*] = [0.1, 0.73, .45, .93]
@@ -413,7 +413,7 @@ FUNCTION Utility::getMultiPlotPosition, index, viewNumber, charsize=charsize, la
   normpos[3,4,*] = [0.58, 0.41, .93, .61]
   ; fifth
   normpos[4,4,*] = [0.1, 0.1, .45, .3]
-  
+
   ; six view case (on 3X2 scheme)
   ; first
   normpos[0,5,*] = [0.1, 0.73, .45, .93]
@@ -427,7 +427,7 @@ FUNCTION Utility::getMultiPlotPosition, index, viewNumber, charsize=charsize, la
   normpos[4,5,*] = [0.1, 0.1, .45, .3]
   ; sixth
   normpos[5,5,*] = [0.58, 0.1, .93, .3]
-  
+
   ; seven view case (on 3X3 scheme)
   ; first
   normpos[0,6,*] = [0.1, 0.73, .3, .93]
@@ -443,7 +443,7 @@ FUNCTION Utility::getMultiPlotPosition, index, viewNumber, charsize=charsize, la
   normpos[5,6,*] = [0.73, 0.41, .93, .61]
   ; seventh
   normpos[6,6,*] = [0.1, 0.1, .3, .3]
-  
+
   ; eight view case (on 3X3 scheme)
   ; first
   normpos[0,7,*] = [0.1, 0.73, .3, .93]
@@ -461,7 +461,7 @@ FUNCTION Utility::getMultiPlotPosition, index, viewNumber, charsize=charsize, la
   normpos[6,7,*] = [0.1, 0.1, .3, .3]
   ; eigthh
   normpos[7,7,*] = [0.41, 0.1, .61, .3]
-  
+
   ; nine view case (on 3X3 scheme)
   ; first
   normpos[0,8,*] = [0.1, 0.73, .3, .93]
@@ -482,19 +482,19 @@ FUNCTION Utility::getMultiPlotPosition, index, viewNumber, charsize=charsize, la
   ; nineth
   normpos[8,8,*] = [0.73, 0.1, .93, .3]
   charSList=[1.5,1.5,1.5,1.5,1.5,1.5,1.,1.,1.]
-  
+
   charsize=charSList[viewNumber-1]
   windowPos=reform(normPos[index, viewNumber-1, *])
   labelPos=[windowPos[0]+(windowPos[2]-windowPos[0])/10, windowPos[3]-(windowPos[3]-windowPos[1])/7]
-  
+
   return, windowPos
-  
+
 END
 
 FUNCTION Utility::buildAxisTickMark, xData
 
   return, strtrim(xData, 2)
-  
+
 END
 
 FUNCTION Utility::buildDateAxisTickMark, startDate, frequency, frameNumber, YEAR=YEAR
@@ -512,7 +512,7 @@ FUNCTION Utility::buildDateAxisTickMark, startDate, frequency, frameNumber, YEAR
   endif else begin
     inStartDate=startDate
   endelse
-  
+
   if inStartDate.year ne 0 then year=inStartDate.year else year=2001
   startCalc=julday(inStartDate.month, inStartDate.day, year, inStartDate.hour, inStartDate.minute, inStartDate.second)
   resDate=strarr(frameNumber)
@@ -522,41 +522,41 @@ FUNCTION Utility::buildDateAxisTickMark, startDate, frequency, frameNumber, YEAR
   secondStep=1./(24*60*60)
   case strupcase(frequency) of
     'DD-MM':begin
-    for i=0, frameNumber-1 do begin
-      caldat, startCalc+i*hourStep, month , day, year, hour, minute, second
-      ;doLog,month , day, year, hour, minute, second
-      ;resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
-      resDate[i]=strtrim(day, 1)+'/'+strtrim(month, 1)
-    endfor
-  end
-  '1H':begin
-  for i=0, frameNumber-1 do begin
-    caldat, startCalc+i*hourStep, month , day, year, hour, minute, second
-    ;doLog,month , day, year, hour, minute, second
-    ;resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
-    resDate[i]=strtrim(hour, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
-  endfor
-end
-'1D':begin
-for i=0, frameNumber-1 do begin
-  caldat, startCalc+i*dayStep, month , day, year, hour, minute, second
-  resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
-endfor
-end
-'1M':begin
-for i=0, frameNumber-1 do begin
-  caldat, startCalc+i*minuteStep, month , day, year, hour, minute, second
-  resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
-endfor
-end
-'1S':begin
-for i=0, frameNumber-1 do begin
-  caldat, startCalc+i*secondStep, month , day, year, hour, minute, second
-  resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
-endfor
-end
-endcase
-return, resDate
+      for i=0, frameNumber-1 do begin
+        caldat, startCalc+i*hourStep, month , day, year, hour, minute, second
+        ;doLog,month , day, year, hour, minute, second
+        ;resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
+        resDate[i]=strtrim(day, 1)+'/'+strtrim(month, 1)
+      endfor
+    end
+    '1H':begin
+      for i=0, frameNumber-1 do begin
+        caldat, startCalc+i*hourStep, month , day, year, hour, minute, second
+        ;doLog,month , day, year, hour, minute, second
+        ;resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
+        resDate[i]=strtrim(hour, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
+      endfor
+    end
+    '1D':begin
+      for i=0, frameNumber-1 do begin
+        caldat, startCalc+i*dayStep, month , day, year, hour, minute, second
+        resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
+      endfor
+    end
+    '1M':begin
+      for i=0, frameNumber-1 do begin
+        caldat, startCalc+i*minuteStep, month , day, year, hour, minute, second
+        resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
+      endfor
+    end
+    '1S':begin
+      for i=0, frameNumber-1 do begin
+        caldat, startCalc+i*secondStep, month , day, year, hour, minute, second
+        resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
+      endfor
+    end
+  endcase
+  return, resDate
 
 END
 
@@ -569,7 +569,7 @@ FUNCTION Utility::buildBestDateAxisTickMark, startDate, frequency, frameNumber
   hourStep=1./24
   minuteStep=1./(24*60)
   secondStep=1./(24*60*60)
-  
+
   if frequency eq '1H' then begin
     stepValue=hourStep
     if frameNumber le 3*24 then template='hh:dd'
@@ -584,58 +584,58 @@ FUNCTION Utility::buildBestDateAxisTickMark, startDate, frequency, frameNumber
     if frameNumber gt 60 and frameNumber le 150 then template='dd:mm'
     if frameNumber gt 150 then template='mm:yyyy'
   endif
-  
+
   case template of
     'dd':begin
-    for i=0, frameNumber-1 do begin
-      caldat, startCalc+i*stepValue, month , day, year, hour, minute, second
-      ;doLog,month , day, year, hour, minute, second
-      ;resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
-      resDate[i]=strtrim(day, 1)
-    endfor
-  end
-  'hh:dd':begin
-  for i=0, frameNumber-1 do begin
-    caldat, startCalc+i*stepValue, month , day, year, hour, minute, second
-    ;doLog,month , day, year, hour, minute, second
-    ;resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
-    resDate[i]=strtrim(hour, 1)+':'+strtrim(day, 1)
-  endfor
-end
-'dd:mm':begin
-for i=0, frameNumber-1 do begin
-  caldat, startCalc+i*stepValue, month , day, year, hour, minute, second
-  ;doLog,month , day, year, hour, minute, second
-  ;resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
-  resDate[i]=strtrim(day, 1)+':'+strtrim(month, 1)
-endfor
-end
-'mm:yyyy':begin
-for i=0, frameNumber-1 do begin
-  caldat, startCalc+i*stepValue, month , day, year, hour, minute, second
-  resDate[i]=strtrim(month, 1)+':'+strtrim(year, 1)
-endfor
-end
-else:begin
-for i=0, frameNumber-1 do begin
-  caldat, startCalc+i*stepValue, month , day, year, hour, minute, second
-  resDate[i]=strtrim(day, 1)+':'+strtrim(month, 1)+':'+strtrim(year, 1)
-endfor
-endcase
-;	'1M':begin
-;		for i=0, frameNumber-1 do begin
-;			caldat, startCalc+i*minuteStep, month , day, year, hour, minute, second
-;			resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
-;		endfor
-;	end
-;	'1S':begin
-;		for i=0, frameNumber-1 do begin
-;			caldat, startCalc+i*secondStep, month , day, year, hour, minute, second
-;			resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
-;		endfor
-;	end
-endcase
-return, resDate
+      for i=0, frameNumber-1 do begin
+        caldat, startCalc+i*stepValue, month , day, year, hour, minute, second
+        ;doLog,month , day, year, hour, minute, second
+        ;resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
+        resDate[i]=strtrim(day, 1)
+      endfor
+    end
+    'hh:dd':begin
+      for i=0, frameNumber-1 do begin
+        caldat, startCalc+i*stepValue, month , day, year, hour, minute, second
+        ;doLog,month , day, year, hour, minute, second
+        ;resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
+        resDate[i]=strtrim(hour, 1)+':'+strtrim(day, 1)
+      endfor
+    end
+    'dd:mm':begin
+      for i=0, frameNumber-1 do begin
+        caldat, startCalc+i*stepValue, month , day, year, hour, minute, second
+        ;doLog,month , day, year, hour, minute, second
+        ;resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
+        resDate[i]=strtrim(day, 1)+':'+strtrim(month, 1)
+      endfor
+    end
+    'mm:yyyy':begin
+      for i=0, frameNumber-1 do begin
+        caldat, startCalc+i*stepValue, month , day, year, hour, minute, second
+        resDate[i]=strtrim(month, 1)+':'+strtrim(year, 1)
+      endfor
+    end
+    else:begin
+      for i=0, frameNumber-1 do begin
+        caldat, startCalc+i*stepValue, month , day, year, hour, minute, second
+        resDate[i]=strtrim(day, 1)+':'+strtrim(month, 1)+':'+strtrim(year, 1)
+      endfor
+    endcase
+    ;	'1M':begin
+    ;		for i=0, frameNumber-1 do begin
+    ;			caldat, startCalc+i*minuteStep, month , day, year, hour, minute, second
+    ;			resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
+    ;		endfor
+    ;	end
+    ;	'1S':begin
+    ;		for i=0, frameNumber-1 do begin
+    ;			caldat, startCalc+i*secondStep, month , day, year, hour, minute, second
+    ;			resDate[i]=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(second, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
+    ;		endfor
+    ;	end
+  endcase
+  return, resDate
 
 END
 
@@ -646,7 +646,7 @@ FUNCTION Utility::getColorTable, refValue, valueTable, colorTable, TEST=TEST
   if keyword_set(TEST) then refValue=minV+refValue*(maxv-minV)
   index=max(where(refValue gt valueTable[*]))
   return, colorTable[index>0]
-  
+
 END
 
 FUNCTION Utility::getOverPlotColor, index
@@ -659,7 +659,7 @@ FUNCTION Utility::getOverPlotColor, index
   colors[4,*]=[0,200,200]
   colors[5,*]=[200,0,200]
   return, getColor(colors[index mod 6,0],colors[index mod 6,1],colors[index mod 6,2])
-  
+
 END
 
 FUNCTION Utility::overPlotGraphCheck, title, xTitle, yTitle, dataXLabel, measureUnit, dataNum, controlWindow, colorToUse=colorToUse
@@ -695,14 +695,14 @@ FUNCTION Utility::overPlotGraphCheck, title, xTitle, yTitle, dataXLabel, measure
   controlWindow.graphOverplotTitles[controlWindow.graphOverplotNum]=title
   colorToUse=getOverPlotColor(controlWindow.graphOverplotNum)
   return, overPlot
-  
-  
+
+
 END
 
 FUNCTION Utility::getColor, red, green, blue, indexes=indexes, THREE=THREE
 
   if n_elements(indexes) ne 0 then begin
-  
+
     colorTable=bytarr(256,3)
     ;colStart=[0,0,0] & colEnd= [68, 0, 72]
     colorTable[0:15,0]=bindgen(16)*68./16
@@ -770,20 +770,20 @@ FUNCTION Utility::getColor, red, green, blue, indexes=indexes, THREE=THREE
     colorTable[224:255,2]=0.
     ;
     ;colorTable[255,*]=255b
-    
+
     ;stretch demo color table
     ;	step=255./(indexes-1)
     ;	subscribeIndexes=indgen(indexes)*(step)
-    
+
     retCT=colorTable[indexes,*]
     ;retCT=colorTable[subscribeIndexes,*]
-    
+
     if keyword_set(THREE) then return, retCT else return, long64(retCT[*,2])*256ll*256ll+retCT[*,1]*256ll+retCT[*,0]
-    
+
   endif
-  
+
   return, long64(blue)*256ll*256ll+green*256ll+red
-  
+
 END
 
 ;**************************************************************
@@ -794,7 +794,7 @@ FUNCTION Utility::isTrue, value
   type=size(value, /TYPE)
   if type eq 7 then return, strupcase(value) eq 'TRUE' or strupcase(value) eq '1'
   return,  value eq 1
-  
+
 END
 
 FUNCTION Utility::isFalse, value
@@ -802,7 +802,7 @@ FUNCTION Utility::isFalse, value
   type=size(value, /TYPE)
   if type eq 7 then return, strupcase(value) eq 'FALSE' or strupcase(value) eq '0'
   return,  value eq 0
-  
+
 END
 
 FUNCTION Utility::stringListToArray, sourceString, separator=separator, FLOAT=FLOAT, INT=INT, BYTE=BYTE, STRING=STRING
@@ -813,7 +813,7 @@ FUNCTION Utility::stringListToArray, sourceString, separator=separator, FLOAT=FL
   if keyword_set(INT) then return, fix(result)
   if keyword_set(BYTE) then return, byte(result)
   return, result
-  
+
 END
 
 FUNCTION Utility::getListDifference, a, b, NULL=NULL
@@ -821,7 +821,7 @@ FUNCTION Utility::getListDifference, a, b, NULL=NULL
   ; = a and (not b) = elements in A but not in B
   result = cmset_op(A, 'AND', /NOT2, B, NULL=NULL)   ; A but not B
   return, result
-  
+
 END
 
 ;Viewing contents of file '../idllib/contrib/groupk/strreplace.pro'
@@ -871,25 +871,25 @@ END
 FUNCTION Utility::STRREPLACE, Strings, Find1, Replacement1
 
   ;   Check integrity of input parameter
-  
+
   NP        = N_PARAMS()
   if (NP ne 3) then message,'Must be called with 3 parameters, '+$
     'Strings, Find, Replacement'
-    
+
   sz        = SIZE(Strings)
   ns        = n_elements(sz)
   if (sz[ns-2] ne 7) then message,'Parameter must be of string type.'
-  
+
   Find      = STRING(Find1)
   pos       = STRPOS(Strings,Find)
   here      = WHERE(pos ne -1, nreplace)
-  
+
   if (nreplace eq 0) then return, strings
-  
+
   Replacement=STRING(Replacement1)
   Flen      = strlen(Find)
   for i=0,nreplace-1 do begin
-  
+
     j         = here[i]
     prefix    = STRMID(Strings[j],0,pos(j))
     suffix    = STRMID(Strings[j],pos[j]+Flen,$
@@ -897,7 +897,7 @@ FUNCTION Utility::STRREPLACE, Strings, Find1, Replacement1
     strings[j] = prefix + replacement + suffix
   endfor
   return, strings
-  
+
 END
 
 
@@ -912,7 +912,7 @@ FUNCTION Utility::replaceChar, aString, sourceChar, destChar
   cb2 = byte(destChar)          ; convert char 2 to byte.
   b[w] = cb2[0]             ; replace char 1 by char 2.
   return, string(b)           ; return new string.
-  
+
 END
 
 ; using %envVarName% dos style convention
@@ -945,7 +945,7 @@ FUNCTION Utility::findEnvVariables, sourceString, envSign, parStrings=parStrings
     endif
   endwhile
   if (nElem mod 2) ne 0 then doLog,'something wrong', level=2
-  
+
   check=strsplit(sourceString, envSign)
   nElem=n_elements(check)
   if (nElem mod 2) ne 0 then doLog,'something wrong', level=2
@@ -957,7 +957,7 @@ FUNCTION Utility::findEnvVariables, sourceString, envSign, parStrings=parStrings
     parStrings[i/2]=strmid(sourceString, check[i+1], (check[i+2]<strlen(sourceString)-1)-check[i+1])
   endfor
   return, fixStrings
-  
+
 END
 
 FUNCTION Utility::IsNumber, aString
@@ -972,7 +972,7 @@ FUNCTION Utility::IsNumber, aString
     ;if count ne strlen(wholeAndDecimal[i]) then return, 0
   endfor
   return, 1
-  
+
 END
 
 FUNCTION Utility::buildWithAsterisk, list, prefix=prefix, numbers=numbers
@@ -986,7 +986,7 @@ FUNCTION Utility::buildWithAsterisk, list, prefix=prefix, numbers=numbers
     for i=1, n_elements(list)-1 do record=record+list[i]+separator
   endelse
   return, record
-  
+
 END
 
 FUNCTION Utility::buildFileDataStream, dataName, datalist, sepChar, blockSepChar, POINTER=POINTER
@@ -1003,21 +1003,21 @@ FUNCTION Utility::buildFileDataStream, dataName, datalist, sepChar, blockSepChar
       record=record+blockSeparatorChar
     endfor
     record=strmid(record, 0, strlen(record)-strlen(blockSeparatorChar))
-    
+
   endif else begin
     record=record+datalist[0]+separatorChar
     for i=1, n_elements(datalist)-1 do record=record+datalist[i]+separatorChar
     record=strmid(record, 0, strlen(record)-strlen(separatorChar))
   endelse
   return, record
-  
+
 END
 
 PRO Utility::convertStreamDataFile, record, dataName, datalist, sepChar, blockSepChar, POINTER=POINTER
 
   if n_elements(sepChar) ne 0 then separatorChar=sepChar[0] else separatorChar='*'
   if n_elements(blockSepChar) ne 0 then blockSeparatorChar=blockSepChar[0] else blockSeparatorChar='&'
-  
+
   info=strsplit(record, '=', /EXTRACT)
   data=info[n_elements(info)-1]
   if keyword_set(POINTER) then begin
@@ -1033,7 +1033,7 @@ PRO Utility::convertStreamDataFile, record, dataName, datalist, sepChar, blockSe
     datalist=str_sep(data, separatorChar)
   endelse
   if n_elements(info) eq 2 then dataName=info[0] else dataName=''
-  
+
 END
 
 ;**************************************************************
@@ -1068,7 +1068,7 @@ FUNCTION Utility::getSysTime, FILECOMPATIBILITY=FILECOMPATIBILITY, ONLY_YEAR=ONL
     endwhile
   endif
   return, date
-  
+
 END
 
 FUNCTION Utility::calcDayOfMonth, date, outHour=outHour
@@ -1076,13 +1076,13 @@ FUNCTION Utility::calcDayOfMonth, date, outHour=outHour
   jDay = julday(date[1], date[2], date[0], date[3])
   jDayFirst = julday(date[1], 1, date[0], 0)
   fyear=date[0]+ (date[1] eq 12 ? 1 : 0)
-  fmonth=(date[1] ne 12) ? date[1]+1 : 1 
-  ;print, fyear, fmonth  
+  fmonth=(date[1] ne 12) ? date[1]+1 : 1
+  ;print, fyear, fmonth
   jDayLast = julday(fmonth, 1, fyear, 0)
   dayDiff=fix(jDayLast-jDayFirst)
   outHour=fix((dayDiff-fix(jDay-jDayFirst))*24)
   return, dayDiff
-  
+
 END
 
 FUNCTION Utility::calcDayOfYear, date, outHour=outHour
@@ -1093,7 +1093,7 @@ FUNCTION Utility::calcDayOfYear, date, outHour=outHour
   dayDiff=fix(jDay-jDayFirst)
   outHour=fix((dayDiff-fix(jDay-jDayFirst))*24)
   return, dayDiff
-  
+
 END
 
 FUNCTION Utility::getDayNumberOfYear, year
@@ -1103,12 +1103,12 @@ FUNCTION Utility::getDayNumberOfYear, year
   hour=0 & ehour=23
   minute=0 & eminute=59
   second=0 & esecond=59
-  
+
   jDay = julday(month, day, year, hour, minute, second)
-  
+
   jDaye = julday(emonth, eday, year, ehour, eminute, esecond)
   return, round(jDaye-jDay)
-  
+
 END
 
 FUNCTION Utility::checkDate, year, month=month, day=day, hour=hour, minute=minute, second=second, julNumber=julNumber
@@ -1118,18 +1118,18 @@ FUNCTION Utility::checkDate, year, month=month, day=day, hour=hour, minute=minut
   if n_elements(hour) eq 0 then hour=0
   if n_elements(minute) eq 0 then minute=0
   if n_elements(second) eq 0 then second=0
-  
+
   jDay = julday(month, day, year, hour, minute, second)
   julNumber=jDay
   caldat, jDay, resMonth, resDay, resYear, resHour, resMinute, resSecond
   resSecond=round(resSecond)
-  
+
   if resYear eq year and resMonth eq month and $
     resDay eq day and resHour eq hour and $
     resMinute eq minute and resSecond eq second then return, 1
-    
+
   return, 0
-  
+
 END
 
 FUNCTION Utility::getDate, startDate, frequency, frameIndex
@@ -1140,29 +1140,29 @@ FUNCTION Utility::getDate, startDate, frequency, frameIndex
   hourStep=1./24
   minuteStep=1./(24*60)
   secondStep=1./(24*60*60)
-  
+
   case frequency of
     '1H':begin
-    caldat, startCalc+frameIndex*hourStep, month , day, year, hour, minute, second
-    ;doLog,month , day, year, hour, minute, second
-    ;resDate=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(floor(second), 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
-    resDate=strtrim(year, 1)+':'+strtrim(month, 1)+':'+strtrim(day, 1)+':'+strtrim(hour, 1)
-    ;resDate[i]=strtrim(hour, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
-  end
-  '1D':begin
-  caldat, startCalc+frameIndex*dayStep, month , day, year, hour, minute, second
-  resDate=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(floor(second), 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
-end
-'1M':begin
-caldat, startCalc+gframeIndex*minuteStep, month , day, year, hour, minute, second
-resDate=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(floor(second), 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
-end
-'1S':begin
-caldat, startCalc+frameIndex*secondStep, month , day, year, hour, minute, second
-resDate=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(floor(second), 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
-end
-endcase
-return, resDate
+      caldat, startCalc+frameIndex*hourStep, month , day, year, hour, minute, second
+      ;doLog,month , day, year, hour, minute, second
+      ;resDate=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(floor(second), 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
+      resDate=strtrim(year, 1)+':'+strtrim(month, 1)+':'+strtrim(day, 1)+':'+strtrim(hour, 1)
+      ;resDate[i]=strtrim(hour, 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
+    end
+    '1D':begin
+      caldat, startCalc+frameIndex*dayStep, month , day, year, hour, minute, second
+      resDate=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(floor(second), 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
+    end
+    '1M':begin
+      caldat, startCalc+gframeIndex*minuteStep, month , day, year, hour, minute, second
+      resDate=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(floor(second), 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
+    end
+    '1S':begin
+      caldat, startCalc+frameIndex*secondStep, month , day, year, hour, minute, second
+      resDate=strtrim(hour, 1)+':'+strtrim(minute, 1)+'.'+strtrim(floor(second), 1)+' '+strtrim(day, 1)+'-'+strtrim(month, 1)+'-'+strtrim(year, 1)
+    end
+  endcase
+  return, resDate
 
 END
 
@@ -1170,28 +1170,36 @@ FUNCTION Utility::formatDate, date, template=template
 
   if n_elements(template) eq 0 then template='hh:dd:mm:yyyy'
   ;date var of type intarr(6) [0]: year [5]: seconds
-  
+
   case template of
+    'satellite':begin
+      ;2014-02-12T13:39:25Z',
+      format='(I04)-(I02))-(I02)TI(02):I(02)Z'
+      stringDate=string(format='(I4, A, I02, A, I02, A, I02, A, I02, A, I02, A)', $
+        date[0], '-', date[1], '-', date[2], 'T', date[3], ':', date[4], ':', date[5], 'Z')
+      ;stringDate=strtrim(date[3], 1)+':'+strtrim(date[2], 1)+':'+strtrim(date[1], 1)+':'+strtrim(date[0], 1)
+    end
     'dd':begin
-    stringDate=strtrim(date[2], 1)
-  end
-  'hh:dd':begin
-  stringDate=strtrim(date[3], 1)+':'+strtrim(date[2], 1)
-end
-'dd:mm':begin
-stringDate=strtrim(date[2], 1)+':'+strtrim(date[1], 1)
-end
-'mm:yyyy':begin
-stringDate=strtrim(date[1], 1)+':'+strtrim(date[0], 1)
-end
-'hh:dd:mm:yyyy':begin
-stringDate=strtrim(date[3], 1)+':'+strtrim(date[2], 1)+':'+strtrim(date[1], 1)+':'+strtrim(date[0], 1)
-end
-else:begin
-stringDate=strtrim(date[3], 1)+':'+strtrim(date[2], 1)+':'+strtrim(date[1], 1)+':'+strtrim(date[0], 1)
-end
-endcase
-return, stringDate
+      stringDate=strtrim(date[2], 1)
+    end
+    'hh:dd':begin
+      stringDate=strtrim(date[3], 1)+':'+strtrim(date[2], 1)
+    end
+    'dd:mm':begin
+      stringDate=strtrim(date[2], 1)+':'+strtrim(date[1], 1)
+    end
+    'mm:yyyy':begin
+      stringDate=strtrim(date[1], 1)+':'+strtrim(date[0], 1)
+    end
+    'hh:dd:mm:yyyy':begin
+      stringDate=strtrim(date[3], 1)+':'+strtrim(date[2], 1)+':'+strtrim(date[1], 1)+':'+strtrim(date[0], 1)
+    end
+    else:begin
+      stringDate=strtrim(date[3], 1)+':'+strtrim(date[2], 1)+':'+strtrim(date[1], 1)+':'+strtrim(date[0], 1)
+    end
+  endcase
+  
+  return, stringDate
 
 END
 
@@ -1201,13 +1209,13 @@ FUNCTION Utility::init
 
   if not self -> Object :: init() then return , 0
   return , 1
-  
+
 END
 
 PRO Utility::cleanUp
 
   self -> Object::cleanUp
-  
+
 END
 
 ;****************************************************************************************
@@ -1217,7 +1225,7 @@ PRO Utility__Define
   Struct = { Utility , $
     Inherits Object $
   }
-  
+
 END
 
 ;****************************************************************************************

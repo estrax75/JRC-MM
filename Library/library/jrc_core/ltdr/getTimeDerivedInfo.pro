@@ -13,9 +13,9 @@ function getTimeDerivedInfo, year, month, TA_TYPE, TC_TYPE, xticks_c=xticks_c, x
   if TA_TYPE eq 'TC' then ta_dir='TC'
   if TA_TYPE eq 'MEAN' then ta_dir='MEAN'
   if TA_TYPE eq 'NONE' then ta_dir=''
-  level='L2'
 
   if TC_TYPE eq 'DAILY' then begin
+    level='L1'
     dayofMonth=utils->calcDayOfMonth([year,month,1,0])
     first=indgen(dayofMonth)+1
     last=first
@@ -24,6 +24,7 @@ function getTimeDerivedInfo, year, month, TA_TYPE, TC_TYPE, xticks_c=xticks_c, x
     tc_dir=TC_TYPE
   endif
   if TC_TYPE eq '5D' then begin
+    level='L3'
     first=[01,06,11,16,21,26]
     last=[5,10,15,20,25,utils->calcDayOfMonth([year,month,1,0])]
     xticks_c=3
@@ -33,6 +34,7 @@ function getTimeDerivedInfo, year, month, TA_TYPE, TC_TYPE, xticks_c=xticks_c, x
     tc_dir=TC_TYPE
   endif
   if TC_TYPE eq '10D' then begin
+    level='L3'
     first=[01,11,21]
     last=[10,20,utils->calcDayOfMonth([year,month,1,0])]
     xticks_c=3
@@ -42,6 +44,7 @@ function getTimeDerivedInfo, year, month, TA_TYPE, TC_TYPE, xticks_c=xticks_c, x
     tc_dir=TC_TYPE
   endif
   if TC_TYPE eq '16D' then begin
+    level='L3'
     first=[01,17]
     last=[16,utils->calcDayOfMonth([year,month,1,0])]
     xticks_c=2
@@ -50,8 +53,18 @@ function getTimeDerivedInfo, year, month, TA_TYPE, TC_TYPE, xticks_c=xticks_c, x
     tc_dir=TC_TYPE
   endif
   if TC_TYPE eq 'MONTHLY' then begin
+    level='L3'
     first=[01]
     last=[utils->calcDayOfMonth([year,month,1,0])]
+    xticks_c=2
+    xtickname_c=[string(first[0], format='(I02)')+string(last[0], format='(I02)'), $
+      string(first[0], format='(I02)')+string(last[0], format='(I02)')]
+    tc_dir=TC_TYPE
+  endif
+  if TC_TYPE eq 'YEARLY' then begin
+    level='L3'
+    first=indgen(12)+1
+    last=first
     xticks_c=2
     xtickname_c=[string(first[0], format='(I02)')+string(last[0], format='(I02)'), $
       string(first[0], format='(I02)')+string(last[0], format='(I02)')]

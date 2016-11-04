@@ -30,6 +30,19 @@ function searchProductFile, productName, instrument, spatialResolution, indicato
         res={fullFileName:resFile[0], fileName:onlyFileName[0], filePath:filePath[0], FOUND:1}
       endif
     end
+    'FAPAR':begin
+      fileInfo=build_JRC_FPA_AVH_Daily_Product_FileName(instrument, year, month, startDay, timestamp, temporalResolution, location, spatialResolution, $
+        product, version, formatType,  indicator=indicator, level, projection=projection)
+      ;fileToSearch=inputDir+fileInfo.fileName
+      searchDir=inputDir
+      searchDir=searchDir+fileInfo.filePath
+
+      resFile=file_search(searchDir,fileInfo.fileName, count=count, /FULLY_QUALIFY_PATH)
+      if count eq 1 then begin
+        onlyFileName=ST_fileSystem->getFileNameInfo(resFile, filePath=filePath, extension=extension)
+        res={fullFileName:resFile[0], fileName:onlyFileName[0], filePath:filePath[0], FOUND:1}
+      endif
+    end
 
     else: begin
       message, 'productName: '+productName+' not available'

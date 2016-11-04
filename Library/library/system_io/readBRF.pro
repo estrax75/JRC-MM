@@ -3,7 +3,7 @@
 ;-
 ;@.\Library\library\objects\GenericOperator.pro
 ;@../Library/library/objects/FileSystem.pro
-function readBRF, folder, fileName, FOUND=FOUND, SWITCH_TS_TV=SWITCH_TS_TV, FULL=FULL
+function readBRF, folder, fileName, FOUND=FOUND, FULL=FULL
 
   ;  avBandNames=['BRF_BAND_1', 'BRF_BAND_2', 'SIGMA_BRF_BAND_1', 'SIGMA_BRF_BAND_2', $
   ;    'TS', 'TV', 'PHI', 'QA', 'Q1', 'Q2']
@@ -77,6 +77,7 @@ function readBRF, folder, fileName, FOUND=FOUND, SWITCH_TS_TV=SWITCH_TS_TV, FULL
 
   dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[6], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
   if keyword_set(FOUND) then begin
+    print, dataSet.fillValue
     phi_avhrr=dataSet.data
     slope_phi=dataSet.slope
     offset_phi=dataSet.intercept
@@ -84,12 +85,12 @@ function readBRF, folder, fileName, FOUND=FOUND, SWITCH_TS_TV=SWITCH_TS_TV, FULL
 
   dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[7], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
   if keyword_set(FOUND) then begin
-    brdf_qa_avhrr=dataSet.data
+    brf_qa_avhrr=dataSet.data
     slope_qa=dataSet.slope
     offset_qa=dataSet.intercept
   endif else begin
     dataSet=operatorObj->readNcdfVar(fullFileName, 'QA', FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
-    brdf_qa_avhrr=dataSet.data
+    brf_qa_avhrr=dataSet.data
     slope_qa=dataSet.slope
     offset_qa=dataSet.intercept
   endelse
@@ -117,7 +118,7 @@ function readBRF, folder, fileName, FOUND=FOUND, SWITCH_TS_TV=SWITCH_TS_TV, FULL
   allData=0
   if keyword_set(FOUND) then allData={red_avhrr:red_avhrr, nir_avhrr:nir_avhrr,$
     ts_avhrr:ts_avhrr,tv_avhrr:tv_avhrr,phi_avhrr:phi_avhrr,$
-    brdf_qa_avhrr:brdf_qa_avhrr, $
+    brf_qa_avhrr:brf_qa_avhrr, $
     sigma_red: sigma_red, sigma_nir: sigma_nir, cMask1:cMask1, cMask2:cMask2, $
     slope_red:slope_red,slope_nir:slope_nir,$
     slope_ts:slope_ts,slope_tv:slope_tv,slope_phi:slope_phi,$

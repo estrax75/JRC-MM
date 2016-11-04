@@ -166,7 +166,7 @@ pro write_ncdf, fileName, bandNames, bandList, boundaryInfo
     NCDF_ATTPUT, id_new, /GLOBAL,"keywords", "brdf, nir, red", /CHAR
     NCDF_ATTPUT, id_new, /GLOBAL,"summary", "", /CHAR
     ;NCDF_ATTPUT, id_new, /GLOBAL,"time_number_steps",STRTRIM('days',1),/CHAR
-    NCDF_ATTPUT, id_new, /GLOBAL,"cdm_datatype","ETRS_1989_LAEA",/CHAR		; grid check
+    ;NCDF_ATTPUT, id_new, /GLOBAL,"cdm_datatype","ETRS_1989_LAEA",/CHAR		; grid check
     NCDF_ATTPUT, id_new, /GLOBAL,"license","Copyright: European Communities, 2016",/CHAR
     NCDF_ATTPUT, id_new, /GLOBAL,"source","JRC LDTR datasets", /CHAR
 
@@ -193,7 +193,7 @@ pro write_ncdf, fileName, bandNames, bandList, boundaryInfo
     ; GSL
     NCDF_ATTPUT, id_new, ds_id, 'long_name', 'BRDFs'
     NCDF_ATTPUT, id_new, ds_id, 'standard_name', 'BRDFs'
-    NCDF_ATTPUT, id_new, ds_id, 'grid_mapping', 'LAEA'
+    NCDF_ATTPUT, id_new, ds_id, 'grid_mapping', 'PLC'
     NCDF_ATTPUT, id_new, ds_id, 'units', 'day'
     NCDF_ATTPUT, id_new, ds_id, 'valid_min', 1,/LONG
     NCDF_ATTPUT, id_new, ds_id, 'valid_max', 1,/LONG
@@ -254,7 +254,7 @@ pro write_ncdf, fileName, bandNames, bandList, boundaryInfo
     NCDF_ATTPUT, id_new, /GLOBAL,"keywords", "put keywords here", /CHAR
     NCDF_ATTPUT, id_new, /GLOBAL,"summary", "Put summary here", /CHAR
     ;NCDF_ATTPUT, id_new, /GLOBAL,"time_number_steps",STRTRIM('days',1),/CHAR
-    NCDF_ATTPUT, id_new, /GLOBAL,"cdm_datatype","ETRS_1989_LAEA",/CHAR		; grid change with right one
+    ;NCDF_ATTPUT, id_new, /GLOBAL,"cdm_datatype","ETRS_1989_LAEA",/CHAR		; grid change with right one
     NCDF_ATTPUT, id_new, /GLOBAL,"license","Copyright: European Communities, 2016",/CHAR
     NCDF_ATTPUT, id_new, /GLOBAL,"source","JRC LDTR datasets", /CHAR
 

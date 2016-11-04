@@ -193,10 +193,8 @@ pro do_AVHRR_Howmuller, month, year, sourceParameter, parameter, $
 
     device,/close
   endfor
+  set_plot, 'X'
+  print, '**** done ****'
   ;
-  ;
-  ;
-  ;
-
 
 end

@@ -14,7 +14,8 @@ function getByteScalingSetting, ZEROISNAN=ZEROISNAN, TWO51_TO_TWO55_ISNAN=TWO51_
   remarkableFlags=[255,254,253]
 
   if keyword_set(ZEROISNAN) then begin
-    DATA_NAN=255
+    ; MM check 
+    DATA_NAN=-1
     BYTE_NAN=0
     BYTE_RANGE=[1,255]
     remarkableFlags[*]=BYTE_NAN

@@ -373,11 +373,18 @@ PRO run_split_plot_summary_analysis_v4_mr_d, request, NODISPLAY=NODISPLAY
     YTICKVALUES=string([yScaleRange[0], refMax], format='(i'+order+'.0)')
     YTICKFORMAT='getVoidTickName'
     formatTicks='(i'+order+'.0)'
-    yTicksNo=n_elements(YTICKVALUES)-1
+    yTicksNo=n_elements(stdYTICKVALUES)-1
     
     for jj=0, numInPar-1 do begin
       ;for j=0, cvNum-1 do begin
       ;fullFileName=fullFileNameHistoCheck[jj]
+      if jj eq 2 then begin
+        YTICKVALUES=string([yScaleRange[0], 35], format='(i'+order+'.0)')
+        yScaleRange=[(0<refMin), 35+35./10]
+      endif else begin
+        YTICKVALUES=string([yScaleRange[0], refMax], format='(i'+order+'.0)')
+        yScaleRange=[(0<refMin), refMax+refMax/10]
+      endelse
       fullFileName=operator->buildOperatorResultFileName(periodType, 'graph'+strcompress(jj, /REMOVE), monthList, yearList, sensorCode, '', outputDir, INTERVAL=INTERVAL, /FULLPATH)
       
       ;mainTitle=histoMainTitlesCheck[jj mod 6]

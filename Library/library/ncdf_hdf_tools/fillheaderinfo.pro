@@ -1,83 +1,49 @@
-pro fillHeaderInfo, fileId, header, TYPE=TYPE
+pro fillHeaderInfo, fileId, header, TYPE=TYPE, $
+  time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End, $
+  Satellite=Satellite, id=id, date_created=date_created, cdr_name=cdr_name
+  
 
-  title='-'
-  technique='-'
-  mainParameter='-'
-  source='-'
-  versionNumber='-'
-  versionDate='-'
-  author='-'
-  institute='-'
-  conventions='-'
-  date='-'
-  telephone='-'
-  facsimile='-'
-  internet='-'
-  post_processing=''
+  ; title='JRC daily FAPAR with AVHRR'
+  ; technique='JRC FAPAR TOC algorithm - see QA4ECV ATBD'
+  ; mainParameter='-'
+  ; source='Inputs BRF AVHRR computed from NOAA datasets'
+  ; versionNumber='1.0'
+  ; versionDate='21-09-2016'
+  ; author=''
+  ; institute='European Commission - Joint Research Center'
+  ; conventions='CF-4'  ; verifica
+  ;date='-'
+  ;telephone='-'
+  ;facsimile='-'
+  ;internet='-'
+  ;post_processing='Normalized surface reflectance to BRF'
+  tagList=strupcase(tag_names(header))
 
-  if n_elements(header) eq 1 then begin
-    avTags=tag_names(header)
-    thisTag=(where(avTags eq strupcase('title')))[0]
-    if thisTag ne -1 then title=header.(thisTag)
-    thisTag=(where(avTags eq strupcase('technique')))[0]
-    if thisTag ne -1 then technique=header.(thisTag)
-    thisTag=(where(avTags eq strupcase('mainParameter')))[0]
-    if thisTag ne -1 then mainParameter=header.(thisTag)
-    thisTag=(where(avTags eq strupcase('source')))[0]
-    if thisTag ne -1 then source=header.(thisTag)
-    thisTag=(where(avTags eq strupcase('versionNumber')))[0]
-    if thisTag ne -1 then versionNumber=header.(thisTag)
-    thisTag=(where(avTags eq strupcase('versionDate')))[0]
-    if thisTag ne -1 then versionDate=header.(thisTag)
-    thisTag=(where(avTags eq strupcase('author')))[0]
-    if thisTag ne -1 then author=header.(thisTag)
-    thisTag=(where(avTags eq strupcase('institute')))[0]
-    if thisTag ne -1 then institute=header.(thisTag)
-    thisTag=(where(avTags eq strupcase('conventions')))[0]
-    if thisTag ne -1 then conventions=header.(thisTag)
-    thisTag=(where(avTags eq strupcase('date')))[0]
-    if thisTag ne -1 then date=header.(thisTag)
-    thisTag=(where(avTags eq strupcase('telephone')))[0]
-    if thisTag ne -1 then telephone=header.(thisTag)
-    thisTag=(where(avTags eq strupcase('facsimile')))[0]
-    if thisTag ne -1 then facsimile=header.(thisTag)
-    thisTag=(where(avTags eq strupcase('internet')))[0]
-    if thisTag ne -1 then internet=header.(thisTag)
-    thisTag=(where(avTags eq strupcase('date')))[0]
-    if thisTag ne -1 then post_processing=header.(thisTag)
-  endif
+  if ~(keyword_set(TYPE)) then TYPE='NC'
+  idx1=where(tagList eq strupcase('time_Coverage_Start'), cntStart)
+  idx2=where(tagList eq strupcase('time_Coverage_End'), cntEnd)
+  idx3=where(tagList eq strupcase('Satellite'), cntSat)
+  idx4=where(tagList eq strupcase('Id'), cntId)
+  idx5=where(tagList eq strupcase('date_created'), cntDate)
+  idx6=where(tagList eq strupcase('cdr_name'), cntCDRName)
+  
+  if n_elements(time_Coverage_Start) and cntStart eq 1 then header.(idx1)=[header.(idx1)[0], time_Coverage_Start]
+  if n_elements(time_Coverage_End) and cntEnd eq 1 then header.(idx2)=[header.(idx2)[0], time_Coverage_End]
+  if n_elements(Satellite) and cntSat eq 1 then header.(idx3)=[header.(idx3)[0], Satellite]
+  if n_elements(id) and cntId eq 1 then header.(idx4)=[header.(idx4)[0], Id]
+  if n_elements(date_created) and cntDate eq 1 then header.(idx5)=[header.(idx5)[0], date_created]
+  if n_elements(cdr_name) and cntCDRName eq 1 then header.(idx5)=[header.(idx5)[0], date_created]
 
-  if ~(keyword_set(TYPE)) then TYPE='NC' 
   if strupcase(TYPE) eq 'NC' then begin
-    NCDF_ATTPUT, fileid, /GLOBAL,'title',title, /STRING
-    NCDF_ATTPUT, fileid, /GLOBAL,'technique',technique, /STRING
-    NCDF_ATTPUT, fileid, /GLOBAL,'mainParameter',mainParameter, /STRING
-    NCDF_ATTPUT, fileid, /GLOBAL,'source',source, /STRING
-    NCDF_ATTPUT, fileid, /GLOBAL,'versionNumber',versionNumber, /STRING
-    NCDF_ATTPUT, fileid, /GLOBAL,'versionDate',versionDate, /STRING
-    NCDF_ATTPUT, fileid, /GLOBAL,'author',author, /STRING
-    NCDF_ATTPUT, fileid, /GLOBAL,'institute',institute, /STRING
-    NCDF_ATTPUT, fileid, /GLOBAL,'conventions',conventions, /STRING
-    NCDF_ATTPUT, fileid, /GLOBAL,'date',date, /STRING
-    NCDF_ATTPUT, fileid, /GLOBAL,'telephone',telephone, /STRING
-    NCDF_ATTPUT, fileid, /GLOBAL,'facsimile',facsimile, /STRING
-    NCDF_ATTPUT, fileid, /GLOBAL,'internet',internet, /STRING
-    NCDF_ATTPUT, fileid, /GLOBAL,'date',date, /STRING
-  endif else begin
-    HDF_SD_ATTRSET, fileid,'title',title
-    HDF_SD_ATTRSET, fileid,'technique',technique
-    HDF_SD_ATTRSET, fileid,'mainParameter',mainParameter
-    HDF_SD_ATTRSET, fileid,'source',source
-    HDF_SD_ATTRSET, fileid,'versionNumber',versionNumber
-    HDF_SD_ATTRSET, fileid,'versionDate',versionDate
-    HDF_SD_ATTRSET, fileid,'author',author
-    HDF_SD_ATTRSET, fileid,'institute',institute
-    HDF_SD_ATTRSET, fileid,'conventions',conventions
-    HDF_SD_ATTRSET, fileid,'date',date
-    HDF_SD_ATTRSET, fileid,'telephone',telephone
-    HDF_SD_ATTRSET, fileid,'facsimile',facsimile
-    HDF_SD_ATTRSET, fileid,'internet',internet
-    HDF_SD_ATTRSET, fileid,'date',date
-  endelse
+    NCDF_ATTPUT, fileid, /GLOBAL, 'Conventions', 'CF-1.6'
+    NCDF_ATTPUT, fileid, /GLOBAL, 'Metadata_Conventions', 'CF-1.6, Unidata Dataset Discovery v1.0'
+    NCDF_ATTPUT, fileid, /GLOBAL, 'standard_name_vocabulary', 'CF Standard Name Table (v25, 05 July 2013)'
+  endif
+  
+
+  for i=0, n_elements(tagList)-1 do begin
+    if strupcase(TYPE) eq 'NC' then NCDF_ATTPUT, fileid, /GLOBAL, (header.(i))[0], (header.(i))[1]
+    if strupcase(TYPE) eq 'HDF' then HDF_SD_ATTRSET, fileid, (header.(i))[0], (header.(i))[1]
+  endfor
 
 end

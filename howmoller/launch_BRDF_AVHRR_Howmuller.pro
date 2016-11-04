@@ -1,5 +1,6 @@
-;launch_BRDF_AVHRR_Howmuller, 1981, 1981, 1, 12, 'NC'
-pro launch_BRDF_AVHRR_Howmuller, startyear, endyear, startmonth, endmonth, sourceformatType, eps=EPS
+;launch_BRF_AVHRR_Howmuller, 1981, 1981, 1, 12, 'NC'
+pro launch_BRF_AVHRR_Howmuller, startyear, endyear, startmonth, endmonth, sourceformatType, missionIndex, $
+  eps=EPS, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX
   ;
   ; QA4EVC daily BRFs
   ;
@@ -21,7 +22,7 @@ pro launch_BRDF_AVHRR_Howmuller, startyear, endyear, startmonth, endmonth, sourc
   for year=startyear, endyear do begin
     for month=startmonth, endmonth do begin
       inputBaseDir=getsourcedir_by_year(year)
-      do_BRDF_AVHRR_Howmuller, month, year, title1, title2, sourceformatType, inputBaseDir, outputDir, $
+      do_BRF_AVHRR_Howmuller, month, year, title1, title2, sourceformatType, inputBaseDir, outputDir, missionIndex, $
         eps=EPS, TA_TYPE=TA_TYPE, TC_TYPE=TC_TYPE, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX
     endfor
   endfor

@@ -1,10 +1,11 @@
 function getStandardDiffDataSetInfo
 
-  infoHeader=getJRCHeader()
-  infoHeader.title='Difference'
+  infoHeader=getJRCHeader_v1_3()
   
-  INT_NAN=-9999
-  BYTE_NAN=255
+  INT_NAN=2^15
+  INT_MAX=2^15-1
+  UINT_MAX=2u^16-1
+  BYTE_NAN=0
 
   GENERIC_DATA_RANGE=[0., 1.]
   ANGLES_DATA_RANGE1=[0., 90.]
@@ -21,7 +22,14 @@ function getStandardDiffDataSetInfo
   bandMeasureUnits=['-','-','-']
   
   bandIntercepts=fltarr(n_elements(bandSlopes))
-  ;bandIntercepts[0]=1.
+
+  ; band data type coding:
+  ;  BYTE=bandDataType[v] eq 1, SHORT=bandDataType[v] eq 2, $
+  ;    LONG=bandDataType[v] eq 3, $
+  ;    UBYTE=bandDataType[v] eq 16, USHORT=bandDataType[v] eq 12, $
+  ;    ULONG=bandDataType[v] eq 13, $
+  ;    FLOAT=bandDataType[v] eq 4, DOUBLE=bandDataType[v] eq 5, $
+  ;    STRING=bandDataType[v] eq 7, UINT64=bandDataType[v] eq 14, $
   bandDataType=[2,2,2]
 
   minMaxs=fltarr(n_elements(bandDataType), 2)

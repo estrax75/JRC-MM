@@ -1,5 +1,5 @@
 ; phi brf <> phi fapar
-FUNCTION dataByteScaling, data, flagMatrix, FLAG_VALUES=FLAG_VALUES, $
+FUNCTION dataByteScaling, data, flagMatrix, $;, FLAG_VALUES=FLAG_VALUES, $
   DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, $
   DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, outSlope, outIntercept
 
@@ -15,14 +15,14 @@ FUNCTION dataByteScaling, data, flagMatrix, FLAG_VALUES=FLAG_VALUES, $
   idxneg=where(data lt DATA_RANGE[0])
   if idxneg[0] ge 0 then begin
     resData[idxneg]=0.0;DATA_RANGE[0]
-    if keyword_set(FLAG_VALUES) then flagMatrix[idxneg]= FLAG_VALUES[0]
+    ;if keyword_set(FLAG_VALUES) then flagMatrix[idxneg]= FLAG_VALUES[0]
   endif
 
   ;idxbig=where(output.fpar gt DATA_MAX and output.fpar le 250.0)
   idxbig=where(data gt DATA_RANGE[1])
   if idxbig[0] ge 0 then begin
     resData[idxbig]=1.0;DATA_RANGE[1]
-    if keyword_set(FLAG_VALUES) then flagMatrix[idxbig]= FLAG_VALUES[1]
+    ;if keyword_set(FLAG_VALUES) then flagMatrix[idxbig]= FLAG_VALUES[1]
   endif
   if preNanCount ne 0 then resData[nanIdxs]=BYTE_NAN
   outSlope=stepRange

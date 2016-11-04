@@ -541,7 +541,8 @@ FUNCTION GenericOperator::cropping, bandInfos, outputVarList, $
   return, {enviDataFile:finalEnviFileName, year:'N/A', month:'N/A', jday:'N/A', memoryData:memoryData}
 END
 
-FUNCTION GenericOperator::readNcdfVar, fileName, datasetName, FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, targetCropInfo=targetCropInfo
+FUNCTION GenericOperator::readNcdfVar, fileName, datasetName, FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, $
+  targetCropInfo=targetCropInfo, offset=offset, count=count
 
   FOUND=0
   res={name:'', idx:0, data:0}
@@ -572,7 +573,7 @@ FUNCTION GenericOperator::readNcdfVar, fileName, datasetName, FOUND=FOUND, REVER
         ;attname=ncdf_attname(fileID,i,attndx)
         ;ncdf_attget,fileID,varndx,attname,value
         varID=ncdf_varid(fileID,varname)
-        ncdf_varget,fileID,varID,variable
+        ncdf_varget,fileID,varID,variable, offset=offset, count=count
         doLog, callingRoutine=callingRoutine, /STACK
         doLog, callingRoutine, fileName, LEVEL=4
         ndims=size(variable, /N_DIM)

@@ -1,7 +1,7 @@
-@../ncdf_tools/ncdf_routines
+;@../ncdf_tools/ncdf_routines
 @../core/structure_definition
 
-PRO GenericOperator::readHdfFullInfoData, fullfilename, name, array, slope, offset, fillvalue, info=INFO, ERROR=ERROR
+PRO GenericOperator::readHdfFullInfoData, fullfilename, name, array, slope, offset, fillvalue, info=INFO, ERROR=ERROR, APPLY=APPLY
   ;
   ;
   ; Inputs:
@@ -27,6 +27,18 @@ PRO GenericOperator::readHdfFullInfoData, fullfilename, name, array, slope, offs
   ;
   ;print, dir+path_sep()+filename
   ;fullfilename
+  ERROR=0
+  catch, error_status
+  FOUND=0
+  res={name:'', idx:0, data:0}
+  if error_status NE 0 THEN BEGIN
+    catch, /CANCEL
+    print, '***Corrupted : ', FULLFILENAME, '  ***'
+    FOUND=0
+    ERROR=1
+    return
+  endif
+
   sd_id=HDF_SD_START(FULLFILENAME,/READ)
   ;
   ;
@@ -64,6 +76,7 @@ PRO GenericOperator::readHdfFullInfoData, fullfilename, name, array, slope, offs
   SDSNo = HDF_SD_NAMETOINDEX(sd_id, name) ;find the SDS offset number
   print, SDSNo
   IF SDSNo NE -1 THEN get_s_hdf_data, sd_id, SDSNo, name, array, dims, chanid, fillvalue, ERROR=ERROR
+  if keyword_set(ERROR) then return
   sds_id = HDF_SD_SELECT(SD_ID, SDSNo)
   aindex = HDF_SD_ATTRFIND(sds_id, 'scale_factor')
 
@@ -96,20 +109,27 @@ PRO GenericOperator::readHdfFullInfoData, fullfilename, name, array, slope, offs
   ;tvscl, reverse(congrid(array/slope(0)+offset(0), dims(0)/10, dims(1)/10),2)
   ;stop
   HDF_SD_END, sd_id
+  if keyword_set(APPLY) then begin
+    if n_elements(offset) eq 1 and n_elements(slope) eq 1 then begin
+      array=1.*array*slope+offset
+      slope=1
+      offset=0
+    endif
+  endif
   ;stop
 
 END
 
 FUNCTION GenericOperator::getFileSystem
 
- if obj_valid(self.app) then fs=self.app->getFileSystem() else fs=obj_new('FileSystem', /STAND_ALONE)
- return, fs
+  if obj_valid(self.app) then fs=self.app->getFileSystem() else fs=obj_new('FileSystem', /STAND_ALONE)
+  return, fs
 
 END
 
 PRO GenericOperator::releaseFileSystem, fs
 
- if ~(obj_valid(self.app)) then obj_destroy, fs 
+  if ~(obj_valid(self.app)) then obj_destroy, fs
 
 END
 
@@ -125,9 +145,9 @@ FUNCTION GenericOperator::getBandsInfo, bandCodes
     parInfos[i].measureUnit=thisPar.measureUnit
     parInfos[i].description=thisPar.description
   endfor
-  
+
   return, parInfos
-  
+
 END
 
 FUNCTION GenericOperator::isBandToExport, bandCode
@@ -135,7 +155,7 @@ FUNCTION GenericOperator::isBandToExport, bandCode
   if ptr_valid(self.bandToExportList) then expBands=*self.bandToExportList else return, 0
   idx=where(bandCode eq expBands, count)
   if count eq 1 then return, 1 else return, 0
-  
+
 END
 
 FUNCTION GenericOperator::prepareBands, fileNames, parCode, NOTFOUND=NOTFOUND
@@ -149,33 +169,33 @@ FUNCTION GenericOperator::prepareBands, fileNames, parCode, NOTFOUND=NOTFOUND
     mapIn=readNcdfGeoInfo(fileName, /ADDPIXEL)
     ;ENVI_OPEN_DATA_FILE, fileName, r_fid=fid, /HDF_SD, HDFSD_DATASET=index
     ;ENVI_FILE_QUERY, Fid, DATA_TYPE=dt, DIMS=dims, NS=ns, NL=nl, NB=nb
-    
+
     ;stepLon = (ABS(mapLimits[3]-mapLimits[1]))/(ns-1)
     ;stepLat = (ABS(mapLimits[2]-mapLimits[0]))/(nl-1)
-    
+
     ; set the map info to the regular grid in ENVI file
     ;ps = [stepLon, stepLat]
     ;mc = [0.5D, 0.5D, mapLimits[1], mapLimits[2]]
     mapInfo = ENVI_MAP_INFO_CREATE(/GEOGRAPHIC, mc=mapIn.mc, ps=mapIn.ps)
-    
+
     ;NOTFOUND=1-keyword_set(FOUND)
     ;data=eRegStatOperator->readNcdfVar(fileName, parCode, FOUND=FOUND1, /REVERSE, TRANSPOSE=TRANSPOSE)
     mask=where(bandInfo.data ne -9999 and bandInfo.data ne 0 and finite(bandInfo.data), cnt)
     sizeInfo=size(bandInfo.data, /STRUCT)
-    
+
     bands={data:bandInfo.data, mask:mask, mapInfo:mapInfo, nl:sizeInfo.dimensions[1], ns:sizeInfo.dimensions[0], dt:sizeInfo.type}
     NOTFOUND=0
   endfor
   return, bands
-  
+
 END
 
 FUNCTION GenericOperator::readDataFromFile, periodType, month, year, dataDir, readFunction, parCode, $
-    roiCode, roiArchiveCode, outputDir, $
-    refRoi=refRoiCode, outMapInfo=outMapInfo, elabName=elabName, $
-    FOUND=FOUND, ignoreValue=ignoreValue, fileName=fileName, $
-    EXTRACT=EXTRACT;, prepareDataDir
-    
+  roiCode, roiArchiveCode, outputDir, $
+  refRoi=refRoiCode, outMapInfo=outMapInfo, elabName=elabName, $
+  FOUND=FOUND, ignoreValue=ignoreValue, fileName=fileName, $
+  EXTRACT=EXTRACT;, prepareDataDir
+
   FOUND=0
   if keyword_set(EXTRACT) then begin
     band = call_function(readFunction+'_'+periodType, $
@@ -191,7 +211,7 @@ FUNCTION GenericOperator::readDataFromFile, periodType, month, year, dataDir, re
   endif else begin
     fileName=call_function(readFunction+'_'+periodType, $
       year, month, periodType, roiCode, sensor, parCode, dataDir, /FULLPATH)
-      
+
     fInfo=file_info(fileName)
     if fInfo.exists then begin
       parInfo=self.app->getParameterByCode(parCode)
@@ -209,7 +229,7 @@ FUNCTION GenericOperator::readDataFromFile, periodType, month, year, dataDir, re
     dataInfo.data=self.app->applyRangeConditions(parCode, dataInfo.data, parCode, ignoreValue=ignoreValue)
     return, dataInfo
   endif
-  
+
 END
 
 FUNCTION GenericOperator::getCompatibleData, dataPtrs, hideIdxs=hideIdxs, hideCount=hideCount, validIdxs=validIdxs, validCount=validCount, maskCondition=maskCondition, outPercentage=outPercentage
@@ -243,7 +263,7 @@ FUNCTION GenericOperator::getCompatibleData, dataPtrs, hideIdxs=hideIdxs, hideCo
   endif
   outPercentage=1.*validCount / (n_elements(band1) > n_elements(band2)) * 100.
   return, validIdxs
-  
+
 END
 
 FUNCTION GenericOperator::buildMaskConditions, parInfo, scallingType
@@ -254,25 +274,25 @@ FUNCTION GenericOperator::buildMaskConditions, parInfo, scallingType
   ;maskExpr='(band eq '+ignoreValue+') or (band gt -'+eps+' and band lt '+eps+') or (finite(band) ne 1)'
   ;june 20th remove 0 as NaN
   maskExpr='(band eq '+ignoreValue+')'+' or (finite(band) ne 1)'
-  
+
   checkMaskConditions[*]=maskExpr
   ;for i=0, length-1 do if strpos(outScallingTypeList[i], 'log') gt -1 then checkMaskConditions[i]='data eq -9999' else checkMaskConditions[i]='data le 0'
   if strpos(scallingType, 'log') gt -1 then checkMaskConditions=maskExpr else checkMaskConditions=maskExpr
   return, checkMaskConditions
-  
+
 END
 
 FUNCTION GenericOperator::getMemoryBands
 
   idxs=where(self.memoryBandNames ne '', count)
   if count ne 0 then return, self.memoryBandNames[idxs] else return, ''
-  
+
 END
 
 FUNCTION GenericOperator::isEnviType
 
   return, self.isEnviType
-  
+
 END
 
 FUNCTION GenericOperator::hasGridReference
@@ -280,7 +300,7 @@ FUNCTION GenericOperator::hasGridReference
   existsLat=self->isABand('lon2d')
   existsLon=self->isABand('lat2d')
   return, existsLat and existsLon
-  
+
 END
 
 FUNCTION GenericOperator::convertFileName, fileName, REMOVE_EXTENSION=REMOVE_EXTENSION
@@ -289,17 +309,17 @@ FUNCTION GenericOperator::convertFileName, fileName, REMOVE_EXTENSION=REMOVE_EXT
   isEnviType=self->isAnEnviFile(testfileName)
   if isEnviType or keyword_set(REMOVE_EXTENSION) then testFileName=self->removeFileExtension(testfileName) ;do it it always, just to be sure...
   return, testfileName
-  
+
 END
 
 FUNCTION GenericOperator::isAnEnviFile, fileName
 
-  fs=self->getFileSystem() 
+  fs=self->getFileSystem()
   sourceFileName=fs->getFileNameInfo(fileName, filePath=filePath, extension=extension)
   if strupcase(extension) eq 'ENVI' or strupcase(extension) eq 'HDR' or extension eq '' then return, 1
-  self->releaseFileSystem, fs 
+  self->releaseFileSystem, fs
   return, 0
-  
+
 END
 
 FUNCTION GenericOperator::isAnNcFile, fileName
@@ -309,7 +329,7 @@ FUNCTION GenericOperator::isAnNcFile, fileName
   self->releaseFileSystem, fs
   if strupcase(extension) eq 'NC' then return, 1
   return, 0
-  
+
 END
 
 FUNCTION GenericOperator::removeFileExtension, fileName
@@ -318,7 +338,7 @@ FUNCTION GenericOperator::removeFileExtension, fileName
   fName=fs->removeFileExtension(fileName)
   obj_destroy, fs
   return, fName
-  
+
 END
 
 FUNCTION GenericOperator::getFileToOverwriteList, month, year, outputDir, sensor, roi, overwriteFlag=overwriteFlag, parInfo=parInfo, NONE=NONE, fileToPreserveNo=fileToPreserveNo, fileToPreserveIdx=fileToPreserveIdx, allFiles=allFiles
@@ -338,36 +358,36 @@ FUNCTION GenericOperator::getFileToOverwriteList, month, year, outputDir, sensor
   endelse
   if count eq 0 then NONE=1
   return, fileToOverwriteList
-  
+
 END
 
 PRO GenericOperator::setPeriodType, value
 
   self.periodType=value
-  
+
 END
 
 FUNCTION GenericOperator::getPeriodType
 
   return, self.periodType
-  
+
 END
 
 FUNCTION GenericOperator::buildOperatorResultFileName, dType, displayName, month, year, sensor, roi, archiveDir, JULDAY=JULDAY, INTERVAL=INTERVAL, FULLPATH=FULLPATH
 
   message, 'You must implement this one on your child class!!!'
   return, ''
-  
+
 END
 
 PRO GenericOperator::writeAsNCDF, month, year, sensor, roi, $
-    archiveDir=archiveDir, overwriteFlag=overwriteFlag, fileToOverwriteList=fileToOverwriteList, refFileName=refFileName, $
-    JULDAY=JULDAY, INTERVAL=INTERVAL, outScallingTypeList=outScallingTypeList, applyFormula=applyFormula, DOHISTO=DOHISTO, HISTOSTRUCT=HISTOSTRUCT
+  archiveDir=archiveDir, overwriteFlag=overwriteFlag, fileToOverwriteList=fileToOverwriteList, refFileName=refFileName, $
+  JULDAY=JULDAY, INTERVAL=INTERVAL, outScallingTypeList=outScallingTypeList, applyFormula=applyFormula, DOHISTO=DOHISTO, HISTOSTRUCT=HISTOSTRUCT
   ;archiveDir=archiveDir, overwriteFlag=overwriteFlag, fileToOverwriteList=fileToOverwriteList, refFileName=refFileName, $
   ;JULDAY=JULDAY, INTERVAL=INTERVAL, outScallingTypeList=outScallingTypeList, applyFormula=applyFormula, DOHISTO=DOHISTO, HISTOSTRUCT=HISTOSTRUCT
-    
+
   dType=self->getPeriodType()
-  
+
   fileList=self->getFileNameToExport(month, year, sensor, roi, archiveDir=archiveDir, parInfos=parInfos, JULDAY=JULDAY, INTERVAL=INTERVAL);, overwriteFlag=overwriteFlag)
   if n_elements(fileToOverwriteList) eq 0 then fileToOverwriteList=fileList
   checkScaleType=n_elements(outScallingTypeList) gt 0
@@ -391,8 +411,8 @@ PRO GenericOperator::writeAsNCDF, month, year, sensor, roi, $
       doLog, ncdfFilename, ' still exists in the file system', level=3
     endelse
   endfor
-;res={kvis:kvis, pp: PP_c2chl_inf_kvis , zeu: zeu_kvis }
-  
+  ;res={kvis:kvis, pp: PP_c2chl_inf_kvis , zeu: zeu_kvis }
+
 END
 
 FUNCTION GenericOperator::getFileNameToExport, month, year, sensor, roi, archiveDir=archiveDir, parInfos=parInfos, NONE=NONE, JULDAY=JULDAY, INTERVAL=INTERVAL
@@ -400,7 +420,7 @@ FUNCTION GenericOperator::getFileNameToExport, month, year, sensor, roi, archive
   dType=self->getPeriodType()
   ;bandToExport=self.app->getKeyValue('NAN_VALUE')
   NONE=0
-  
+
   parInfos=self->getBandToExportInfoList()
   ncdfFilenames=strarr(n_elements(parInfos))
   for i=0, n_elements(parInfos)-1 do begin
@@ -411,7 +431,7 @@ FUNCTION GenericOperator::getFileNameToExport, month, year, sensor, roi, archive
   ;  if ~keyword_set(NONE) then parInfos=parInfos[idxs]
   ;endif
   return, ncdfFilenames
-  
+
 END
 
 FUNCTION GenericOperator::checkResultFileExistence, fileList, folder, idxs=idxs, NONE=NONE
@@ -425,36 +445,36 @@ FUNCTION GenericOperator::checkResultFileExistence, fileList, folder, idxs=idxs,
     idxs=notPresentIdx
   endif
   return, fileList
-  
+
 END
 
 PRO GenericOperator::writeResult, month, year, sensor, roi, $
-    archiveDir=archiveDir, overwriteFlag=overwriteFlag, fileToOverwriteList=fileToOverwriteList, JULDAY=JULDAY, INTERVAL=INTERVAL, $
-    outScallingTypeList=outScallingTypeList, applyFormula=applyFormula
+  archiveDir=archiveDir, overwriteFlag=overwriteFlag, fileToOverwriteList=fileToOverwriteList, JULDAY=JULDAY, INTERVAL=INTERVAL, $
+  outScallingTypeList=outScallingTypeList, applyFormula=applyFormula
   ;archiveDir=archiveDir, overwriteFlag=overwriteFlag, fileToOverwriteList=fileToOverwriteList, JULDAY=JULDAY, INTERVAL=INTERVAL, $
   ;outScallingTypeList=outScallingTypeList, applyFormula=applyFormula
-    
+
   prevLog=self.app->getLogLevel()
   self.app->setLogLevel, 1
   self->writeAsNCDF, month, year, sensor, roi, archiveDir=archiveDir, overwriteFlag=overwriteFlag, $
     fileToOverwriteList=fileToOverwriteList, JULDAY=JULDAY, INTERVAL=INTERVAL, $
     outScallingTypeList=outScallingTypeList, applyFormula=applyFormula
   self.app->setLogLevel, prevLog
-  
+
 END
 
 PRO GenericOperator::removeMainFile
 
-  fs=self->getFileSystem() 
+  fs=self->getFileSystem()
   if self.mainFileName ne '' then fs->removeEnviFile, self.mainFileName
   self->releaseFileSystem, fs
-  
+
 END
 
 FUNCTION GenericOperator::getBandToExportInfoList
 
   selectedCodes=self->getBandToExportList()
-  
+
   parInfos=replicate(getParameterInfoStruct(), n_elements(selectedCodes))
   for i=0, n_elements(selectedCodes)-1 do begin
     thisPar=self.app->getParameterByCode(selectedCodes[i])
@@ -465,16 +485,16 @@ FUNCTION GenericOperator::getBandToExportInfoList
     parInfos[i].measureUnit=thisPar.measureUnit
     parInfos[i].description=thisPar.description
   endfor
-  
+
   return, parInfos
-  
+
 END
 
 PRO  GenericOperator::configureMaskFromMemory, dataValues, maskCondition
 
   self->setMaskBand, dataValues
   self->setMaskCondition, maskCondition
-  
+
 END
 
 PRO  GenericOperator::copyMaskInfo, destinationOperator
@@ -482,7 +502,7 @@ PRO  GenericOperator::copyMaskInfo, destinationOperator
   mBand=self->getMaskBand()
   destinationOperator->setMaskBand, mBand
   destinationOperator->setMaskCondition, self->getMaskCondition()
-  
+
 END
 
 PRO  GenericOperator::configureMask, fileName, varName, maskCondition
@@ -495,8 +515,8 @@ PRO  GenericOperator::configureMask, fileName, varName, maskCondition
   ;util->strreplace(maskCondition, listOfBand[i], 'b'+strcompress(idx+1, /REMOVE_ALL))
   ;maskCondition=util->strreplace(maskCondition, 'ignoreValue', strcompress(ignoreValue, /REMOVE_ALL))
   self->setMaskCondition, maskCondition
-;operator->setMaskCondition, 'finite(maskBand) eq 0 or maskBand eq '+strcompress(ignoreValue, /REMOVE)
-  
+  ;operator->setMaskCondition, 'finite(maskBand) eq 0 or maskBand eq '+strcompress(ignoreValue, /REMOVE)
+
 END
 
 ;FUNCTION GenericOperator::ncdfVarCheck, fileName, GLOBAL=GLOBAL
@@ -521,7 +541,7 @@ FUNCTION GenericOperator::readNcdfAttr, fileName, varName, attrName, FOUND=FOUND
     FOUND=0
     return, -1
   endif
-  
+
   fileID = ncdf_open(fileName)
   if ~keyword_set(GLOBAL) then begin
     varId=NCDF_VARID(fileID, varName)
@@ -533,36 +553,36 @@ FUNCTION GenericOperator::readNcdfAttr, fileName, varName, attrName, FOUND=FOUND
   endelse
   ncdf_close, fileID
   return, attrvalue
-  
+
 END
 
 ;FUNCTION GenericOperator::cropping, infilenames, inputVarList, outputVarList, conv_functions, $
 ;    tempDir, roiName, ignoreValue, NOTFOUND=NOTFOUND, MEMORY=MEMORY, targetCropInfo=targetCropInfo
 FUNCTION GenericOperator::cropping, bandInfos, outputVarList, $
-    tempDir, roiName, ignoreValue, NOTFOUND=NOTFOUND, MEMORY=MEMORY, targetCropInfo=targetCropInfo
-    
+  tempDir, roiName, ignoreValue, NOTFOUND=NOTFOUND, MEMORY=MEMORY, targetCropInfo=targetCropInfo
+
   fileWriteFlag=(~keyword_set(MEMORY)) or (n_elements(targetCropInfo) eq 1)
   NOTFOUND=0
   varNo=n_elements(bandInfos)
   ;fileNo=n_elements(infilenames)
   var_file = intarr(varNo);
   varFileRes=intarr(varNo)
-  
+
   utils=self.app->getUtility()
   fS=self->getFileSystem()
   pathSep=path_sep()
-  
+
   tempfName=utils->getSysTime(/FILECOMPATIBILITY)
   enviFileName = tempDir+pathSep+tempfName+'_'+strcompress(roiName)+'_temp_jrc.envi'
   intermediateEnviFileName=tempDir+pathSep+tempfName+'_'+strcompress(roiName)+'_int_out_jrc.envi'
   finalEnviFileName = tempDir+pathSep+tempfName+'_'+strcompress(roiName)+'_out_jrc.envi'
   if keyword_set(MEMORY) then memoryData=ptrarr(varNo) else memoryData=-1
-  
+
   if fileWriteFlag then openw, lun, enviFileName, /GET_LUN
   ;fakeBand=readSingleBand('mld', infilenames, mask, NOTFOUND=NOTFOUND)
   ;print All
   for i=0, varNo-1 do begin
-  
+
     ;band=readSingleBand(inputVarList[i], infilenames, mask, NOTFOUND=NOTFOUND)
     band=bandInfos[i]
     ;if ~keyword_set(NOTFOUND) then begin
@@ -575,29 +595,29 @@ FUNCTION GenericOperator::cropping, bandInfos, outputVarList, $
     validIdxs=where(band.data ne -9999 and band.data gt 0 and finite(band.data), cnt)
     if cnt ne 0 then doLog, '**'+outputVarList[i]+strcompress(max(band.data))+strcompress(min(band.data))+strcompress(mean(band.data))+'**' else doLog, '**'+'No data'+'**'
     mask=band.mask
-  ;endif else begin
-  ;  if fileWriteFlag then begin
-  ;    close, lun
-  ;    free_lun, lun
-  ;  endif
-  ;  return, -1
-  ;endelse
-    
+    ;endif else begin
+    ;  if fileWriteFlag then begin
+    ;    close, lun
+    ;    free_lun, lun
+    ;  endif
+    ;  return, -1
+    ;endelse
+
   endfor
   if fileWriteFlag then begin
     close, lun
     free_lun, lun
   endif
-  
+
   finalMask=mask
   mask=0b
-  
+
   ; apply mask to each band
   if fileWriteFlag then begin
     applyMaskToEnviFile, enviFileName, intermediateEnviFileName, varNo, band.data, finalMask, ignoreValue
     ; setup the header in the ENVI file
     ;intermediateEnviFileName1=fs->removeFileExtension(intermediateEnviFileName)
-    
+
     ;help, band, /STRUCT
     envi_setup_head_oxy,  $
       FNAME=fs->removeFileExtension(intermediateEnviFileName),$
@@ -616,7 +636,7 @@ FUNCTION GenericOperator::cropping, bandInfos, outputVarList, $
   endif
   ;doLog, band.ns, band.nl
   ;doLog, band.mapinfo.ps, band.mapinfo.mc
-  
+
   if n_elements(targetCropInfo) eq 1 then begin
     PIXEL_SIZE=[abs(targetCropInfo.mapWindowBoundary[1]-targetCropInfo.mapWindowBoundary[0])/targetCropInfo.mapPixelExtension[0], abs(targetCropInfo.mapWindowBoundary[3]-targetCropInfo.mapWindowBoundary[2])/targetCropInfo.mapPixelExtension[1]]
     mosaicFile=doMosaic(intermediateEnviFileName, finalEnviFileName, ignoreValue, targetCropInfo, PIXEL_SIZE=PIXEL_SIZE);/PRESERVE_RESOLUTION)
@@ -636,41 +656,41 @@ FUNCTION GenericOperator::cropping, bandInfos, outputVarList, $
     envi_file_mng, id=fid, /REMOVE
     ;remove envi intermediate file!!!
     removeEnviFiles, intermediateEnviFileName;, /ALL
-  ;file_delete, intermediateEnviFileName, /ALLOW
+    ;file_delete, intermediateEnviFileName, /ALLOW
   endif else begin
     finalEnviFileName=intermediateEnviFileName
   endelse
   if (keyword_set(MEMORY)) then begin
-  ;here extract data
+    ;here extract data
   endif
-  
+
   ;fileName=fs->getFileNameInfo(infilenames[0], filePath=filePath, extension=extension)
   band=0b
-  
+
   ;year = strmid(fileName, 1, 4);
   ;jday = strmid(fileName, 5, 3);
-  
+
   ;caldat, julday(1,1,year) + jday, resMonth, resDay, resYear
-  
+
   ;month = resMonth;
   self->releaseFileSystem, fs
-  
+
   return, {enviDataFile:finalEnviFileName, year:'N/A', month:'N/A', jday:'N/A', memoryData:memoryData}
 END
 
 FUNCTION GenericOperator::readNcdfVar, fileName, datasetName, FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, ONEDIM=ONEDIM, $
-    targetCropInfo=targetCropInfo, getSlope=getslope, getIntercept=getintercept
+  targetCropInfo=targetCropInfo, slope=slope, intercept=intercept, fillValue=fillValue
 
   FOUND=0
-  res={name:'', idx:0, data:0}
+  res={name:'', idx:0, data:0, slope:1, intercept:0, fillValue:-9999}
   if NCDF_IsValidFile(fileName) then begin
-  
+
     fileID = ncdf_open(fileName)
-    
+
     catch, error_status
     fileinq_struct=ncdf_inquire(fileID)
     ERROR=0
-    
+
     slope=1
     intercept=0
     if error_status NE 0 THEN BEGIN
@@ -686,7 +706,7 @@ FUNCTION GenericOperator::readNcdfVar, fileName, datasetName, FOUND=FOUND, REVER
       varname = varinq_struct.name
       dimensions = varinq_struct.dim
       numatts = varinq_struct.natts
-      print, varname
+      ;print, varname
       ;doLog, varname, LEVEL=4
       if strupcase(varinq_struct.name) eq strupcase(datasetName) then begin
         ;attname=ncdf_attname(fileID,i,attndx)
@@ -699,12 +719,15 @@ FUNCTION GenericOperator::readNcdfVar, fileName, datasetName, FOUND=FOUND, REVER
         attName='intercept'
         interceptTry=NCDF_ATTINQ(fileID,varID,attName)
         if interceptTry.length eq 1 then ncdf_attget, fileID, varID, attName, intercept
+        attName='_FillValue'
+        fillValueTry=NCDF_ATTINQ(fileID,varID,attName)
+        if fillValueTry.length eq 1 then ncdf_attget, fileID, varID, attName, fillValue
         doLog, callingRoutine=callingRoutine, /STACK
         doLog, callingRoutine, fileName, LEVEL=4
         ndims=size(variable, /N_DIM)
         if keyword_set(REVERSE) then variable=reverse(temporary(variable), ndims)
         if keyword_set(TRANSPOSE) then variable=transpose(temporary(variable))
-        res={name:datasetName, idx:i, data:variable, slope:SLOPE, intercept:intercept}
+        res={name:datasetName, idx:i, data:variable, slope:SLOPE, intercept:intercept, fillValue:fillValue}
         FOUND=1
         break
       endif
@@ -713,7 +736,7 @@ FUNCTION GenericOperator::readNcdfVar, fileName, datasetName, FOUND=FOUND, REVER
   endif
   ; now crop!!!
   return, res
-  
+
 END
 
 ;FUNCTION GenericOperator::fileOpen, filename, _EXTRA = extra
@@ -735,8 +758,8 @@ END
 ;END
 
 FUNCTION GenericOperator::getNcdfDataValues, fileName, varName, SET_NAN=SET_NAN, missingAttribName=missingAttribName, REVERSE=REVERSE, $
-    FOUND=FOUND
-    
+  FOUND=FOUND
+
   FOUND=0
   res=self->readNcdfVar(fileName, varName, REVERSE=REVERSE, FOUND=FOUND)
   if keyword_set(FOUND) then begin
@@ -751,39 +774,39 @@ FUNCTION GenericOperator::getNcdfDataValues, fileName, varName, SET_NAN=SET_NAN,
     endif
   endif
   return, res
-  
+
 END
 
 FUNCTION GenericOperator::getMaskBand
 
   if ptr_valid(self.maskBand) then maskBand=*self.maskBand
   return, maskBand
-  
+
 END
 
 PRO GenericOperator::setMaskBand, maskData
 
   ptr_free, self.maskBand
   self.maskBand= ptr_new(maskData, /NO_COPY)
-  
+
 END
 
 FUNCTION GenericOperator::getMaskCondition
 
   return, self.maskCondition
-  
+
 END
 
 PRO GenericOperator::setMaskCondition, maskCondition
 
   self.maskCondition = maskCondition
-  
+
 END
 
 FUNCTION GenericOperator::hasMask
 
   if ptr_valid(self.maskBand) then return, 1 else return, 0
-  
+
 END
 
 FUNCTION GenericOperator::getMaskIndxsInfo
@@ -795,7 +818,7 @@ FUNCTION GenericOperator::getMaskIndxsInfo
   executeConditionString=executeConditionString+'complement=nonMaskIdxs, ncomplement=nonMaskCount)'
   res=execute(executeConditionString)
   return, {maskIdxs:maskIdxs, maskCount:maskCount, nonMaskIdxs:nonMaskIdxs, nonMaskCount:nonMaskCount}
-  
+
 END
 
 PRO GenericOperator::logStatsStuff, filename, data, info, year, month, nanValue
@@ -833,7 +856,7 @@ PRO GenericOperator::logStatsStuff, filename, data, info, year, month, nanValue
     infoText=string(format='(F12.7,"  ",I7," (",F5.2, "%)")', steps[k], counts[k], counts[k]/tot*100)
     doLog, 'formatted: ', infoText, level=0
     xyouts, 0.4, 0.95-(1-float(k)/11)*.8, infoText, /NORM, color=180l+180l*255l+180l*255l*255l
-  ;xyouts, 0.4, 0.95-(1-float(k)/10)*.8, strtrim(steps[k],1)+' - '+strtrim(counts[k],1)+' '+strtrim(float(counts[k])/tot,1)+'%', /NORM, color=180l+180l*255l+180l*255l*255l
+    ;xyouts, 0.4, 0.95-(1-float(k)/10)*.8, strtrim(steps[k],1)+' - '+strtrim(counts[k],1)+' '+strtrim(float(counts[k])/tot,1)+'%', /NORM, color=180l+180l*255l+180l*255l*255l
   endfor
   ;infoText=string(format='(F11.8,"  ",I7.0," (",F5.2, "%)")', steps[k], counts[k], counts[k]/tot*100)
   ;xyouts, 0.4, 0.95-(1-float(k)/10)*.8, infoText, /NORM, color=180l+180l*255l+180l*255l*255l
@@ -847,8 +870,8 @@ PRO GenericOperator::logStatsStuff, filename, data, info, year, month, nanValue
   doLog, '**********', level=0
   wdelete,1
   self->releaseFileSystem, fs
-;tv, bytscl(var)
-  
+  ;tv, bytscl(var)
+
 END
 
 FUNCTION GenericOperator::buildCopyFileName, fileName
@@ -863,7 +886,7 @@ FUNCTION GenericOperator::buildCopyFileName, fileName
   self->releaseFileSystem, fs
   ;destName=fs->getTempDir(/WITH)+fName+'_'+mark
   return, destName
-  
+
 END
 
 PRO  GenericOperator::setMainFileName, fileName, COPY=COPY, OPEN=OPEN, REMOVE_EXTENSION=REMOVE_EXTENSION
@@ -878,31 +901,31 @@ PRO  GenericOperator::setMainFileName, fileName, COPY=COPY, OPEN=OPEN, REMOVE_EX
     fs->copyEnviFile, testFileName, destName, /TEMP, newfileName=newFileName
     self.mainFileName=newFileName
     self->releaseFileSystem, fs
-  ;fs->copyEnviFile, testFileName, fs->getTempDir(), newFileName=newFileName
-  ;self.mainFileName=newFileName
+    ;fs->copyEnviFile, testFileName, fs->getTempDir(), newFileName=newFileName
+    ;self.mainFileName=newFileName
   endif else begin
     self.mainFileName=testFileName
   endelse
   if keyword_set(OPEN) then self->updateFid
-  
+
 END
 
 FUNCTION GenericOperator::getMainFileName
 
   return, self.mainFileName
-  
+
 END
 
 PRO  GenericOperator::setWorkingDir, folder
 
   self.workingDir=folder
-  
+
 END
 
 FUNCTION GenericOperator::getWorkingDir
 
   return, self.workingDir
-  
+
 END
 
 FUNCTION GenericOperator::getMapInfo, enviFileName=enviFileName, enviFileId=enviFileId
@@ -910,7 +933,7 @@ FUNCTION GenericOperator::getMapInfo, enviFileName=enviFileName, enviFileId=envi
   props=self->getLocalFileProperties(enviFileName=enviFileName, enviFileId=enviFileId)
   mapInfo = envi_get_map_info(FID=props.localFileId)
   return, mapInfo
-  
+
 END
 
 PRO GenericOperator::buildGeoInfo, minLon, minLat, maxLon, maxLat, xNb, yNb, lat2d, lon2d, refFileName=refFileName, mapInfo=mapInfo
@@ -930,7 +953,7 @@ PRO GenericOperator::buildGeoInfo, minLon, minLat, maxLon, maxLat, xNb, yNb, lat
       if n_elements(mapInfo) ne 1 then begin
         dims=self->getDataDimensions()
         mapInfo=self->getMapInfo()
-        
+
         xNb=dims[2]+1
         yNb=dims[4]+1
         tMinLon=mapInfo.mc[2]
@@ -952,38 +975,38 @@ PRO GenericOperator::buildGeoInfo, minLon, minLat, maxLon, maxLat, xNb, yNb, lat
         minLat=1.*round(tMinLat*100)/100
         maxLon=1.*round(tMaxLon*100)/100
         maxLat=1.*round(tMaxLat*100)/100
-      ;minLon=mapInfo.minLon
-      ;minLat=mapInfo.minLat
-      ;maxLon=mapInfo.maxLon
-      ;maxLat=mapInfo.maxLat
-      ;xNb=mapInfo.xNb
-      ;yNb=mapInfo.xNb
+        ;minLon=mapInfo.minLon
+        ;minLat=mapInfo.minLat
+        ;maxLon=mapInfo.maxLon
+        ;maxLat=mapInfo.maxLat
+        ;xNb=mapInfo.xNb
+        ;yNb=mapInfo.xNb
       endelse
     endelse
   endelse
-  
+
 END
 
 FUNCTION GenericOperator::importBandGeoNc, dType, bands, bandInfo, fileName, year, month, outputDir, dims=dims, $
-    refFileName=refFileName, mapInfo=mapInfo, $
-    title=title, scallingType=scallingType, applyFormula=applyFormula, extraMaskConditions=extraMaskConditions, DOHISTO=DOHISTO, HISTOSTRUCT=HISTOSTRUCT, $
-    NOTFOUND=NOTFOUND
-    
+  refFileName=refFileName, mapInfo=mapInfo, $
+  title=title, scallingType=scallingType, applyFormula=applyFormula, extraMaskConditions=extraMaskConditions, DOHISTO=DOHISTO, HISTOSTRUCT=HISTOSTRUCT, $
+  NOTFOUND=NOTFOUND
+
   fileName=self->buildOperatorResultFileName(dType, displayName, month, year, sensor, roi, archiveDir, JULDAY=JULDAY, INTERVAL=INTERVAL, FULLPATH=FULLPATH)
   bandInfo=self->readNcdfVar(fileName, parCode, FOUND=FOUND1, /REVERSE, TRANSPOSE=TRANSPOSE)
-  if ~keyword_set(FOUND1) then return, bandInfo else return ,-1 
+  if ~keyword_set(FOUND1) then return, bandInfo else return ,-1
 
 END
 
 PRO GenericOperator::exportBandAsGeoNc, bands, bandInfo, fileName, year, month, outputDir, dims=dims, $
-    refFileName=refFileName, mapInfo=mapInfo, $
-    title=title, scallingType=scallingType, applyFormula=applyFormula, extraMaskConditions=extraMaskConditions, DOHISTO=DOHISTO, HISTOSTRUCT=HISTOSTRUCT
+  refFileName=refFileName, mapInfo=mapInfo, $
+  title=title, scallingType=scallingType, applyFormula=applyFormula, extraMaskConditions=extraMaskConditions, DOHISTO=DOHISTO, HISTOSTRUCT=HISTOSTRUCT
   ;  title=title, scallingType=scallingType, applyFormula=applyFormula, extraMaskConditions=extraMaskConditions, DOHISTO=DOHISTO, HISTOSTRUCT=HISTOSTRUCT
-    
+
   ignoreValue=float(self.app->getKeyValue('NAN_VALUE'))
-  
+
   att_struct = {name:"", ptr_value:ptr_new()} ; structure to store attributes
-  
+
   if size(bands, /TYPE) eq 7 then begin
     bandToRead=1
     bandNo=n_elements(bands)
@@ -992,10 +1015,10 @@ PRO GenericOperator::exportBandAsGeoNc, bands, bandInfo, fileName, year, month, 
     bandNo=1
   endelse
   if ~keyword_set(TITLE) then title= bandInfo[0].longName+' '+strcompress(year, /REMOVE)+' '+strcompress(month, /REMOVE)
-  
+
   if strmid(outputDir, strlen(outputDir), 1) ne path_sep() then newOutputDir=outputDir+path_sep() else newOutputDir=outputDir
   self->buildGeoInfo, minLon, minLat, maxLon, maxLat, xNb, yNb, lat2d, lon2d, refFileName=refFileName, mapInfo=mapInfo
-  
+
   doLog, minLon, minLat, maxLon, maxLat, xNb, yNb, LEVEL=4
   if n_elements(extraMaskConditions) ne bandNo then begin
     maskConditions=strarr(bandNo)
@@ -1004,50 +1027,50 @@ PRO GenericOperator::exportBandAsGeoNc, bands, bandInfo, fileName, year, month, 
   endif else begin
     maskConditions=extraMaskConditions
   endelse
-  
+
   if n_elements(applyFormula) ne bandNo then begin
     applyFuncts=strarr(bandNo)
     applyFuncts[*]=''
   endif else begin
     applyFuncts=applyFormula
   endelse
-  
+
   for i=0,bandNo-1 do begin
-  
+
     fullFileName=newOutputDir+fileName[0]
-    
+
     if (file_info(fullFileName)).exists then $
       file_delete, fullFileName
-      
+
     fileId = ncdf_file_create(fullFileName, /COL_MAJOR)
-    
+
     ncdf_write_global_attribute, fileId, "Title", title
     ncdf_write_global_attribute, fileId, "Year", year
     ncdf_write_global_attribute, fileId, "Month", month
     ncdf_write_global_attribute, fileId, "history", 'Created by Joint Research Centre (IES) on '+systime()
     contact=self.app->getKeyValue('CONTACT_MAIL')
     ncdf_write_global_attribute, fileId, "contact", contact
-    
+
     ncdf_write_global_attribute, fileId, "Min_Lat", fix(round(minLat<maxLat))
     ncdf_write_global_attribute, fileId, "Min_Lon", fix(round(minLon<maxLon))
     ncdf_write_global_attribute, fileId, "Max_Lat", fix(round(minLat>maxLat))
     ncdf_write_global_attribute, fileId, "Max_Lon", fix(round(maxLon>minLon))
     ncdf_write_global_attribute, fileId, "x_nb", xNb
     ncdf_write_global_attribute, fileId, "y_nb", yNb
-    
+
     coordSysBuilder=self.app->getKeyValue('NCDF_OUT_COORDSYSBUILDER')
     ncdf_write_global_attribute, fileId, "_CoordSysBuilder", coordSysBuilder
     ncdfVersion=self.app->getKeyValue('NCDF_OUT_VERSION')
     ncdf_write_global_attribute, fileId, "Internal_Version_Date", ncdfVersion
     ;ncdf_write_global_attribute, fileId, "Conventions", 'CF-1.0'
-    
-    
+
+
     ; Write dimension datasets
     ; ------------------------
     att_nb = 4
     diminfo = {name:"",att:replicate(att_struct,att_nb)}
     diminfo.att[*].name = ['standard_name', 'long_name',  'units', 'axis']
-    
+
     ;    timedim = 0
     ;    londim = findgen(xNb)/(xNb-1) * (abs(maxLon - minLon)) + min([minLon, maxLon])
     ;    latdim = findgen(yNb)/(yNb-1) * (abs(maxLat - minLat)) + min([minLat, maxLat])
@@ -1055,17 +1078,17 @@ PRO GenericOperator::exportBandAsGeoNc, bands, bandInfo, fileName, year, month, 
     latdim = findgen(yNb)/(yNb) * (abs(maxLat - minLat)) + min([minLat, maxLat])
     diminfo.name = 'lat'
     diminfo.att[*].ptr_value = [ptr_new('Latitude'),ptr_new('latitude'),ptr_new('degrees_north'),ptr_new('Y')]
-    
+
     dim_id_lat = ncdf_create_dimension(fileId, diminfo.name, yNb)
-    
+
     var_id = ncdf_create_ds(fileId, float(latdim), dim_id_lat, diminfo)
-    
+
     diminfo.name = 'lon'
     diminfo.att[*].ptr_value = [ptr_new('Longitude'),ptr_new('longitude'),ptr_new('degrees_east'),ptr_new('X')]
-    
+
     dim_id_lon = ncdf_create_dimension(fileId, diminfo.name, xNb)
     var_id = ncdf_create_ds(fileId, float(londim), dim_id_lon, diminfo)
-    
+
     ; Initialise structure for dataset
     att_nb = 5
     varinfo = {name:"",att:replicate(att_struct,att_nb)}
@@ -1073,7 +1096,7 @@ PRO GenericOperator::exportBandAsGeoNc, bands, bandInfo, fileName, year, month, 
     ;varinfo.att[*].name = ['standard_name', 'units', missingAttribName]
     missingAttr=self.app->getKeyValue('MISSING_VALUE_ATTRIB_OUT')
     varinfo.att[*].name = ['standard_name', 'long_name', 'units', missingAttr, 'scalling']
-    
+
     ; dim_id_res = [dim_id_lon, dim_id_lat, dim_id_time]
     if bandToRead then thisData=self->getBand(bands[i]) else thisData=bands
     aa=where(finite(thisData), mcount)
@@ -1081,7 +1104,7 @@ PRO GenericOperator::exportBandAsGeoNc, bands, bandInfo, fileName, year, month, 
     sizeInfo=size(thisData, /STRU)
     dim_id_res = [dim_id_lon, dim_id_lat]
     ;dim_id_res = size(thisData, /DIMENSIONS)
-    
+
     band = make_array(xNb,yNb,TYPE=sizeInfo.type,VALUE=ignoreValue)
     varName=bandInfo[i].shortName
     if keyword_set(scallingType) then scaleType=scallingType else scaleType='linear'
@@ -1091,7 +1114,7 @@ PRO GenericOperator::exportBandAsGeoNc, bands, bandInfo, fileName, year, month, 
     ;ignoreValue1=-9998.
     ;varinfo.att[*].ptr_value = $
     ;  [ptr_new(bandInfo[i].shortName),ptr_new(bandInfo[i].measureUnit),ptr_new(ignoreValue1)]
-      
+
     ;apply mask (from memory i.e. another matrix)
     if self->hasMask() then begin
       ;maskIdxs:maskIdxs, maskCount:maskCount, nonMaskIdxs:nonMaskIdxs, nonMaskCount:nonMaskCount
@@ -1103,30 +1126,30 @@ PRO GenericOperator::exportBandAsGeoNc, bands, bandInfo, fileName, year, month, 
     ;set Nan all others values
     idx=where(finite(band) eq 0, count)
     if count ne 0 then band[idx]=ignoreValue
-    
+
     maskCondition=maskConditions[i]
     applyFunct=applyFuncts[i]
     maskCount=0
-    
+
     ;apply mask (from data values self)...
     if maskCondition ne '' then begin
       res=execute('maskIdx=where('+maskCondition+', maskCount)')
-    ;if maskCount ne 0 then data[maskIdx]=ignoreValue
+      ;if maskCount ne 0 then data[maskIdx]=ignoreValue
     endif
-    
+
     if (applyFunct ne '') and (applyFunct ne 'N/A') then begin
       res=execute('band='+applyFunct)
     endif
-    
+
     ; Apply range conditions
     if strlowcase(scallingType) eq 'linear' then band=self.app->applyRangeConditions(bandInfo, band, 'band', ignoreValue=ignoreValue)
-    
+
     if maskCount ne 0 then band[maskIdx]=ignoreValue
     if keyword_set(DOHISTO) then begin
       doHistogram, band, HISTOSTRUCT.folder, 'hist_'+fileName, HISTOSTRUCT.day, HISTOSTRUCT.month, HISTOSTRUCT.year, cutvalue=HISTOSTRUCT.cutvalue, binsize=HISTOSTRUCT.binsize
     endif
     aa=where(band ne ignoreValue, count)
-    
+
     band=reverse(temporary(band),2)
     ;    doLog, '****************************'
     ;    help, data
@@ -1135,15 +1158,15 @@ PRO GenericOperator::exportBandAsGeoNc, bands, bandInfo, fileName, year, month, 
     ;if self.app->IsTestMode() then self->logStatsStuff, fullFileName, band, bandInfo[i], year, month, ignoreValue
     var_id = ncdf_create_ds(fileId, band, dim_id_res, varinfo)
     ; Close monthly result file
-    
+
     ncdf_file_close,fileId
-    
+
     doLog, string(FORMAT='("Written:",A)',fullFileName), ' - Valid pixs:', strcompress(count, /REMOVE), LEVEL=4
     if count eq 0 then begin
       doLog, 'Warning!!! No valid pixels for the last output', LEVEL=4
     endif
   endfor
-  
+
 END
 
 PRO GenericOperator::exportBand, bandNames, bandInfos, OUTPUTFORMAT=OUTPUTFORMAT
@@ -1157,7 +1180,7 @@ PRO GenericOperator::exportBand, bandNames, bandInfos, OUTPUTFORMAT=OUTPUTFORMAT
   endif
   doLog, 'Output format not selected, using GEONC as default', level=1
   self->exportBandAsGeoNc, bandNames, bandInfos
-  
+
 END
 
 PRO GenericOperator::updateFid, enviFileId=enviFileId
@@ -1167,8 +1190,8 @@ PRO GenericOperator::updateFid, enviFileId=enviFileId
   envi_open_file, self.mainFileName+'.envi', r_fid=fid
   if n_elements(fid) gt 1 then for i=1, n_elements(fid)-1 do  envi_file_mng, id=fid[i], /remove
   self.mainFid=fid[0]
-;help, /memory
-  
+  ;help, /memory
+
 END
 
 FUNCTION GenericOperator::getLocalFileProperties, enviFileName=enviFileName, enviFileId=enviFileId
@@ -1186,14 +1209,14 @@ FUNCTION GenericOperator::getLocalFileProperties, enviFileName=enviFileName, env
     updateInternalFid=0
   endif
   return, {localFileName:localFileName, localFileId:localFileId, updateInternal:updateInternalFid}
-  
+
 END
 
 FUNCTION GenericOperator::isAMemoryBand, bandName
 
   list=self->getMemoryBands()
   idx=where(strupcase(list) eq strupcase(bandName), count)
-  return, idx 
+  return, idx
 
 END
 
@@ -1201,16 +1224,16 @@ FUNCTION GenericOperator::isABand, bandName, enviFileName=enviFileName, enviFile
 
   memIdx=self->isAMemoryBand(bandName)
   if memIdx ne -1 then return, 1
-  
+
   if size(bandName, /TYPE) ne 7 then return, 0
-  
+
   if ~self.app->enviFileExists(self.mainFileName) then return, 0
-  
+
   if self->getBandPos(bandName, enviFileName=enviFileName, enviFileId=enviFileId) ne -1 then begin
     return, 1
   endif
   return, 0
-  
+
 END
 
 FUNCTION GenericOperator::getDataDimensions, enviFileName=enviFileName, enviFileId=enviFileId
@@ -1218,7 +1241,7 @@ FUNCTION GenericOperator::getDataDimensions, enviFileName=enviFileName, enviFile
   props=self->getLocalFileProperties(enviFileName=enviFileName, enviFileId=enviFileId)
   envi_file_query, props.localFileId, dims=c_dims
   return, c_dims
-  
+
 END
 
 FUNCTION GenericOperator::getBandNames, enviFileName=enviFileName, enviFileId=enviFileId
@@ -1226,7 +1249,7 @@ FUNCTION GenericOperator::getBandNames, enviFileName=enviFileName, enviFileId=en
   props=self->getLocalFileProperties(enviFileName=enviFileName, enviFileId=enviFileId)
   envi_file_query, props.localFileId, bnames=bnames
   return, bnames
-  
+
 END
 
 FUNCTION GenericOperator::getBandPos, bandName, enviFileName=enviFileName, enviFileId=enviFileId, CASESENSITIVE=CASESENSITIVE
@@ -1241,7 +1264,7 @@ FUNCTION GenericOperator::getBandPos, bandName, enviFileName=enviFileName, enviF
     testBandName=strupcase(bandName)
   endif
   return, (where(testBandName eq testBnames))[0]
-  
+
 END
 
 FUNCTION GenericOperator::getDataValues, dataSource, enviFileName=enviFileName, enviFileId=enviFileId
@@ -1249,7 +1272,7 @@ FUNCTION GenericOperator::getDataValues, dataSource, enviFileName=enviFileName, 
   dataValues=dataSource
   if size(dataSource, /TYPE) eq 7 then dataValues=self->getBand(dataSource, enviFileName=enviFileName, enviFileId=enviFileId)
   return, dataValues
-  
+
 END
 
 FUNCTION GenericOperator::getBandFromMemory, bandName, FOUND=FOUND
@@ -1257,7 +1280,7 @@ FUNCTION GenericOperator::getBandFromMemory, bandName, FOUND=FOUND
   idx=(where(strupcase(self.memoryBandNames) eq strupcase(bandName), count))[0]
   FOUND=count eq 1
   if FOUND then return, *self.memoryBandValues[idx]
-  
+
 END
 
 FUNCTION GenericOperator::getBand, bandName, enviFileName=enviFileName, enviFileId=enviFileId, NOMASK=NOMASK, $
@@ -1275,7 +1298,7 @@ FUNCTION GenericOperator::getBand, bandName, enviFileName=enviFileName, enviFile
     band=dV
   endif else begin
     props=self->getLocalFileProperties(enviFileName=enviFileName, enviFileId=enviFileId)
-    
+
     pos=self->getBandPos(bandName, enviFileName=props.localFileName, enviFileId=props.localFileId)
     dims=self->getDataDimensions(enviFileName=props.localFileName, enviFileId=props.localFileId)
     band=envi_get_data(fid=props.localFileId, dims=dims, pos=pos)
@@ -1291,7 +1314,7 @@ FUNCTION GenericOperator::getBand, bandName, enviFileName=enviFileName, enviFile
   ;  doLog, 'read-from-envi'
   ;  help, datavalues
   return, band
-  
+
 END
 
 ;PRO GenericOperator::fillBand, bandDataSource, bandName, enviFileName=enviFileName, enviFileId=enviFileId
@@ -1315,7 +1338,7 @@ PRO GenericOperator::addMemoryBand, bandDataSource, bandName, OVERWRITE=OVERWRIT
     self.memoryBandNames[memPosIdx]=bandName
     self.memoryBandValues[memPosIdx]=ptr_new(resValues)
   endif
-  
+
 END
 
 PRO GenericOperator::addBand, bandDataSource, bandName, enviFileName=enviFileName, enviFileId=enviFileId, OVERWRITE=OVERWRITE, MEMORY=MEMORY, ignorevalue=ignorevalue, setIgnoreValue=setIgnoreValue
@@ -1336,7 +1359,7 @@ PRO GenericOperator::addBand, bandDataSource, bandName, enviFileName=enviFileNam
   ;    ;dataValues=self.app->applyRangeConditions(bandName, dataValues, bandName, ignoreValue=ignoreValue)
   ;    self->addMemoryBand, bandDataSource, bandName, OVERWRITE=OVERWRITE
   ;  endif
-  
+
   if pos eq -1 then begin
     props=self->getLocalFileProperties(enviFileName=enviFileName, enviFileId=enviFileId)
     envi_file_query, props.localFileId, ns=ns, nl=nl, nb=nb, data_type=dt, dims=c_dims, bnames=bnames
@@ -1346,10 +1369,10 @@ PRO GenericOperator::addBand, bandDataSource, bandName, enviFileName=enviFileNam
     if n_elements(setIgnoreValue) ne 0 then dataValues=self->setIgnoreValue(dataValues, setIgnoreValue)
     dataValues=self.app->applyRangeConditions(bandName, dataValues, bandName, ignoreValue=ignoreValue)
     mapInfo=self->getMapInfo()
-    
+
     bnames=[bnames, bandName]
     bNumber=n_elements(bnames)
-    
+
     ; add band as last
     doLog, 'adding... ', bandName, level=0
     ;doLog, 'Force Wait, write data', LEVEL=0
@@ -1358,20 +1381,20 @@ PRO GenericOperator::addBand, bandDataSource, bandName, enviFileName=enviFileNam
     openw, lun, props.localFileName+'.envi', /GET_LUN, /APPEND
     writeu, lun, dataValues
     close, lun & free_lun, lun
-    
+
     envi_setup_head_oxy, FNAME=props.localFileName, NS=ns, NL=nl, DATA_IGNORE_VALUE=ignoreValue, $
       NB=bNumber, DATA_TYPE=dt, FILE_TYPE=0, INTERLEAVE=0, MAP_INFO=mapinfo, /WRITE,$
       /OPEN, BNAMES=bNames
-      
+
     self->updateFid, enviFileId=enviFileId
     ;doLog, 'Force Wait, update fid', LEVEL=0
     ;wait,1
-    
+
     return
   endif
   ;error when band exists and no keyword_set (overwrite)
   message, 'band already exists!'
-  
+
 END
 
 FUNCTION GenericOperator::setIgnoreValue, dataValues, ignoreValue
@@ -1379,7 +1402,7 @@ FUNCTION GenericOperator::setIgnoreValue, dataValues, ignoreValue
   nanIdxs=where(dataValues eq ignoreValue, count)
   if count ne 0 then dataValues[nanIdxs]=!VALUES.F_NAN
   return, dataValues
-  
+
 END
 
 PRO GenericOperator::removeBand, bandName, enviFileName=enviFileName, enviFileId=enviFileId, CASESENSITIVE=CASESENSITIVE
@@ -1387,9 +1410,9 @@ PRO GenericOperator::removeBand, bandName, enviFileName=enviFileName, enviFileId
   fs=self->getFileSystem()
   util=fs->getUtility()
   props=self->getLocalFileProperties(enviFileName=enviFileName, enviFileId=enviFileId)
-  
+
   envi_file_query, props.localFileId, ns=ns, nl=nl, nb=nb, data_type=dt, dims=c_dims, bnames=bnames
-  
+
   howMany=n_elements(bnames)
   if not(keyword_set(CASESENSITIVE)) then begin
     testBnames=strupcase(bnames)
@@ -1397,7 +1420,7 @@ PRO GenericOperator::removeBand, bandName, enviFileName=enviFileName, enviFileId
   endif
   removeBandIdx=where(testBandName eq testBnames, complement=leaveBandIdxs, count, ncomplement=countComplement)
   mapInfo=self->getMapInfo()
-  
+
   if countComplement ne 0 then begin
     newBnames=bnames[leaveBandIdxs]
     bNumber=n_elements(newBnames)
@@ -1405,12 +1428,12 @@ PRO GenericOperator::removeBand, bandName, enviFileName=enviFileName, enviFileId
     newBnames=bandName
     bNumber=1
   endelse
-  
-  
+
+
   outFname = util->getSysTime(/FILECOMPATIBILITY)
   dir=fs->getTempDir(/WITH)
   outFname=dir+outFname
-  
+
   ;envi_file_mng, id=props.localFileId, /REMOVE
   doLog, 'Force Wait, write data', LEVEL=0
   ;wait,1
@@ -1423,11 +1446,11 @@ PRO GenericOperator::removeBand, bandName, enviFileName=enviFileName, enviFileId
       writeu, lun, dataValues
     endif
   endfor
-  
+
   close, lun & free_lun, lun
   ;move temp file, overwriting original one
   file_move, outFname, props.localFileName+'.envi', /ALLOW, /OVERWRITE
-  
+
   ;rebuild header
   envi_setup_head_oxy,  $
     FNAME=props.localFileName,$
@@ -1442,51 +1465,51 @@ PRO GenericOperator::removeBand, bandName, enviFileName=enviFileName, enviFileId
     /WRITE,$
     /OPEN, $
     BNAMES=newBnames
-    
+
   self->updateFid
   self->releaseFileSystem, fs
   doLog, 'Force Wait, update fid', LEVEL=0
-;wait,1
-  
+  ;wait,1
+
 END
 
 FUNCTION GenericOperator::buildExpression, originalExpression, listOfUsedBands, allBands, pos=pos
 
   replaceExpression=expression
   pos=lonarr(n_elements(listOfBand))
-  
+
   for i=0, n_elements(listOfBand)-1 do begin
     thisBand=listOfBand[i]
     idx=(where(thisBand eq bnames, count))[0]
     pos[i]=idx
     replaceExpression=util->strreplace(replaceExpression, listOfBand[i], 'b'+strcompress(idx+1, /REMOVE_ALL))
-  ;doLog, expression
-  ;doLog, replaceExpression
+    ;doLog, expression
+    ;doLog, replaceExpression
   endfor
   return, replaceExpression
-  
+
 END
 
 FUNCTION GenericOperator::doEnviBandMath, expression, listOfBand, resultBandName, enviFileName=enviFileName, enviFileId=enviFileId, MEMORY=MEMORY
 
   util=self.app->getUtility()
   props=self->getLocalFileProperties(enviFileName=enviFileName, enviFileId=enviFileId)
-  
+
   envi_file_query, props.localFiD, dims=dims, bnames=allBands
-  
+
   replaceExpression=self->buildExpression(originalExpression, listOfBand, allBands, posList=posList)
-  
+
   fidlist = lonarr(n_elements(listOfBand))
   ; all the bands are in the same file
   fidList[*] = fid
-  
+
   envi_doit, 'math_doit', $
     fid=fidList, pos=posList, dims=dims, $
     exp=replaceExpression, $
     r_fid=resultFid, /IN_MEMORY
-    
+
   result=0
-  
+
   bandDataValues = self->getDataValues(enviFileId=resultFid)
   if keyword_set(MEMORY) then begin
     envi_file_mng, id=resultFid, /REMOVE, /DELETE
@@ -1496,7 +1519,7 @@ FUNCTION GenericOperator::doEnviBandMath, expression, listOfBand, resultBandName
     if props.updateInternal then self.mainFid=newFId
   endelse
   return, result
-  
+
 END
 
 PRO GenericOperator::testBandMath, fileName
@@ -1504,26 +1527,26 @@ PRO GenericOperator::testBandMath, fileName
   listOfBand=['Rrs_412-Mean', 'chl_a-Mean']
   expression="(Rrs_412-Mean + chl_a-Mean)/2"
   outbandName='MyMean'
-  
+
   res = self->doEnviBandMath(fileName, expression, listOfBand, outbandName, ret_fid=ret_fid)
-  
+
   listOfBand=['Rrs_412-Mean', 'chl_a-Mean', outbandName]
   expression="(Rrs_412-Mean + chl_a-Mean + " + outbandName + ")/3"
   outbandName='MyTestMean'
   res = self->doEnviBandMath(fileName, expression, listOfBand, /MEMORY)
-  
+
   ;self->removeBand, fileName, 'MyTestMean', newFileFid=newFileFid
   self->removeBand, fileName, 'MyMean', newFileFid=newFileFid
-  
+
   envi_file_query, newFileFid, dims=dims, bnames=bnames
-  
+
 END
 
 PRO GenericOperator::addMask, maskValues
 
   ptr_free, self.mask
   self.mask=ptr_new(maskValues, /NO_COPY)
-  
+
 END
 
 FUNCTION GenericOperator::getMask, EXIST=EXIST
@@ -1534,7 +1557,7 @@ FUNCTION GenericOperator::getMask, EXIST=EXIST
     return, *self.mask
   endif
   return, 0
-  
+
 END
 
 PRO GenericOperator::writeMask, filename=filename
@@ -1546,7 +1569,7 @@ PRO GenericOperator::setBandToExportList, list
   ptr_free, self.bandToExportList
   myList=list
   self.bandToExportList=ptr_new(myList, /NO_COPY)
-  
+
 END
 
 PRO GenericOperator::createEnviFileFromBand, bandValues, bandName, fullFileName, ps=ps, mc=mc, MEMORY=MEMORY
@@ -1557,23 +1580,23 @@ PRO GenericOperator::createEnviFileFromBand, bandValues, bandName, fullFileName,
   openw, lun, fullFileName+'.envi', /GET_LUN
   writeu, lun, bandValues
   close, lun & free_lun, lun
-  
+
   sizeInfo=size(bandValues, /STRUCTURE)
   dt=sizeInfo.type
   NS=sizeInfo.dimensions[0]
   NL=sizeInfo.dimensions[1]
   NB=1
-  
+
   ;stepLon = (ABS(sstMapWin[1]-sstMapWin[0]))/(ns-1)
   ;stepLat = (ABS(sstMapWin[2]-sstMapWin[3]))/(nl-1)
-  
+
   ; set the map info to the regular grid in ENVI file
   ;ps = [stepLon, stepLat]
   ;mc = [0.5D, 0.5D, sstMapWin[0], sstMapWin[2]]
   mapInfo = ENVI_MAP_INFO_CREATE(/GEOGRAPHIC, mc=mc, ps=ps)
   bNumber=n_elements(bandName)
   bNames=bandName
-  
+
   ; setup the header in the ENVI file
   envi_setup_head_oxy,  $
     FNAME=fullFileName,$
@@ -1589,17 +1612,17 @@ PRO GenericOperator::createEnviFileFromBand, bandValues, bandName, fullFileName,
     /WRITE,$
     /OPEN, $
     BNAMES=bNames
-    
+
   self.mainFid=myId
   if keyword_set(MEMORY) then self->addMemoryBand, bandValues, bandName
-  
+
 END
 
 FUNCTION GenericOperator::getBandToExportList
 
   if ptr_valid(self.bandToExportList) then list=*self.bandToExportList else message, 'BandToExportList is empty!'
   return, list
-  
+
 END
 
 PRO GenericOperator::CleanUp
@@ -1611,15 +1634,15 @@ PRO GenericOperator::CleanUp
   ptr_free, self.bandToExportList
   self-> Object::cleanup
   for i=0, n_elements(memoryBandValues)-1 do ptr_free, memoryBandValues[i]
-  
+
 END
 
 FUNCTION GenericOperator::init, application, workingDir, periodType, maskBand=maskBand, geoBand=geoBand, fileName=fileName, bandToExportList=bandToExportList, $
-    REMOVE_EXTENSION=REMOVE_EXTENSION, OPEN=OPEN, COPY=COPY, ENVITYPE=ENVITYPE
+  REMOVE_EXTENSION=REMOVE_EXTENSION, OPEN=OPEN, COPY=COPY, ENVITYPE=ENVITYPE
   ;REMOVE_EXTENSION=REMOVE_EXTENSION, OPEN=OPEN, COPY=COPY, ENVITYPE=ENVITYPE
-    
+
   if not (self -> Object :: init()) then return, 0
-  
+
   ;if n_elements( applicationFS ) eq 1 then self.appFS = applicationFS
   if n_elements(application) eq 1 then self.app = application
   if n_elements(workingDir) eq 1 then self.workingDir = workingDir
@@ -1631,7 +1654,7 @@ FUNCTION GenericOperator::init, application, workingDir, periodType, maskBand=ma
   if keyword_set(ENVITYPE) then self.isEnviType = keyword_set(ENVITYPE)
   self.maskCondition='finite(maskBand) eq 0'
   return, 1
-  
+
 END
 
 PRO GenericOperator__Define
@@ -1650,6 +1673,6 @@ PRO GenericOperator__Define
     memoryBandNames: strarr(20), $
     memoryBandValues: ptrarr(20), $
     Inherits Object $
-    }
-    
+  }
+
 END

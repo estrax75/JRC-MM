@@ -1,7 +1,7 @@
 ;@../ncdf_tools/ncdf_routines
 @../core/structure_definition
 
-PRO GenericOperator::readHdfFullInfoData, fullfilename, name, array, slope, offset, fillvalue, info=INFO, ERROR=ERROR, APPLY=APPLY
+PRO GenericOperator::readHdfFullInfoData, fullfilename, name, array, slope, offset, fillvalue, info=INFO, ERROR=ERROR, APPLY=APPLY, REVERSE=REVERSE
   ;
   ;
   ; Inputs:
@@ -27,6 +27,9 @@ PRO GenericOperator::readHdfFullInfoData, fullfilename, name, array, slope, offs
   ;
   ;print, dir+path_sep()+filename
   ;fullfilename
+  q=!QUIET
+  !QUIET=1
+
   ERROR=0
   catch, error_status
   FOUND=0
@@ -34,6 +37,7 @@ PRO GenericOperator::readHdfFullInfoData, fullfilename, name, array, slope, offs
   if error_status NE 0 THEN BEGIN
     catch, /CANCEL
     print, '***Corrupted : ', FULLFILENAME, '  ***'
+    quiet=q
     FOUND=0
     ERROR=1
     return
@@ -109,6 +113,7 @@ PRO GenericOperator::readHdfFullInfoData, fullfilename, name, array, slope, offs
   ;tvscl, reverse(congrid(array/slope(0)+offset(0), dims(0)/10, dims(1)/10),2)
   ;stop
   HDF_SD_END, sd_id
+  if keyword_set(REVERSE) then array=reverse(temporary(array), 2)
   if keyword_set(APPLY) then begin
     if n_elements(offset) eq 1 and n_elements(slope) eq 1 then begin
       array=1.*array*slope+offset
@@ -116,6 +121,7 @@ PRO GenericOperator::readHdfFullInfoData, fullfilename, name, array, slope, offs
       offset=0
     endif
   endif
+  quiet=q
   ;stop
 
 END
@@ -679,28 +685,38 @@ FUNCTION GenericOperator::cropping, bandInfos, outputVarList, $
 END
 
 FUNCTION GenericOperator::readNcdfVar, fileName, datasetName, FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, ONEDIM=ONEDIM, $
-  targetCropInfo=targetCropInfo, slope=slope, intercept=intercept, fillValue=fillValue
+  targetCropInfo=targetCropInfo, slope=slope, intercept=intercept, fillValue=fillValue, count=count, offset=offset, fid=fid
 
+  q=!QUIET
+  !QUIET=1
   FOUND=0
-  res={name:'', idx:0, data:0, slope:1, intercept:0, fillValue:-9999}
+  res={name:'', idx:0, data:0, slope:1, intercept:0, fillValue:2^15} ; first signed integer... (avoid dangerous -9999)
   if NCDF_IsValidFile(fileName) then begin
 
-    fileID = ncdf_open(fileName)
+    if n_elements(fid) eq 1 then begin
+      fileID=fid
+    endif else begin
+      fileID = ncdf_open(fileName)
+      if fileId gt 0 then fid=fileID
+    endelse
 
-    catch, error_status
+    error_status=0
+    ;catch, error_status
     fileinq_struct=ncdf_inquire(fileID)
     ERROR=0
 
-    slope=1
-    intercept=0
+    _slope=1
+    _intercept=0
+    _fillValue=2^15
     if error_status NE 0 THEN BEGIN
       ERROR=1
       catch, /CANCEL
       ncdf_close, fileID
+      !QUIET=q
       doLog, 'dataSetName: ', datasetName, ' not found.', level=2
       return, res
     endif
-    res={name:datasetName, idx:-1, data:0, slope:slope, intercept:intercept}
+    res={name:datasetName, idx:-1, data:0, slope:_slope, intercept:_intercept}
     for i=0, 100 do begin
       varinq_struct=ncdf_varinq(fileID,i)
       varname = varinq_struct.name
@@ -712,22 +728,33 @@ FUNCTION GenericOperator::readNcdfVar, fileName, datasetName, FOUND=FOUND, REVER
         ;attname=ncdf_attname(fileID,i,attndx)
         ;ncdf_attget,fileID,varndx,attname,value
         varID=ncdf_varid(fileID,varname)
-        ncdf_varget,fileID,varID,variable
+        ncdf_varget,fileID,varID,variable, count=count, offset=offset
         attName='slope'
         slopeTry=NCDF_ATTINQ(fileID,varID,attName)
-        if slopeTry.length eq 1 then ncdf_attget, fileID, varID, attName, slope
+        if slopeTry.length ne 1 then begin
+          attName='scale_factor'
+          slopeTry=NCDF_ATTINQ(fileID,varID,attName)
+        endif
+        if slopeTry.length eq 1 and slopeTry.dataType ne 'UNKNOWN' then ncdf_attget, fileID, varID, attName, _slope
         attName='intercept'
         interceptTry=NCDF_ATTINQ(fileID,varID,attName)
-        if interceptTry.length eq 1 then ncdf_attget, fileID, varID, attName, intercept
+        if interceptTry.length ne 1 then begin
+          attName='add_offset'
+          interceptTry=NCDF_ATTINQ(fileID,varID,attName)
+        endif
+        if interceptTry.length eq 1 and interceptTry.dataType ne 'UNKNOWN' then ncdf_attget, fileID, varID, attName, _intercept
         attName='_FillValue'
         fillValueTry=NCDF_ATTINQ(fileID,varID,attName)
-        if fillValueTry.length eq 1 then ncdf_attget, fileID, varID, attName, fillValue
+        if fillValueTry.length eq 1 and fillValueTry.dataType ne 'UNKNOWN' then ncdf_attget, fileID, varID, attName, _fillValue
         doLog, callingRoutine=callingRoutine, /STACK
         doLog, callingRoutine, fileName, LEVEL=4
         ndims=size(variable, /N_DIM)
         if keyword_set(REVERSE) then variable=reverse(temporary(variable), ndims)
         if keyword_set(TRANSPOSE) then variable=transpose(temporary(variable))
-        res={name:datasetName, idx:i, data:variable, slope:SLOPE, intercept:intercept, fillValue:fillValue}
+        if fillValueTry.length eq 1 then fillvalue=_fillvalue
+        if slopeTry.length eq 1 then slope=_slope
+        if interceptTry.length eq 1 then intercept=_intercept
+        res={name:datasetName, idx:i, data:variable, slope:_SLOPE, intercept:_intercept, fillValue:_fillValue}
         FOUND=1
         break
       endif
@@ -735,7 +762,122 @@ FUNCTION GenericOperator::readNcdfVar, fileName, datasetName, FOUND=FOUND, REVER
     ncdf_close, fileID
   endif
   ; now crop!!!
+  !QUIET=q
   return, res
+
+END
+
+; to be implemented to boost reading from a single file...
+FUNCTION GenericOperator::readMultiNcdfVar, fileName, datasetNames, FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, ONEDIM=ONEDIM, $
+  targetCropInfo=targetCropInfo, slope=slope, intercept=intercept, fillValue=fillValue, count=count, offset=offset, fid=fid
+
+  q=!QUIET
+  !QUIET=1
+  FOUND=0
+  foundList=0
+  ;multiRes={name:'', idx:0, data:0, slope:1, intercept:0, fillValue:2^15} ; first signed integer... (avoid dangerous -9999)
+  ;res={name:'', idx:-1, data:0, slope:1., intercept:0.}
+  multiRes=ptrarr(n_elements(datasetNames));replicate(res, n_elements(datasetNames))
+  if NCDF_IsValidFile(fileName) then begin
+
+    if n_elements(fid) eq 1 then begin
+      fileID=fid
+    endif else begin
+      fileID = ncdf_open(fileName)
+      if fileId gt 0 then fid=fileID
+    endelse
+
+    error_status=0
+    ;catch, error_status
+    fileinq_struct=ncdf_inquire(fileID)
+    ERROR=0
+
+    _slope=1
+    _intercept=0
+    _fillValue=2^15
+    ;    if error_status NE 0 THEN BEGIN
+    ;      ERROR=1
+    ;      catch, /CANCEL
+    ;      ncdf_close, fileID
+    ;      !QUIET=q
+    ;      doLog, 'dataSetName: ', datasetName, ' not found.', level=2
+    ;      return, res
+    ;    endif
+    for i=0, fileinq_struct.nvars-1 do begin
+      varinq_struct=ncdf_varinq(fileID,i)
+      varname = varinq_struct.name
+      dimensions = varinq_struct.dim
+      numatts = varinq_struct.natts
+      ;print, varname
+      ;doLog, varname, LEVEL=4
+      idx=where(strupcase(varinq_struct.name) eq strupcase(datasetNames), check)
+      if check eq 1 then begin
+        ;attname=ncdf_attname(fileID,i,attndx)
+        ;ncdf_attget,fileID,varndx,attname,value
+        varID=ncdf_varid(fileID,varname)
+        ncdf_varget,fileID,varID,variable, count=count, offset=offset
+        attName='slope'
+        slopeTry=NCDF_ATTINQ(fileID,varID,attName)
+        if slopeTry.length ne 1 then begin
+          attName='scale_factor'
+          slopeTry=NCDF_ATTINQ(fileID,varID,attName)
+        endif
+        if slopeTry.length eq 1 then ncdf_attget, fileID, varID, attName, _slope
+        attName='intercept'
+        interceptTry=NCDF_ATTINQ(fileID,varID,attName)
+        if interceptTry.length ne 1 then begin
+          attName='add_offset'
+          interceptTry=NCDF_ATTINQ(fileID,varID,attName)
+        endif
+        if interceptTry.length eq 1 then ncdf_attget, fileID, varID, attName, _intercept
+        attName='_FillValue'
+        fillValueTry=NCDF_ATTINQ(fileID,varID,attName)
+        if fillValueTry.length eq 1 then ncdf_attget, fileID, varID, attName, _fillValue
+        doLog, callingRoutine=callingRoutine, /STACK
+        doLog, callingRoutine, fileName, LEVEL=4
+        ndims=size(variable, /N_DIM)
+        if keyword_set(REVERSE) then variable=reverse(temporary(variable), ndims)
+        if keyword_set(TRANSPOSE) then variable=transpose(temporary(variable))
+        validExtra=''
+        if fillValueTry.length eq 1 then begin
+          validExtra=validExtra+'1'
+          fillvalue=_fillvalue
+        endif else begin
+          validExtra=validExtra+'0'
+        endelse
+        if slopeTry.length eq 1 then begin
+          validExtra=validExtra+'1'
+          slope=_slope
+        endif else begin
+          validExtra=validExtra+'0'
+        endelse
+        if interceptTry.length eq 1 then begin
+          validExtra=validExtra+'1'
+          intercept=_intercept
+        endif else begin
+          validExtra=validExtra+'0'
+        endelse
+        print, datasetNames[idx], validExtra
+        res={name:datasetNames[idx], idx:idx, data:ptr_new(variable, /NO_COPY), slope:slope, intercept:intercept, fill_value:ptr_new(fillValue, /NO_COPY), validExtra:validExtra}
+        multiRes[idx]=ptr_new(res, /NO_COPY)
+        foundList++
+      endif
+    endfor
+    if foundList eq n_elements(datasetNames) then FOUND=1 else FOUND=0
+    ncdf_close, fileID
+  endif
+  nElem=n_elements(multiRes)
+  if foundList eq nElem then print, 'yep' 
+  explodeRes=*(multiRes[0])
+  explodeResAll=replicate(explodeRes[0], nElem)
+  ptr_free, multiRes[0]
+  for i=1, nElem-1 do begin
+    explodeResAll[i]=reform(*(multiRes[i]))
+    ptr_free, multiRes[i]
+  endfor
+  
+  !QUIET=q
+  return, explodeResAll
 
 END
 

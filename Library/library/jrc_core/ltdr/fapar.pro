@@ -62,14 +62,14 @@ PRO FAPAR,sensor,sensorCode,ttasun,ttaview,phisun,phiview,$
   rhotildeRED=abs(BRF_ToA_RED/F_red)
   rhotildeNIR=abs(BRF_ToA_NIR/F_nir)
   ;
-  idx_fine=where( (brf_toa_red-rhotildered) ge 0.0)
+  ;idx_fine=where( (brf_toa_red-rhotildered) ge 0.0)
 
-  res1=histogram(brf_toa_red(idx_fine)-rhotildered(idx_fine), min=min(brf_toa_red(idx_fine)-rhotildered(idx_fine)),max=max(brf_toa_red(idx_fine)-rhotildered(idx_fine)),bin=0.01)
+  ;res1=histogram(brf_toa_red(idx_fine)-rhotildered(idx_fine), min=min(brf_toa_red(idx_fine)-rhotildered(idx_fine)),max=max(brf_toa_red(idx_fine)-rhotildered(idx_fine)),bin=0.01)
   ;res=histogram(rhotildered, min=min(rhotildered),max=max(rhotildered),bin=0.01)
   ;xpdf=fltarr(N_elements(res))
-  xpdf1=fltarr(N_elements(res1))
+  ;xpdf1=fltarr(N_elements(res1))
   ;for kl=0, N_elements(res)-1 do xpdf(kl)=min(rhotildered)+kl*0.01
-  for kl=0, N_elements(res1)-1 do xpdf1(kl)=min(brf_toa_red(idx_fine)-rhotildered(idx_fine))+kl*0.01
+  ;for kl=0, N_elements(res1)-1 do xpdf1(kl)=min(brf_toa_red(idx_fine)-rhotildered(idx_fine))+kl*0.01
   ;
   ;plot, xpdf1, 100.0*res1/total(res1), psym=10, xr=[min(brf_toa_red(idx_fine)-rhotildered(idx_fine)),max(brf_toa_red(idx_fine)-rhotildered(idx_fine))],$
   ;  yr=[0.,100], xtitle='brf_toa_red-RHo Tidle RED',ytitle='Frequency (%)', charsize=1.5
@@ -78,12 +78,12 @@ PRO FAPAR,sensor,sensorCode,ttasun,ttaview,phisun,phiview,$
   ;stop
   ;window,/free
   ;
-  res1=histogram(brf_toa_nir-rhotildenir, min=min(brf_toa_nir-rhotildenir),max=max(0.20),bin=0.01)
+  ;res1=histogram(brf_toa_nir-rhotildenir, min=min(brf_toa_nir-rhotildenir),max=max(0.20),bin=0.01)
   ;res=histogram(rhotildenir, min=min(rhotildenir),max=max(rhotildenir),bin=0.01)
   ;xpdf=fltarr(N_elements(res))
-  xpdf1=fltarr(N_elements(res1))
+  ;xpdf1=fltarr(N_elements(res1))
   ;for kl=0, N_elements(res)-1 do xpdf(kl)=min(rhotildenir)+kl*0.01
-  for kl=0, N_elements(res1)-1 do xpdf1(kl)=min(brf_toa_nir-rhotildenir)+kl*0.01
+  ;for kl=0, N_elements(res1)-1 do xpdf1(kl)=min(brf_toa_nir-rhotildenir)+kl*0.01
   ;
   ;plot, xpdf1, 100.0*res1/total(res1), psym=10, xr=[min(rhotildenir-rhotildenir),max(rhotildenir-rhotildenir)],$
   ;  yr=[0.,100], xtitle='RHo Tidle NIR',ytitle='Frequency (%)', charsize=1.5

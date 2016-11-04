@@ -14,10 +14,10 @@ function doBRFLand, sourceFile, confDir, year, month, day, sensor, missionCode, 
 
   ;fname='/space3/storage/products/results/FAPAR/SWF_TO_CMP/SEA01_ORB01_20031221000000_20031231000000_L3_FPA_000001_900S900N1800W1800E_PLC_0500D_PRO.NC'
   ;ST_operator->readHdfFullInfoData, infoVar1b[1], infoVar1b[0], red_avh09, red_slope, red_offset, red_fillvalue, ERROR=ERROR
-  
+
   ;NaN=-9999 ;!VALUES.F_NAN
   ;stop
-  INT_NAN=-9999
+  INT_NAN=2^15
 
   outputBaseDir=ST_fileSystem->adjustDirSep(destBaseDir, /ADD)
   confDir=ST_fileSystem->adjustDirSep(confDir, /ADD)
@@ -32,11 +32,15 @@ function doBRFLand, sourceFile, confDir, year, month, day, sensor, missionCode, 
   indicator='LAN'
   spatialResolution='0005D'
   level='L2'
-  
-  resFileNCInfo=build_JRC_BRDF_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
-    product, version, 'NC',  indicator=indicator, level, projection=projection)
-  resFileHDFInfo=build_JRC_BRDF_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
-    product, version, 'HDF',  indicator=indicator, level, projection=projection)
+
+  ;resFileNCInfo=build_JRC_BRF_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
+  ;  product, version, 'NC',  indicator=indicator, level, projection=projection)
+  ;resFileHDFInfo=build_JRC_BRDF_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
+  ;  product, version, 'HDF',  indicator=indicator, level, projection=projection)
+  resFileNCInfo=build_JRC_BRF_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
+    product, version, 'test.NC',  indicator=indicator, level, projection=projection)
+  resFileHDFInfo=build_JRC_BRF_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
+    product, version, 'test.HDF',  indicator=indicator, level, projection=projection)
 
   destDir=destBaseDir+resFileNCInfo.filePath
   destDir=ST_fileSystem->adjustDirSep(destDir, /ADD)
@@ -61,12 +65,12 @@ function doBRFLand, sourceFile, confDir, year, month, day, sensor, missionCode, 
   ;if keyword_set(NONCWRITE) then return, -1
   if keyword_set(NONCWRITE) and keyword_set(NOHDFWRITE) then return, -1
 
-;  outputDir=writeBaseDir+resFileNCInfo.filePath
-;  outputDir=ST_fileSystem->adjustDirSep(outputDir, /ADD)
-;  resFileNC=outputDir+resFileNCInfo.fileName
-;  resFileHDF=outputDir+resFileHDFInfo.fileName
+  ;  outputDir=writeBaseDir+resFileNCInfo.filePath
+  ;  outputDir=ST_fileSystem->adjustDirSep(outputDir, /ADD)
+  ;  resFileNC=outputDir+resFileNCInfo.fileName
+  ;  resFileHDF=outputDir+resFileHDFInfo.fileName
 
-  BRDF_params=getPGEInfo(confDir, file, globDim=globDim)
+  BRF_params=getPGEInfo(confDir, file, globDim=globDim)
 
   ;AVHRR-Land_v004_AVH09C1_NOAA-16_20030101_c20140421105754.nc
   ;fName1=ST_fileSystem->getFileNameInfo(file1, filePath=dir1, extension=ext1)
@@ -169,15 +173,15 @@ function doBRFLand, sourceFile, confDir, year, month, day, sensor, missionCode, 
   n=globDim
   n_non_zero = 0;
 
-  brdf_r_param=fltarr(2,globDim)
-  brdf_v_param=fltarr(2,globDim)
+  brf_r_param=fltarr(2,globDim)
+  brf_v_param=fltarr(2,globDim)
 
   ;input_data[0,*]=input_data[0,*]*slope_red+offset_red
   ;input_data[1,*]=input_data[1,*]*slope_nir+offset_nir
   ;totData=n_elements(input_data[0,*])
 
   n_non_zero=0
-  brdfcorr=0
+  brfcorr=0
   sourceData=input_data
   ;rr3=cgi_map_bitwise_flag(qc_avhrr,3)
   rr3=cgi_map_bitwise_flag(qa_avh09,3)
@@ -230,7 +234,7 @@ function doBRFLand, sourceFile, confDir, year, month, day, sensor, missionCode, 
     n_non_zero = 0;
     for i=0, 1 do if (input_data[i,checkIndex] gt 0) then n_non_zero++
 
-    brdfcorr = 0;  /* not corrected by default */
+    brfcorr = 0;  /* not corrected by default */
 
     if input_data[0,checkIndex] lt 0 then continue
     if input_data[1,checkIndex] lt 0 then continue
@@ -241,59 +245,59 @@ function doBRFLand, sourceFile, confDir, year, month, day, sensor, missionCode, 
       brefl = input_data[i,checkIndex]
       lsz = native_ts[checkIndex];
       ;    print, lsz
-      BRDFVs = BRDF_params[i].slope_v1[checkIndex];
-      BRDFRs = BRDF_params[i].slope_r1[checkIndex];
-      ;     print, 'V, R', BRDFVs, BRDFRs
-      ndvi_min = BRDF_params[i].NDVImin[checkIndex];
-      ndvi_max = BRDF_params[i].NDVImax[checkIndex];
+      BRFVs = BRF_params[i].slope_v1[checkIndex];
+      BRFRs = BRF_params[i].slope_r1[checkIndex];
+      ;     print, 'V, R', BRFVs, BRFRs
+      ndvi_min = BRF_params[i].NDVImin[checkIndex];
+      ndvi_max = BRF_params[i].NDVImax[checkIndex];
       ;    print, 'min, max', ndvi_min, ndvi_max
       ;if ((i==0) && (j == (1444*7200) + 4105)) printf("X (%f %f), %f %f %f SLOPES %f %f\n", input_data[0][checkIndex], input_data[1][checkIndex], ndvi_value, ndvi_min, ndvi_max, BRDFVs, BRDFRs);
 
-      brdf_r_param[i,checkIndex] = 0.0
-      brdf_v_param[i,checkIndex] = 0.0
+      brf_r_param[i,checkIndex] = 0.0
+      brf_v_param[i,checkIndex] = 0.0
 
       computationMask[i,checkIndex]=0
-      if ((BRDFVs ne 0) and (BRDFRs ne 0)) then begin
+      if ((BRFVs ne 0) and (BRDFRs ne 0)) then begin
 
         computationMask[i,checkIndex]=1
         if (ndvi_value lt ndvi_min) then ndvi_value = ndvi_min else if (ndvi_value gt ndvi_max) then ndvi_value = ndvi_max
         ndvi_value = ndvi_value - ndvi_min;
 
-        BRDFV = (BRDFVs*ndvi_value) + BRDF_params[i].intercept_v1[checkIndex];
-        BRDFR = (BRDFRs*ndvi_value) + BRDF_params[i].intercept_r1[checkIndex];
-        ;    print, 'v,r', brdfv, brdfr
+        BRFV = (BRDFVs*ndvi_value) + BRF_params[i].intercept_v1[checkIndex];
+        BRFR = (BRDFRs*ndvi_value) + BRF_params[i].intercept_r1[checkIndex];
+        ;    print, 'v,r', brfv, brfr
         ;if ((i==0) && (j == (1444*7200) + 4105)) printf("%f %f %f %f\n", BRDFV, BRDFVs, ndvi_value, BRDF_params[i].intercept_v1[checkIndex]);
 
-        brdf_r_param[i,checkIndex] = BRDFR;
-        brdf_v_param[i,checkIndex] = BRDFV;
+        brf_r_param[i,checkIndex] = BRFR;
+        brf_v_param[i,checkIndex] = BRFV;
 
         nvalue = 1;
-        if ((BRDFV ge 0.0) and (BRDFR le 0.350)) then begin
+        if ((BRFV ge 0.0) and (BRFR le 0.350)) then begin
           ;     print, 'angles ', native_ts[checkIndex], native_tv[checkIndex], native_relphi[checkIndex]
-          res=corbrdfl(brefl, native_ts[checkIndex], native_tv[checkIndex], native_relphi[checkIndex], nvalue, BRDFV, BRDFR);
+          res=corbrdfl(brefl, native_ts[checkIndex], native_tv[checkIndex], native_relphi[checkIndex], nvalue, BRFV, BRFR);
           ;         print, 'res', res
           input_data[i,checkIndex] = res
-          brdfcorr++;
+          brfcorr++;
           ;if ((i==0) && (j == (1444*7200) + 4105)) printf("XX %f %f %f %f\n", BRDFV, BRDFVs, ndvi_value, BRDF_params[i].intercept_v1[checkIndex]);
         endif; else input_data[i,checkIndex] = 10.0
       endif else begin
         computationMask[i,checkIndex]=2
 
-        BRDFV = BRDF_params[i].intercept_v1[checkIndex];
-        BRDFR = BRDF_params[i].intercept_r1[checkIndex];
+        BRFV = BRF_params[i].intercept_v1[checkIndex];
+        BRFR = BRF_params[i].intercept_r1[checkIndex];
         ;     print, 'v,r 2', brdfv, brdfr
-        brdf_r_param[i,checkIndex] = BRDFR;
-        brdf_v_param[i,checkIndex] = BRDFV;
+        brf_r_param[i,checkIndex] = BRFR;
+        brf_v_param[i,checkIndex] = BRFV;
         ;if ((i==0) && (j == (1444*7200) + 4105)) printf("BRDF paramters %f %f\n", BRDFV, BRDFR)
 
         nvalue = 1;
-        if ((BRDFV ge 0.0) and (BRDFR le 0.350)) then begin
+        if ((BRFV ge 0.0) and (BRFR le 0.350)) then begin
           ;     print, 'angles 2', native_ts[checkIndex], native_tv[checkIndex], native_relphi[checkIndex]
-          ;      print, brefl, native_ts[checkIndex], native_tv[checkIndex], native_relphi[checkIndex], nvalue, BRDFV, BRDFR
-          res=corbrdfl(brefl, native_ts[checkIndex], native_tv[checkIndex], native_relphi[checkIndex], nvalue, BRDFV, BRDFR);
+          ;      print, brefl, native_ts[checkIndex], native_tv[checkIndex], native_relphi[checkIndex], nvalue, BRFV, BRFR
+          res=corbrdfl(brefl, native_ts[checkIndex], native_tv[checkIndex], native_relphi[checkIndex], nvalue, BRFV, BRFR);
           ;     print, 'res 2', res
           input_data[i,checkIndex] = res;
-          brdfcorr++;
+          brfcorr++;
         endif; else input_data[i,checkIndex] = 11.0
       endelse
       val = 0;  /* OK by default */
@@ -375,12 +379,12 @@ function doBRFLand, sourceFile, confDir, year, month, day, sensor, missionCode, 
   ;  window, 0, xsize=720, ysize=360, title='source band1: '+SENSOR
   ;  tv, reverse(rebin(bytscl(sd1, min=0., max=1.0), 720,360),2)
 
-  ;BRDF_params[i].slope_v1[checkIndex];
-  ; check BRDF
-  ;  b1v=reform(BRDF_params[0].slope_v1, 7200, 3600)
-  ;  b1r=reform(BRDF_params[0].slope_r1, 7200, 3600)
-  ;  b2v=reform(BRDF_params[1].slope_v1, 7200, 3600)
-  ;  b2r=reform(BRDF_params[1].slope_r1, 7200, 3600)
+  ;BRF_params[i].slope_v1[checkIndex];
+  ; check BRF
+  ;  b1v=reform(BRF_params[0].slope_v1, 7200, 3600)
+  ;  b1r=reform(BRF_params[0].slope_r1, 7200, 3600)
+  ;  b2v=reform(BRF_params[1].slope_v1, 7200, 3600)
+  ;  b2r=reform(BRF_params[1].slope_r1, 7200, 3600)
   ;  ;b1v[IDX_SEA]=NaN
   ;
   ;  max=max(b1v, min=min)
@@ -426,6 +430,7 @@ function doBRFLand, sourceFile, confDir, year, month, day, sensor, missionCode, 
   bandIntercepts=brfDSInfo.bandIntercepts
   bandSlopes=brfDSInfo.bandSlopes
   bandDataTypes=brfDSInfo.bandDataTypes
+  scaledminmaxs=brfDSInfo.scaledminmaxs
   nanList=brfDSInfo.nanS
   trueminMaxs=brfDSInfo.minMaxs
   header=brfDSInfo.header
@@ -503,18 +508,27 @@ function doBRFLand, sourceFile, confDir, year, month, day, sensor, missionCode, 
   ;  ;trueMinMaxs=minMaxs
 
   ;;
-  
+
+  date_created=ST_utils->getSysTime(/FILECOMPATIBILITY)
+  satellite='NOAA '+strcompress(noaaCode, /REMOVE)
+  time_Coverage_Start=ST_utils->formatDate([year, month, day, 0, 0, 0], template='satellite')
+  time_Coverage_End=ST_utils->formatDate([year, month, day, 23, 59, 59], template='satellite')
+  header.cdr_variable=['cdr_variable', 'BRF']
+  header.Process=['process', 'LAI/FAPAR postprocessing NASA algorithm.']
+
   if ~keyword_set(NOHDFWRITE) then write_hdf, resFileHDF, $
     bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
-    dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
+    dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, scaledminmaxs=scaledminmaxs, $
     postcompression=postcompression, gzipLevel=gzipLevel, NOREVERSE=NOREVERSE, trueMinMaxs=trueMinMaxs, nanlist=nanlist, $
-    trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, header=header
+    trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, header=header, id=resFileHDFInfo.filename, satellite=satellite, $
+    date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End
 
   if ~keyword_set(NONCWRITE) then write_georef_ncdf, resFileNC, $
     bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
-    dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
+    dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, scaledminmaxs=scaledminmaxs, $
     postcompression=postcompression, gzipLevel=gzipLevel, NOREVERSE=NOREVERSE, trueMinMaxs=trueMinMaxs, nanlist=nanlist, $
-    trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, header=header
+    trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, header=header, id=resFileNCInfo.filename, satellite=satellite, $
+    date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End
   print, '****'
   print, resFileNC
   print, 'done'
@@ -527,17 +541,17 @@ function doBRFLand, sourceFile, confDir, year, month, day, sensor, missionCode, 
   final_nir_avhrr=0
   final_red_avhrr=0
   ;  idx_ok=where(red_brf gt 0.0 and final_red_avhrr gt 0.0)
-  ;  window, 0, xsize=720, ysize=360, title='red brdfl: '+SENSOR
+  ;  window, 0, xsize=720, ysize=360, title='red brfl: '+SENSOR
   ;  tv, reverse(rebin(bytscl(red_brf, min=0., max=1.0), 720,360),2)
-  ;  window, 1, xsize=720, ysize=360, title='nir brdfl: '+SENSOR
+  ;  window, 1, xsize=720, ysize=360, title='nir brfl: '+SENSOR
   ;  tv, reverse(rebin(bytscl(nir_brf, min=0.,max=1.0), 720,360),2)
   ;  ;
   ;  ;window, 11, xsize=720, ysize=360, title='nir input: '+SENSOR
   ;  ;tv, reverse(rebin(bytscl(dataset.data*slope_nir, min=0.,max=1.0), 720,360),2)
   ;
-  ;  window, 2, xsize=720, ysize=360, title='nir brdfl: '+SENSOR
+  ;  window, 2, xsize=720, ysize=360, title='nir brfl: '+SENSOR
   ;  tv, reverse(rebin(bytscl(final_nir_avhrr, min=0., max=1.0), 720,360),2)
-  ;  window, 3, xsize=720, ysize=360, title='red brdfl: '+SENSOR
+  ;  window, 3, xsize=720, ysize=360, title='red brfl: '+SENSOR
   ;  tv, reverse(rebin(bytscl(final_red_avhrr, min=0., max=1.0), 720,360),2)
   ;
   ;  idx_ok=where(red_brf gt 0. and red_brf lt 1.0)

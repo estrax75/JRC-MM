@@ -1,7 +1,9 @@
 function getAVHRRNOAANumber, year, noaacode, RECENT=RECENT
 
+  ; check here!!!
+  
   sYear=1981
-  eYear=1985
+  eYear=1984
   nYears=eYear-sYear+1
   set07=indgen(nYears)+sYear
   noaaCode=intarr(nYears)

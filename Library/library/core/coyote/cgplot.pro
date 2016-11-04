@@ -346,6 +346,7 @@ PRO cgPlot, x, y, $
     YSTYLE=ystyle, $
     YTITLE=ytitle, $
     LOG_AXIS_Y=LOG_AXIS_Y, $
+    LOWER_ZERO=LOWER_ZERO, $
     _REF_EXTRA=extra
     
   Compile_Opt idl2
@@ -946,10 +947,12 @@ PRO cgPlot, x, y, $
       ; Y high error bars.
       IF (N_Elements(err_yhigh) NE 0) THEN BEGIN
         yhigh = dep + err_yhigh
-        FOR j=0,N_Elements(err_yhigh)-1 DO BEGIN
-          PlotS, [indep[j], indep[j]], [yhigh[j], dep[j]], Color=err_color, Thick=err_thick, $
+        valid=where(finite(yhigh), countFinite)
+        FOR j=0,countFinite-1 DO BEGIN
+          jj=valid[j]
+          PlotS, [indep[jj], indep[jj]], [yhigh[jj], dep[jj]], Color=err_color, Thick=err_thick, $
             NoClip=1-Keyword_Set(err_clip)
-          nCoord = Convert_Coord(indep[j], yhigh[j], /Data, /To_Normal)
+          nCoord = Convert_Coord(indep[jj], yhigh[jj], /Data, /To_Normal)
           errBox[0, *]=[nCoord[0]-xerr_width, nCoord[0]-xerr_width, nCoord[0]+xerr_width, nCoord[0]+xerr_width, nCoord[0]-xerr_width]
           errBox[1, *]=[nCoord[1], nCoord[1], nCoord[1], nCoord[1], nCoord[1]]
           if keyword_set(ERR_SHAPE) then begin
@@ -966,18 +969,22 @@ PRO cgPlot, x, y, $
       ; check for out of plot range...
       IF (N_Elements(err_ylow) NE 0) THEN BEGIN
         ylow = dep - err_ylow
+        valid=where(finite(ylow), countFinite)
         if keyword_set(LOG_AXIS_Y) then begin
           negIdxs=where(ylow le 0, count)
           if count ne 0 then ylow[negIdxs]=10^!Y.crange[0]
-        endif 
+        endif
         ;yLow=!Y.crange[0]
         ;idxs=where(ylow le !Y.crange[0] or dep le !Y.crange[0] or finite(ylow) ne 1 or finite(dep) ne 1, count)
         ;if count ne 0 then idxs
         ;help, YLOG
-        FOR j=0,N_Elements(err_ylow)-1 DO BEGIN
-          PlotS, [indep[j], indep[j]], [ylow[j], dep[j]], Color=err_color, Thick=err_thick, $
+        FOR j=0,countFinite-1 DO BEGIN
+          ; avoid negative stddev
+          jj=valid[j]
+          if keyword_set(lower_zero) then ylow[jj]=ylow[jj]>0
+          PlotS, [indep[jj], indep[jj]], [ylow[jj], dep[jj]], Color=err_color, Thick=err_thick, $
             NoClip=1-Keyword_Set(err_clip)
-          nCoord = Convert_Coord(indep[j], ylow[j], /Data, /To_Normal)
+          nCoord = Convert_Coord(indep[jj], ylow[jj], /Data, /To_Normal)
           errBox[0, *]=[nCoord[0]-xerr_width, nCoord[0]-xerr_width, nCoord[0]+xerr_width, nCoord[0]+xerr_width, nCoord[0]-xerr_width]
           errBox[1, *]=[nCoord[1], nCoord[1], nCoord[1], nCoord[1], nCoord[1]]
           if keyword_set(ERR_SHAPE) then begin

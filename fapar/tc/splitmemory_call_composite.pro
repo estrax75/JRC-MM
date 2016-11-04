@@ -38,6 +38,11 @@ Pro sm_make_tc_distance_eu_vegetation_m, daysNumber, data_in, idx_doIt, day, mea
   ;
   if nfield eq 3 then thres = 7.915
   if nfield eq 2 then thres = 5.991
+  ; this setting coming from SeaWifs l3time C-Code
+;  if nfield eq 3 then thres = 3.53
+;  if nfield eq 2 then thres = 2.30
+  
+  
   ;
   ;=================================================================
   ;
@@ -68,7 +73,7 @@ Pro sm_make_tc_distance_eu_vegetation_m, daysNumber, data_in, idx_doIt, day, mea
     if nfield eq 2 then idx_bad_mask = where(buf gt thres and (data_in(t).flag eq 4 or data_in(t).flag eq 5), outliersCount)
     if nfield eq 3 then idx_bad_mask = where(buf gt thres and data_in(t).flag eq 0, outliersCount)
     vld=where(buf lt 100)
-    if max(buf[vld]) gt thres then stop
+    ;if max(buf[vld]) gt thres then stop
     ;if nfield eq 2 then idx_bad_mask = where(buf gt thres and (data_in(t).flag eq 4 or data_in(t).flag eq 5), outliersCount)
     ;if nfield eq 3 then idx_bad_mask = where(buf gt std_mean.temp and data_in(t).flag eq 0, outliersCount)
     if outliersCount gt 1 then data_in(t).flag(idx_bad_mask)=11.0
@@ -92,9 +97,10 @@ Pro sm_make_tc_distance_eu_vegetation_m, daysNumber, data_in, idx_doIt, day, mea
     ;save, std_mean, filename='std_mean.sav', /compress
     ;saveDistance=distance[saveIndexes]
     ;idx_remake1=where(data_in.flag eq 0.0 and index_2 ge 3 and distance ne 100.0, complement=saveIndexes1)
-    save, distance, filename='first_distance.sav', /compress
-    save, meandat, filename='first_meandat.sav', /compress
-    save, std_mean, filename='first_std_mean.sav', /compress
+    ;print, distance[*,280, ]
+    save, distance, filename='first_distance_.sav', /compress
+    save, meandat, filename='first_meandat_.sav', /compress
+    save, std_mean, filename='first_std_mean_.sav', /compress
     DelidlVar, distance
     ;saveMean=meandat[saveIndexes]
     DelidlVar, meandat
@@ -105,9 +111,9 @@ Pro sm_make_tc_distance_eu_vegetation_m, daysNumber, data_in, idx_doIt, day, mea
     distance=temporary(distanceRes)
     meandat=temporary(meandatRes)
     std_mean=temporary(std_meanRes)
-    save, distance, filename='new_distance.sav', /compress
-    save, meandat, filename='new_meandat.sav', /compress
-    save, std_mean, filename='new_std_mean.sav', /compress
+    save, distance, filename='new_distance_.sav', /compress
+    save, meandat, filename='new_meandat_.sav', /compress
+    save, std_mean, filename='new_std_mean_.sav', /compress
      
     ;    restore, 'distance.sav'
     ;    resDist=distanceRes-distance

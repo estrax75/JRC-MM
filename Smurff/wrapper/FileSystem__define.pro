@@ -578,7 +578,7 @@ END
 FUNCTION FileSystem::getTempDir, WITHSEPARATOR=WITHSEPARATOR
 
   dir=self->getHomeDir(/WITH)
-  dir=dir+'temp'
+  dir=dir+'temp2'
   if keyword_set(WITHSEPARATOR) then dir=dir+self.oSDirSeparator
   return, dir
   
@@ -727,8 +727,8 @@ PRO FileSystem::configure, mainDir, MUSTEXISTS=MUSTEXISTS, NOTFOUND=NOTFOUND
     endelse
   endif
   
+  filename='/home/mariomi/idl_apps.ini'
   openr, unit, filename, /GET_LUN
-  ;filename='/home/mariomi/idl_apps.ini'
   
   bufferString=''
   while not(eof(unit)) do begin

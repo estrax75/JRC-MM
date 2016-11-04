@@ -1,4 +1,4 @@
-;testCompareFAPAR, 41, -96, 1999, 6, 14, /TO_PIX, /ten
+;testCompareFAPAR, 41.179667, -96.439646, 1999, 6, 14, /TO_PIX, /ten
 pro testCompareFAPAR, latPos, lonPos, year, month, noaa, TO_PIX=TO_PIX, RESET=RESET, RED=RED, NIR=NIR, TEN=TEN;, sourceFile, confDir, year, month, day, sensor, missionCode, noaaCode, resolution, mainVar, outputBaseDir, tempDir, $
   ;testFile=testFile, OVERWRITE=OVERWRITE, HDF=HDF, NC=NC
 
@@ -54,6 +54,8 @@ pro testCompareFAPAR, latPos, lonPos, year, month, noaa, TO_PIX=TO_PIX, RESET=RE
     title='Nir'
   endif
 
+  myDailyPixFaparMx=fltarr(3,3,days)
+  myDailyPixSigmaMx=myDailyPixFaparMx
   for i=0, days-1 do begin
     print, dailyFaparFiles[i]
     faparName=ST_fileSystem->getFileNameInfo(dailyFaparFiles[i], filePath=filePath, extension=extension)
@@ -73,25 +75,16 @@ pro testCompareFAPAR, latPos, lonPos, year, month, noaa, TO_PIX=TO_PIX, RESET=RE
     if count ne 0 then sigma_fapar[noIdxs]=!VALUES.F_NAN
     myDailyPixSigma[i]=sigma_fapar[pixLonPos, pixLatPos]
 
+    for k=-1, 1 do begin
+      for l=-1, 1 do begin
+        myDailyPixFaparMx[k+1,l+1,i]=fapar[pixLonPos+k, pixLatPos+l]
+        myDailyPixSigmaMx[k+1,l+1,i]=sigma_fapar[pixLonPos+k, pixLatPos+l]
+      endfor
+    endfor
+
+
   endfor
 
-  restore, filename='first_distance.sav'
-  restore, filename='first_meandat.sav'
-  restore, filename='first_std_mean.sav'
-  offset=1440
-  ; distance from call mean 3 computation
-  myDailyPixDistance=reform(distance[*,pixLonPos-offset, pixLatPos])
-  ; mean...
-  myDailyPixmeandat=meandat.fapar[pixLonPos-offset, pixLatPos]
-  ; std dev...
-  myDailyPixstd_mean=std_mean.temp[pixLonPos-offset, pixLatPos]
-  restore, 'new_distance.sav'
-  restore, 'new_meandat.sav'
-  restore, 'new_std_mean.sav'
-  myDailyPixNewDistance=reform(distance[*,pixLonPos-offset, pixLatPos])
-  myDailyPixNewmeandat=meandat.fapar[pixLonPos-offset, pixLatPos]
-  myDailyPixNewstd_mean=std_mean.temp[pixLonPos-offset, pixLatPos]
-  
   faparName=ST_fileSystem->getFileNameInfo(monthlyFaparFiles[0], filePath=filePath, extension=extension)
 
   infoVarFPA=[tcMain, workDir+faparName, faparName, workDir, ext, 'input_data[1,*]/fapar']
@@ -104,6 +97,174 @@ pro testCompareFAPAR, latPos, lonPos, year, month, noaa, TO_PIX=TO_PIX, RESET=RE
   ncdfread, infoVarFPA_dev_temp[1], infoVarFPA_dev_temp[0], dev_temp_fapar, dev_temp_fapar_slope, dev_temp_fapar_offset, dim, dev_temp_fapar_fillvalue, ERROR=ERROR
   noIdxs=where(dev_temp_fapar eq dev_temp_fapar_fillvalue, count)
   dev_temp_fapar=1.*dev_temp_fapar*dev_temp_fapar_slope+dev_temp_fapar_offset
+
+  myMonthlyPixSigmaMx=fltarr(3,3)
+  myMonthlyPixFaparMx=fltarr(3,3)
+  for k=-1, 1 do begin
+    for l=-1, 1 do begin
+      myMonthlyPixFaparMx[k+1,l+1]=fapar[pixLonPos+k, pixLatPos+l]
+      myMonthlyPixSigmaMx[k+1,l+1]=dev_temp_fapar[pixLonPos+k, pixLatPos+l]
+    endfor
+  endfor
+
+  print, 'Before outliers'
+  restore, filename='first_distance.sav'
+  restore, filename='first_meandat.sav'
+  restore, filename='first_std_mean.sav'
+  offset=1440
+  ; distance from call mean 3 computation
+  myDailyPixDistance=reform(distance[*,pixLonPos-offset, pixLatPos])
+
+  ; mean...
+  myDailyPixmeandat=meandat.fapar[pixLonPos-offset, pixLatPos]
+
+  ; std dev...
+  myDailyPixstd_mean=std_mean.temp[pixLonPos-offset, pixLatPos]
+
+  myDailyPixDistanceMx=myDailyPixFaparMx
+  myDailyPixmeandatMx=fltarr(3,3)
+  myDailyPixstd_meanMx=fltarr(3,3)
+
+  for k=-1, 1 do begin
+    for j=-1, 1 do begin
+      myDailyPixDistanceMx[k+1,j+1,*]=reform(distance[*,pixLonPos-offset+k, pixLatPos+j])
+      myDailyPixmeandatMx[k+1,j+1]=meandat.fapar[pixLonPos-offset+k, pixLatPos+j]
+      myDailyPixstd_meanMx[k+1,j+1]=std_mean.temp[pixLonPos-offset+k, pixLatPos+j]
+    endfor
+  endfor
+
+  zeroIndx=where(myDailyPixFapar eq 0, zeroes)
+  if zeroes gt 1 then myDailyPixFapar[zeroIndx]=!VALUES.F_NAN
+  zeroIndx=where(myDailyPixFaparMx eq 0, zeroes)
+  if zeroes gt 1 then myDailyPixFaparMx[zeroIndx]=!VALUES.F_NAN
+
+  theChosenRough1=fltarr(9,2)
+  theChosenEuclidean1=fltarr(9,2)
+  i=0
+  for k=0, 2 do begin
+    for j=0, 2 do begin
+      ;testEuclDistances=myDailyPixDistanceMx[k,l,*]
+      myDailyPixDistance=reform(myDailyPixDistanceMx[k,j,*])
+
+      myDailyPixFapar=reform(myDailyPixFaparMx[k,j,*])
+      myDailyPixmeandat=reform(myDailyPixmeandatMx[k,j])
+
+      RoughDistance=abs(myDailyPixFapar-(reform(myDailyPixmeandat))[0])
+
+      indexEucl=(where(min(myDailyPixDistance, /NAN) eq myDailyPixDistance))[0]
+      indexRD=(where(min(RoughDistance, /NAN) eq RoughDistance))[0]
+
+      print, 'best euclidean distance (min):', myDailyPixDistance[indexEucl], ', index(', indexEucl, ')'
+      print, 'best rough distance value (min):', RoughDistance[indexRD], ', index(', indexRD, ')'
+
+      print, 'Euclidean chosen value ',myDailyPixFapar[indexEucl]
+      print, 'Rough distance chosen value ',myDailyPixFapar[indexRD]
+      theChosenRough1[i,*]=[myDailyPixFapar[indexRD], indexRD]
+      theChosenEuclidean1[i,*]=[myDailyPixFapar[indexEucl], indexEucl]
+      i++
+
+    endfor
+  endfor
+  ;remake...
+  print, '*******'
+
+  ;  firstMoment=moment(data, /NAN)
+  ;  firstMean=firstMoment[0]
+  ;  firstStdDev=sqrt(firstMoment[1])
+  ;  firstOut=where((data ge firstMean+firstStdDev or data le firstMean-firstStdDev) and finite(data) ne 0, countFirst)
+  ;
+  ;  countSecond=0
+  ;  if countFirst gt 0 then begin
+  ;    data[firstOut]=!VALUES.F_NAN
+  ;    firstMoment=moment(data, /NAN)
+  ;    firstMean=firstMoment[0]
+  ;    firstStdDev=sqrt(firstMoment[1])
+  ;    ERR_YLow=(firstStdDev)>0
+  ;    ERR_YHIGH=firstStdDev
+  ;    secondOut=where((data ge firstMean+firstStdDev or data le firstMean-firstStdDev) and finite(data) ne 0, countSecond)
+  ;  endif
+
+  print, '****After outliers out***'
+
+  restore, 'new_distance.sav'
+  restore, 'new_meandat.sav'
+  restore, 'new_std_mean.sav'
+  myDailyPixDistance=reform(distance[*,pixLonPos-offset, pixLatPos])
+
+  ; mean...
+  myDailyPixmeandat=meandat.fapar[pixLonPos-offset, pixLatPos]
+
+  ; std dev...
+  myDailyPixstd_mean=std_mean.temp[pixLonPos-offset, pixLatPos]
+
+  myDailyPixDistanceMx=myDailyPixFaparMx
+  myDailyPixmeandatMx=fltarr(3,3)
+  myDailyPixstd_meanMx=fltarr(3,3)
+
+  for k=-1, 1 do begin
+    for j=-1, 1 do begin
+      myDailyPixDistanceMx[k+1,j+1,*]=reform(distance[*,pixLonPos-offset+k, pixLatPos+j])
+      myDailyPixmeandatMx[k+1,j+1]=meandat.fapar[pixLonPos-offset+k, pixLatPos+j]
+      myDailyPixstd_meanMx[k+1,j+1]=std_mean.temp[pixLonPos-offset+k, pixLatPos+j]
+    endfor
+  endfor
+
+  theChosenRough2=fltarr(9,2)
+  theChosenEuclidean2=fltarr(9,2)
+  outLiersMean=fltarr(3,3)
+  i=0
+  for k=0, 2 do begin
+    for j=0, 2 do begin
+      ;testEuclDistances=myDailyPixDistanceMx[k,l,*]
+      myDailyPixDistance=reform(myDailyPixDistanceMx[k,j,*])
+
+      myDailyPixFapar=reform(myDailyPixFaparMx[k,j,*])
+      myDailyPixmeandat=reform(myDailyPixmeandatMx[k,j])
+      ; recompute...
+      firstMoment=moment(myDailyPixFapar, /NAN)
+      firstMean=firstMoment[0]
+      firstStdDev=sqrt(firstMoment[1])
+      firstOut=where((myDailyPixFapar ge firstMean+firstStdDev or myDailyPixFapar le firstMean-firstStdDev) and finite(myDailyPixFapar) ne 0, countFirst)
+
+      countSecond=0
+      outLiersMean[k,j]=firstMean
+      if countFirst gt 0 then begin
+        myDailyPixFapar[firstOut]=!VALUES.F_NAN
+        firstMoment=moment(myDailyPixFapar, /NAN)
+        firstMean=firstMoment[0]
+        firstStdDev=sqrt(firstMoment[1])
+        ERR_YLow=(firstStdDev)>0
+        ERR_YHIGH=firstStdDev
+        secondOut=where((myDailyPixFapar ge firstMean+firstStdDev or myDailyPixFapar le firstMean-firstStdDev) and finite(myDailyPixFapar) ne 0, countSecond)
+        myDailyPixmeandat=firstMean
+        outLiersMean[k,j]=firstMean
+      endif
+
+      ;;
+      RoughDistance=abs(myDailyPixFapar-(reform(myDailyPixmeandat))[0])
+
+      indexEucl=(where(min(myDailyPixDistance, /NAN) eq myDailyPixDistance))[0]
+      indexRD=(where(min(RoughDistance, /NAN) eq RoughDistance))[0]
+
+      print, 'best euclidean distance (min):', myDailyPixDistance[indexEucl], ', index(', indexEucl, ')'
+      print, 'best rough distance value (min):', RoughDistance[indexRD], ', index(', indexRD, ')'
+
+      print, 'Euclidean chosen value ',myDailyPixFapar[indexEucl]
+      print, 'Rough distance chosen value ',myDailyPixFapar[indexRD]
+      theChosenRough2[i,*]=[myDailyPixFapar[indexRD], indexRD]
+      theChosenEuclidean2[i,*]=[myDailyPixFapar[indexEucl], indexEucl]
+      i++
+
+    endfor
+  endfor
+  print, theChosenRough1
+  print, theChosenRough2
+  print, theChosenEuclidean1
+  print, theChosenEuclidean2
+  print, myMonthlyPixFaparMx
+  print, 'end'
+
+  ;RoughDistance=abs(myDailyPixFapar-myDailyPixmeandat)
 
   scr_dims=GET_SCREEN_SIZE()
   ;pixLonPos=3600 & pixLatPos=1800
@@ -147,10 +308,6 @@ pro testCompareFAPAR, latPos, lonPos, year, month, noaa, TO_PIX=TO_PIX, RESET=RE
 
   ;ERR_YLow=(-myDailyPixSigma)>0
   ;ERR_YHIGH=myDailyPixSigma
-  fullStat=moment(data, /NAN)
-  fullMean=fullStat[0]
-  fullStdDev=sqrt(fullStat[1])
-
   maxx=max(data+ERR_YHIGH, /NAN)
   yrange=[0, maxx+maxx/10.]
 
@@ -164,129 +321,170 @@ pro testCompareFAPAR, latPos, lonPos, year, month, noaa, TO_PIX=TO_PIX, RESET=RE
   ;cgtext, 'Lat Position':latPos
   ;cgtext, 'Lon Position':lonPos
 
-  window, 1, XSIZE=float(scr_dims[0])/4*3, YSIZE=float(scr_dims[1])/4*3
+  ;window, 1, XSIZE=float(scr_dims[0])/4*3, YSIZE=float(scr_dims[1])/4*3
 
   LatLabel='Lat:'+string(latPos, format='(f8.3)')+'deg'
   LonLabel='Lon:'+string(lonPos, format='(f8.3)')+'deg'
-  MTitle='Daily ('+LatLabel+' '+LonLabel+')'
   XTitle='June 1999'
   Ytitle=Title
 
   ; data serie
   ;sub=[0,4,9,14,19,24,29]
-  cgPlot, time, data, Title=MTitle, XTitle=xtitle, YTitle=ytitle, $
-    Position=position, color='Red', YRANGE=YRANGE, /LOWER_ZERO
+  i=0
+  for k=0, 2 do begin
+    for j=0, 2 do begin
 
-  ; tc mean+stddev filling
-  cgColorFill, [time, Reverse(time), time[0]], $
-    [highDevErr, Reverse(lowDevErr), highDevErr[0]], $
-    Color='sky blue', /LINE_FILL, SPACING=0.15, ORIENT=45
+      MTitle='Daily ('+LatLabel+' '+LonLabel+')' + ' Pixel shift ('+strcompress(k-1, /REMOVE)+','+ strcompress(j-1, /REMOVE)+')'
+      window, i+1, XSIZE=float(scr_dims[0])/4*3, YSIZE=float(scr_dims[1])/4*3
+      myDailyPixFapar=reform(myDailyPixFaparMx[k,j,*])
+      dataStats=moment(myDailyPixFapar, /NAN)
+      xSquare=max(time)*.015
+      ySquare=YRANGE[1]*.015
 
-  ; tc mean+stddev border
-  cgPlots, [time, Reverse(time), time[0]], $
-    [highDevErr, Reverse(lowDevErr), highDevErr[0]], $
-    Color='sky blue'
+      print, myDailyPixFapar[29]
+      cgPlot, time, myDailyPixFapar, Title=MTitle, XTitle=xtitle, YTitle=ytitle, $
+        Position=position, color='Green', YRANGE=YRANGE, /LOWER_ZERO
 
-  ; TC mean...
-  cgOPlot, [min(time), max(time)], [myMonthlyPixFapar,myMonthlyPixFapar] , Title=title, XTitle=xtitle, YTitle=ytitle, $
-    Position=position, linestyle=2, color='sky blue', thick=1.3
+      ; data mean+stddev filling
+      highDevErr[*]=dataStats[0]+sqrt(dataStats[1])
+      lowDevErr[*]=dataStats[0]-sqrt(dataStats[1])
 
-  ;; ***
-  ; Full serie (without zero and Nan
-  cgOPlot, time, data, Title=title, XTitle=xtitle, YTitle=ytitle, $
-    Position=position, color='Red', /ERR_SHAPE, $
-    ERR_YLow=ERR_YLow, ERR_YHIGH=ERR_YHIGH, psym=4, /LOWER_ZERO;, YRange=[-5, 35], YStyle=1
+      ; rectangle
+      cgColorFill, [time, Reverse(time), time[0]], $
+        [highDevErr, Reverse(lowDevErr), highDevErr[0]], $
+        Color='Green', /LINE_FILL, SPACING=0.15, ORIENT=45
 
-  ; Full serie (psym marker)
-  cgOPlot, time, data, Title=title, XTitle=xtitle, YTitle=ytitle, $
-    Position=position, linestyle=2, color='Red'
+      ;borders
+      cgPlots, [time, Reverse(time), time[0]], $
+        [highDevErr, Reverse(lowDevErr), highDevErr[0]], $
+        Color='Green'
 
-  ; Full serie mean
-  cgOPlot, [min(time), max(time)], [fullMean,fullMean], $
-    Position=position, linestyle=1, color='Red', thick=2.
+      ; Data mean...
+      cgOPlot, [min(time), max(time)], [dataStats[0],dataStats[0]], $
+        Position=position, linestyle=0, color='Green', thick=3
 
-  ; First cut-off
-  firstMoment=moment(data, /NAN)
-  firstMean=firstMoment[0]
-  firstStdDev=sqrt(firstMoment[1])
-  firstOut=where((data ge firstMean+firstStdDev or data le firstMean-firstStdDev) and finite(data) ne 0, countFirst)
+      cgOPlot, [min(time), max(time)], [myMonthlyPixFaparMx[k,j], myMonthlyPixFaparMx[k,j]], $
+        Position=position, linestyle=0, color='Sky Blue', thick=2
 
-  countSecond=0
-  if countFirst gt 0 then begin
-    data[firstOut]=!VALUES.F_NAN
-    firstMoment=moment(data, /NAN)
-    firstMean=firstMoment[0]
-    firstStdDev=sqrt(firstMoment[1])
-    ERR_YLow=(firstStdDev)>0
-    ERR_YHIGH=firstStdDev
-    secondOut=where((data ge firstMean+firstStdDev or data le firstMean-firstStdDev) and finite(data) ne 0, countSecond)
-  endif
+      cgOPlot, [min(time), max(time)], [outLiersMean[k,j], outLiersMean[k,j]], $
+        Position=position, linestyle=5, color='Pink', thick=2
 
-  devErr=fltarr(days)
-  highDevErr=devErr
-  lowDevErr=devErr
+    
+      ; Full serie (without zero and Nan)
+      cgOPlot, time, myDailyPixFapar, Title=title, XTitle=xtitle, YTitle=ytitle, $
+        Position=position, color='Green', /ERR_SHAPE, thick=3., linestyle=0, $
+        ERR_YLow=ERR_YLow, ERR_YHIGH=ERR_YHIGH, psym=4, /LOWER_ZERO;, YRange=[-5, 35], YStyle=1
 
-  highDevErr[*]=fullMean+fullStdDev
-  lowDevErr[*]=fullMean-fullStdDev
+      ; Roughly Choosen 1
+      xChoosen=[time[theChosenRough1[i,1]]-xSquare,time[theChosenRough1[i,1]],time[theChosenRough1[i,1]]+xSquare,time[theChosenRough1[i,1]],time[theChosenRough1[i,1]]-xSquare]
+      YChoosen=[theChosenRough1[i,0],theChosenRough1[i,0]+ySquare,theChosenRough1[i,0],theChosenRough1[i,0]-ySquare,theChosenRough1[i,0]]
+      ;      cgColorFill, xChoosen, $
+      ;        yChoosen, linestyle=0, $
+      ;        Color='Red', /LINE_FILL, SPACING=0.1, ORIENT=25
+      cgPlots, xChoosen, $
+        yChoosen, linestyle=0, thick=2, $
+        Color='Red'
 
-  cgColorFill, [time, Reverse(time), time[0]], $
-    [highDevErr, Reverse(lowDevErr), highDevErr[0]], $
-    Color='Red', /LINE_FILL, SPACING=0.15, ORIENT=135
+      ; Roughly Choosen 2
+      xChoosen=[time[theChosenRough2[i,1]]-xSquare,time[theChosenRough2[i,1]]-xSquare,time[theChosenRough2[i,1]]+xSquare,time[theChosenRough2[i,1]]+xSquare,time[theChosenRough2[i,1]]-xSquare]
+      YChoosen=[theChosenRough2[i,0]-ySquare,theChosenRough2[i,0]+ySquare,theChosenRough2[i,0]+ySquare,theChosenRough2[i,0]-ySquare,theChosenRough2[i,0]-ySquare]
+      ;      cgColorFill, xChoosen, $
+      ;        yChoosen, linestyle=0, $
+      ;        Color='Red', /LINE_FILL, SPACING=0.1, ORIENT=70
+      cgPlots, xChoosen, $
+        yChoosen, linestyle=0, $
+        Color='Red'
 
-  ; Filter 1 serie (without zero and Nan)
-  cgOPlot, time+0.15, data, Title=title, XTitle=xtitle, YTitle=ytitle, $
-    Position=position, color='Green', psym=2;, /ERR_SHAPE, $
-  ;ERR_YLow=ERR_YLow, ERR_YHIGH=ERR_YHIGH, psym=2, /LOWER_ZERO;, YRange=[-5, 35], YStyle=1
+      ; Euclidean Choosen 1
+      xChoosen=[time[theChosenEuclidean1[i,1]]-xSquare,time[theChosenEuclidean1[i,1]],time[theChosenEuclidean1[i,1]]+xSquare,time[theChosenEuclidean1[i,1]],time[theChosenEuclidean1[i,1]]-xSquare]
+      YChoosen=[theChosenEuclidean1[i,0],theChosenEuclidean1[i,0]+ySquare,theChosenEuclidean1[i,0],theChosenEuclidean1[i,0]-ySquare,theChosenEuclidean1[i,0]]
+      ;      cgColorFill, xChoosen, $
+      ;        yChoosen, linestyle=1, $
+      ;        Color='Blue', /LINE_FILL, SPACING=0.1, ORIENT=115
+      cgPlots, xChoosen, $
+        yChoosen, thick=1.5, linestyle=1, $
+        Color='Blue'
 
-  ; Filter 1 serie (psym marker)
-  cgOPlot, time+0.15, data, Title=title, XTitle=xtitle, YTitle=ytitle, $
-    Position=position, linestyle=2, color='Green'
+      ; Euclidean Choosen 2
+      xChoosen=[time[theChosenEuclidean2[i,1]]-xSquare,time[theChosenEuclidean2[i,1]]-xSquare,time[theChosenEuclidean2[i,1]]+xSquare,time[theChosenEuclidean2[i,1]]+xSquare,time[theChosenEuclidean2[i,1]]-xSquare]
+      YChoosen=[theChosenEuclidean2[i,0]-ySquare,theChosenEuclidean2[i,0]+ySquare,theChosenEuclidean2[i,0]+ySquare,theChosenEuclidean2[i,0]-ySquare,theChosenEuclidean2[i,0]-ySquare]
+      ;      cgColorFill, xChoosen, $
+      ;        yChoosen, linestyle=1, $
+      ;        Color='Blue', /LINE_FILL, SPACING=0.1, ORIENT=160
+      cgPlots, xChoosen, $
+        yChoosen, linestyle=1, $
+        Color='Blue'
+      i++
 
-  ; Filter 1 mean
-  cgOPlot, [min(time), max(time)], [firstMean,firstMean], $
-    Position=position, linestyle=2, color='Green', thick=1.3
+      ;      ; TC mean...
+      ;      cgOPlot, [min(time), max(time)], [myMonthlyPixFapar,myMonthlyPixFapar] , Title=title, XTitle=xtitle, YTitle=ytitle, $
+      ;        Position=position, linestyle=2, color='sky blue', thick=1.3
+      ;
+      ;      ;; ***
+      ;
+      ;      ; Full serie (psym marker)
+      ;      cgOPlot, time, data, Title=title, XTitle=xtitle, YTitle=ytitle, $
+      ;        Position=position, linestyle=2, color='Red'
+      ;
+      ;      ; Full serie mean
+      ;      cgOPlot, [min(time), max(time)], [fullMean,fullMean], $
+      ;        Position=position, linestyle=1, color='Red', thick=2.
+      ;
+      ;      ; First cut-off
+      ;      devErr=fltarr(days)
+      ;      highDevErr=devErr
+      ;      lowDevErr=devErr
+      ;
+      ;      highDevErr[*]=fullMean+fullStdDev
+      ;      lowDevErr[*]=fullMean-fullStdDev
+      ;
+      ;      cgColorFill, [time, Reverse(time), time[0]], $
+      ;        [highDevErr, Reverse(lowDevErr), highDevErr[0]], $
+      ;        Color='Red', /LINE_FILL, SPACING=0.15, ORIENT=135
+      ;
+      ;      ; Filter 1 serie (without zero and Nan)
+      ;      cgOPlot, time+0.15, data, Title=title, XTitle=xtitle, YTitle=ytitle, $
+      ;        Position=position, color='Green', psym=2;, /ERR_SHAPE, $
+      ;      ;ERR_YLow=ERR_YLow, ERR_YHIGH=ERR_YHIGH, psym=2, /LOWER_ZERO;, YRange=[-5, 35], YStyle=1
+      ;
+      ;      ; Filter 1 serie (psym marker)
+      ;      cgOPlot, time+0.15, data, Title=title, XTitle=xtitle, YTitle=ytitle, $
+      ;        Position=position, linestyle=2, color='Green'
+      ;
+      ;      ; Filter 1 mean
+      ;      cgOPlot, [min(time), max(time)], [firstMean,firstMean], $
+      ;        Position=position, linestyle=2, color='Green', thick=1.3
+      ;
+      ;      ; More TC Info
+      ;      ;  cgOPlot, myDailyPixDistance/max(myDailyPixDistance)*YRANGE[1], $
+      ;      ;    color='Pink', thick=2.0;, /LEGO
+      ;
+      ;      ;  myDailyPixDistance=reform(distance[*,pixLonPos-offset, pixLatPos])
+      ;      ;  myDailyPixmeandat=meandat.fapar[pixLonPos-offset, pixLatPos]
+      ;      ;  myDailyPixstd_mean=std_mean.temp[pixLonPos-offset, pixLatPos]
+      ;      ;
+      ;      ;  myDailyPixNewDistance=reform(distance[*,pixLonPos-offset, pixLatPos])
+      ;      ;  myDailyPixNewmeandat=meandat.fapar[pixLonPos-offset, pixLatPos]
+      ;      ;  myDailyPixNewstd_mean=std_mean.temp[pixLonPos-offset, pixLatPos]
+      ;
+      ;      ;
+      ;      ; Filter 2 serie (without zero and Nan)
+      ;      ;cgOPlot, time+0.3, data, Title=title, XTitle=xtitle, YTitle=ytitle, $
+      ;      ;  Position=position, color='Blue', /ERR_SHAPE, $
+      ;      ;  ERR_YLow=ERR_YLow, ERR_YHIGH=ERR_YHIGH, psym=5, /LOWER_ZERO;, YRange=[-5, 35], YStyle=1
+      ;
+      ;      ; Filter 2 serie (psym marker)
+      ;      ;cgOPlot, time+0.3, data, Title=title, XTitle=xtitle, YTitle=ytitle, $
+      ;      ;  Position=position, linestyle=2, color='Blue'
+      ;
+      ;      ; Filter 2 mean
+      ;      ;cgOPlot, [min(time), max(time)], [secondMean,secondMean], $
+      ;      ;  Position=position, linestyle=3, color='Blue', thick=1.1
+      cgLegend, COLORS=['Green','Pink','Red', 'Red', 'Blue', 'Blue'], BACKGROUND='snow', BG_COLOR='snow', /BOX, LOCATION=[0.7,0.9], $
+        titles=['Original (mean + stddev)','Filtered mean', 'Rough Mean (diamond)', 'Rough Mean + Filter', 'Euclidean (diamond)', 'Euclidean + Filter'], linestyle=[0,5,0,0,1,1]
+    endfor
+  endfor
 
-  ; Second cut-off
-  secondMean=firstMean
-  secondStdDev=firstStdDev
-  if countSecond gt 0 then begin
-    data[SecondOut]=!VALUES.F_NAN
-    secondMoment=moment(data, /NAN)
-    secondMean=secondMoment[0]
-    secondStdDev=sqrt(secondMoment[1])
-    ERR_YLow=(secondStdDev)>0
-    ERR_YHIGH=secondStdDev
-    ;secondOut=where(data ge firstMean+firstStdDev and data le firstMean-firstStdDev and finite(data) ne 0, countSecond)
-  endif
-
-  ; More TC Info
-;  cgOPlot, myDailyPixDistance/max(myDailyPixDistance)*YRANGE[1], $
-;    color='Pink', thick=2.0;, /LEGO
-  
-;  myDailyPixDistance=reform(distance[*,pixLonPos-offset, pixLatPos])
-;  myDailyPixmeandat=meandat.fapar[pixLonPos-offset, pixLatPos]
-;  myDailyPixstd_mean=std_mean.temp[pixLonPos-offset, pixLatPos]
-;
-;  myDailyPixNewDistance=reform(distance[*,pixLonPos-offset, pixLatPos])
-;  myDailyPixNewmeandat=meandat.fapar[pixLonPos-offset, pixLatPos]
-;  myDailyPixNewstd_mean=std_mean.temp[pixLonPos-offset, pixLatPos]
-
-  ; 
-  ; Filter 2 serie (without zero and Nan)
-  ;cgOPlot, time+0.3, data, Title=title, XTitle=xtitle, YTitle=ytitle, $
-  ;  Position=position, color='Blue', /ERR_SHAPE, $
-  ;  ERR_YLow=ERR_YLow, ERR_YHIGH=ERR_YHIGH, psym=5, /LOWER_ZERO;, YRange=[-5, 35], YStyle=1
-
-  ; Filter 2 serie (psym marker)
-  ;cgOPlot, time+0.3, data, Title=title, XTitle=xtitle, YTitle=ytitle, $
-  ;  Position=position, linestyle=2, color='Blue'
-
-  ; Filter 2 mean
-  ;cgOPlot, [min(time), max(time)], [secondMean,secondMean], $
-  ;  Position=position, linestyle=3, color='Blue', thick=1.1
-
-  cgLegend, COLORS=['Red', 'Green', 'Sky Blue'], BACKGROUND='snow', BG_COLOR='snow', /BOX, LOCATION=[0.7,0.9], $
-    titles=['Original (mean + stddev)', 'After Outliers (mean)', 'TC computation']
 
   device, decompose=0
   loadct, 73

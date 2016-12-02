@@ -79,6 +79,12 @@ FUNCTION L2Summary_Operator::importBand, dType, parCodes, date, year, roiCode, r
   savFilename = self->buildOperatorResultFileName(dType, parCodes, date, year, sensor, roiArchiveCode, archiveDir, JULDAY=dType eq 'D', /FULL, /LOWCASE)
   if n_elements(fullSatelliteStat) eq 0 then begin
     fullSatelliteStat=self->readSavVar(savFilename, FOUND=FOUND)
+    if ~FOUND then begin
+      data=-1
+      NF=1
+      stop
+      return, data
+    endif
     issss=where(fullSatelliteStat[*].dayofyear ge 1 and fullSatelliteStat[*].dayofyear le 366 and fullSatelliteStat[*].year ge 2003 and fullSatelliteStat[*].year le 2007 and fullSatelliteStat[*].istatus eq 1 and fullSatelliteStat[*].ASSIGNEDEXTRACTIONFILE ne '', countttt)
     ;fullSatelliteStat[issss]
     doLog, 'total file expected:', countttt, LEVEL=4

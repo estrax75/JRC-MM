@@ -7,7 +7,7 @@
 ;@/main/fapar_uncertainties.pro
 pro runDailyBrf, confDir, sourceDir, tempDir, destDir, startYear, endYear, startMonth, endMonth, missionIndex, $
   OVERWRITE=OVERWRITE, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
-  HDF=HDF, NC=NC
+  HDF=HDF, NC=NC, OLDSTYLE=OLDSTYLE, singleday=singleday
 
   COMMON singleTons, ST_utils, ST_operator, ST_fileSystem
 
@@ -26,12 +26,16 @@ pro runDailyBrf, confDir, sourceDir, tempDir, destDir, startYear, endYear, start
   ;years=[1999,2003]
   ;years1=[2004]
 
+  ; ****
   years=indgen(endYear-startYear+1)+startYear
   months=indgen(endMonth-startMonth+1)+startMonth
+  ; ****
+  
+  
   ;years3=[2006]
   ;months2=indgen(12)+1
   ;months2=indgen(8)+4
-  startDay=7
+  ;startDay=17
   ;startDay=5
 
   ;months=[]
@@ -50,6 +54,7 @@ pro runDailyBrf, confDir, sourceDir, tempDir, destDir, startYear, endYear, start
   ;rootDir2='/space3/storage/products/AVHRR_LDTR'
   mainVar='BRF'
   resolution='GEOG_0.05DEG'
+  startDay=1
 
   ;rootDir3='E:\mariomi\Documents\projects\LDTR\data\input\AVHRR'
   ;sensor3='GLOBAL_L3_GEOG_0.05DEG'
@@ -72,19 +77,18 @@ pro runDailyBrf, confDir, sourceDir, tempDir, destDir, startYear, endYear, start
       noaanumber=fix(missionIndex)
     endelse
     refStorage=getsourcedir_by_year(thisYear)
-    sourceDir[0]=refStorage+path_sep()+'LAN/AVH/L1/PLC'
-    sourceDir[1]=sourceDir[0]
+    sourceDir=refStorage+path_sep()+'LAN/AVH/L1/PLC'
     destDir=refStorage
     ;stop
     if n_elements(noaanumber) gt 1 then noaanumber=originalNoaanumber[MISSIONOVERLAPINDEX]
     for m=0, n_elements(months)-1 do begin
-      monthDays=ST_utils->calcDayOfMonth([years[y],months[m],1,0])
-      ; CAREFFFFFFFUUULLL
-      monthDays=startDay+10
+      monthDays=ST_utils->calcDayOfMonth([years[y],months[y],1,0])
+      if n_elements(singleday) eq 1 then begin
+        startday=singleday
+        monthdays=singleday
+      endif
       for d=startDay, monthDays do begin
-        ;for d=0, n_elements(monthDays)-1 do begin
         thisDay=d
-        ;thisDay=monthDays[d]
 
         thisMonth=months[m]
         yearDay=ST_utils->calcDayOfYear([thisYear,thisMonth,thisDay,0])+1
@@ -92,13 +96,15 @@ pro runDailyBrf, confDir, sourceDir, tempDir, destDir, startYear, endYear, start
 
         sensor='AVHRR-Land_v004_AVH09C1'
         missionCode='NOAA' ;number coming from year info by mapping "table"
+        ;sourceDir=sourceDir[0]
         testFileLand=build_Land_Avh_FileName_D(sensor, missionCode, thisYear, thisMonth, thisDay, sourceDir[0], /full, MISSIONNUMBER=noaanumber, /YEARFOLDER)
         file=file_search(testFileLand, count=count)
         if count eq 1 then landstyle=1
         if count ne 1 then begin
           print, 'try (Land) overlap noaa number...'
           if n_elements(noaanumber) gt 1 then noaanumber=originalNoaanumber[1-MISSIONOVERLAPINDEX]
-          testFileLand=build_Land_Avh_FileName_D(sensor, missionCode, thisYear, thisMonth, thisDay, sourceDir[0], /full, /JULDAY, MISSIONNUMBER=noaanumber, /YEARFOLDER)
+          ;sourceDir=sourceDir[0]
+          testFileLand=build_Land_Avh_FileName_D(sensor, missionCode, thisYear, thisMonth, thisDay, sourceDir[0], /full, MISSIONNUMBER=noaanumber, /YEARFOLDER)
           ;file=file_search(testFile, count=count, FOLD_CASE=1)
           file=file_search(testFileLand, count=count)
           if count eq 0 then begin
@@ -115,7 +121,7 @@ pro runDailyBrf, confDir, sourceDir, tempDir, destDir, startYear, endYear, start
           ;testFile1=buildAvhrrLandFileName_D(sensor1, missionCode1, thisYear, thisMonth, thisDay, checkDir, /full)
           sensor='AVH09C1'
           missionCode='N' ;number coming from year info by mapping "table"
-          testFileLDTR=build_LDTR_Avh_FileName_D(sensor, missionCode, thisYear, thisMonth, yearDay, sourceDir[1], /full, /JULDAY, MISSIONNUMBER=noaanumber, /YEARFOLDER)
+          testFileLDTR=build_LDTR_Avh_FileName_D(sensor, missionCode, thisYear, thisMonth, yearDay, sourceDir, /full, /JULDAY, MISSIONNUMBER=noaanumber, /YEARFOLDER)
           ;noaanumber=16
           ;testFile3=buildAvhrrGlobFileName_D(sensor3, missionCode3, thisYear, thisMonth, yearDay, rootDir3, /full, /JULDAY)
           ;        testFile='GLOBAL_L3_GEOG_0.05DEG_001-001_03.NOAA-16.hdf'
@@ -140,7 +146,7 @@ pro runDailyBrf, confDir, sourceDir, tempDir, destDir, startYear, endYear, start
           if count ne 1 then begin
             print, 'try (LDTR) overlap noaa number...'
             if n_elements(noaanumber) gt 1 then noaanumber=originalNoaanumber[1-MISSIONOVERLAPINDEX]
-            testFileLDTR=build_LDTR_Avh_FileName_D(sensor, missionCode, thisYear, thisMonth, yearDay, sourceDir[1], /full, /JULDAY, MISSIONNUMBER=noaanumber, /YEARFOLDER)
+            testFileLDTR=build_LDTR_Avh_FileName_D(sensor, missionCode, thisYear, thisMonth, yearDay, sourceDir, /full, /JULDAY, MISSIONNUMBER=noaanumber, /YEARFOLDER)
             ;file=file_search(testFile, count=count, FOLD_CASE=1)
             file=file_search(testFileLDTR, count=count)
             if count eq 0 then begin
@@ -192,12 +198,12 @@ pro runDailyBrf, confDir, sourceDir, tempDir, destDir, startYear, endYear, start
         ;resFile=doBrf(file, confDir, thisYear, thisMonth, thisDay, sensor, missionCode, noaanumber, resolution, mainVar, outputDir, tempDir, testFile=testFile, /OVERWRITE)
         if keyword_set(landStyle) then begin
           ;file=build_Land_Avh_FileName_D(sensor, missionCode, thisYear, thisMonth, yearDay, sourceDir[0], /full, /JULDAY, MISSIONNUMBER=noaanumber, /YEARFOLDER)
-          resFile=doBrfLand_switched(file, confDir, thisYear, thisMonth, thisDay, sensor, missionCode, noaanumber, resolution, mainVar, destDir, tempDir, $
-            testFile=testFile, OVERWRITE=OVERWRITE, HDF=HDF, NC=NC)
+          resFile=doBrfLand(file, confDir, thisYear, thisMonth, thisDay, sensor, missionCode, noaanumber, resolution, mainVar, destDir, tempDir, $
+            testFile=testFile, OVERWRITE=OVERWRITE, HDF=HDF, NC=NC, OLDSTYLE=OLDSTYLE)
         endif else begin
           ;file=build_LDTR_Avh_FileName_D(sensor, missionCode, thisYear, thisMonth, yearDay, sourceDir[1], /full, /JULDAY, MISSIONNUMBER=noaanumber, /YEARFOLDER)
-          resFile=doBrfLDTR_switched(file, confDir, thisYear, thisMonth, thisDay, sensor, missionCode, noaanumber, resolution, mainVar, destDir, tempDir, $
-            testFile=testFile, OVERWRITE=OVERWRITE, HDF=HDF, NC=NC)
+          resFile=doBrfLDTR(file, confDir, thisYear, thisMonth, thisDay, sensor, missionCode, noaanumber, resolution, mainVar, destDir, tempDir, $
+            testFile=testFile, OVERWRITE=OVERWRITE, HDF=HDF, NC=NC, OLDSTYLE=OLDSTYLE)
         endelse
         print, '... done'
       endfor

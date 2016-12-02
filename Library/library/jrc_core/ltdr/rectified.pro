@@ -159,6 +159,8 @@ PRO Rectified,sensor,sensorCode,ttasun,ttaview,phisun,phiview,$
 
   ;stop
 
+  ;aa=where(finite(ttasun) ne 1, cc)
+  ;if cc gt 0 then stop
   F_red=F(ttasun,ttaview,phisun,phiview,RahmanCoeffs_RED[0],RahmanCoeffs_RED[1],RahmanCoeffs_RED[2])
   F_nir=F(ttasun,ttaview,phisun,phiview,RahmanCoeffs_NIR[0],RahmanCoeffs_NIR[1],RahmanCoeffs_NIR[2])
   IF NOT(KEYWORD_set(toc)) THEN F_blue=F(ttasun,ttaview,phisun,phiview,RahmanCoeffs_BLUE[0],RahmanCoeffs_BLUE[1],RahmanCoeffs_BLUE[2])

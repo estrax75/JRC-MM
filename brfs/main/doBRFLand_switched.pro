@@ -31,7 +31,7 @@ function _doBRFLand_switched, sourceFile, confDir, year, month, day, sensor, mis
   version='N'+string(noaaCode, format='(I02)');version='001'
   indicator='LAN'
   spatialResolution='0005D'
-  level='L2'
+  level='L1'
 
   ;resFileNCInfo=build_JRC_BRF_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
   ;  product, version, 'NC',  indicator=indicator, level, projection=projection)

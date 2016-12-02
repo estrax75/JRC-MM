@@ -1,5 +1,5 @@
-pro runTCFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, startMonth, endMonth, $
-  MONTHLY=MONTHLY, TENDAYS=TENDAYS, SIXTEENDAYS=SIXTEENDAYS, ELAB_TC=ELAB_TC, ELAB_MEAN=ELAB_MEAN
+pro runTCFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, startMonth, endMonth, level, $
+  TA_TYPE=TA_TYPE, TC_TYPE=TC_TYPE
 
   ;confDir='E:\mariomi\Documents\projects\LDTR\data\AVHRR\data'
 
@@ -7,11 +7,12 @@ pro runTCFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, star
   months=indgen(endMonth-startMonth+1)+startMonth
 
   ;sensor='AVHRR'
-  sensor='AVH09C1'
-  resolution='GEOG_0.05DEG'
+  instrument='AVH'
+  indicator='LAN'
+  spatialResolution='0005D'
+  level='L2'
   missionName='N'
-  ;missionName='NOAA-N'
-  mainVarName='FAPAR'
+  outputDir='/space2/storage/projects/'
 
   ;years3=[2006]
   ;months2=indgen(12)+1
@@ -25,6 +26,13 @@ pro runTCFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, star
     for m=0, n_elements(months)-1 do begin
       thisYear=years[y]
       thisMonth=months[m]
+      if n_elements(missionIndex) eq 0 then begin
+        noaanumber=getAVHRRNOAANumber(thisYear, undef)
+        if n_elements(noaanumber) gt 1 then noaanumber=noaanumber[MISSIONOVERLAPINDEX]
+        noaanumber=noaanumber[0]
+      endif else begin
+        noaanumber=fix(missionIndex)
+      endelse
       ;missionCode=getAVHRRNOAANumber(thisYear, undef)
       ;        testFile1=buildAvhrrLandFileName_D(sensor1, missionCode1, thisYear, thisMonth, thisDay, rootDir1, /full)
       ;        testFile2=buildAvhFileName_D(sensor2, missionCode2, thisYear, thisMonth, yearDay, rootDir2, /full, /JULDAY)
@@ -94,8 +102,21 @@ pro runTCFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, star
       ;        print, 'file2: ', file2
       ;        print, 'file3: ', file3
 
-      resFile=doFaparTC(sensor, resolution, missionName, confDir, sourceDir, tempDir, outputDir, thisYear, thisMonth, $
-        MONTHLY=MONTHLY, TENDAYS=TENDAYS, SIXTEENDAYS=SIXTEENDAYS, ELAB_TC=ELAB_TC, ELAB_MEAN=ELAB_MEAN)
+      sourceDir=getsourcedir_by_year(thisYear)
+      if n_elements(outputDir) eq 0 then outputDir=sourceDir
+
+      ;      resFile=doFaparComposite(sensor, resolution, missionName, level, confDir, sourceDir, tempDir, outputDir, thisYear, thisMonth, $
+      ;        TC_TYPE=TC_TYPE, TA_TYPE=TA_TYPE)
+;      resFile=doFaparComposite(instrument, indicator, spatialResolution, level, missionName, mainVarName, noaanumber, thisyear, thisMonth, day, $
+;        sourceDir, outputDir, tempdir, $
+;        FIRST_LOOK=FIRST_LOOK, $
+;        TYPE1=TYPE1, TYPE2=TYPE2, NC=NC, HDF=HDF, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
+;        OVERWRITE=OVERWRITE, TC_TYPE=TC_TYPE)
+      resFile=doFaparComposite_split(instrument, indicator, spatialResolution, level, missionName, mainVarName, noaanumber, thisyear, thisMonth, day, $
+        sourceDir, outputDir, tempdir, $
+        FIRST_LOOK=FIRST_LOOK, $
+        TYPE1=TYPE1, TYPE2=TYPE2, NC=NC, HDF=HDF, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
+        OVERWRITE=OVERWRITE, TC_TYPE=TC_TYPE, TA_TYPE=TA_TYPE )
       if resFile eq -1 then print, thisyear, thismonth, ' skip (already exists or missing/corrupted source file)
       ;resFile=AVH01_merge_BRFGlob(file1, file2, file3, confDir, thisYear, thisMonth, thisDay, noaanumber, operatorObj, fsObj, tempDir, testFile=testFile)
       ;resFile=merge_BRFGlob(file1, file2, file3, confDir, thisYear, thisMonth, thisDay, noaanumber, operatorObj, fsObj, tempDir, testFile=testFile)

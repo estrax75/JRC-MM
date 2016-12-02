@@ -204,11 +204,6 @@ function doFaparComparison, confDir, sensors, sourceDirs, mainVarNames, sourceFo
       ;difference=abs(*matrixS[1]-*matrixS[0])
       difference=(*matrixS[1]-*matrixS[0])
 
-      TYPE1=1
-      ZEROISNAN=keyword_set(TYPE1) ;0
-      TWO51_TO_TWO55_ISNAN=keyword_set(TYPE2) ;0
-
-      bSInfo=getByteScalingSetting(ZEROISNAN=keyword_set(TYPE1), TWO51_TO_TWO55_ISNAN=keyword_set(TYPE2))
       ;byteOutput=dataByteScaling(output.fpar, NAN_BYTE_VALUE=0, VALUE_BYTES=[1,255])
       ;byteOutput=dataByteScaling(output.fpar, NAN_BYTE_VALUE=0, VALUE_BYTES=[1,255])
       ;byteOutput=dataByteScaling(output.fpar, VALUE_BYTES=[0,250])

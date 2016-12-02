@@ -1,6 +1,6 @@
 function getStandardBrfDataSetInfo
 
-  infoHeader=getJRCHeader_v1_3()
+  infoHeader=getJRCHeader_v1_5()
 
   INT_NAN=2^15
   INT_MAX=2^15-1
@@ -51,15 +51,15 @@ function getStandardBrfDataSetInfo
 
   minMaxs[*,*]=-1
   minMaxs[0,*]=GENERIC_DATA_RANGE
-  scaledMinMaxs[0,*]=[0,INT_MAX]
+  scaledMinMaxs[0,*]=minMaxs[0,*]/bandSlopes[0]
   nanList[0]=INT_NAN
 
   minMaxs[1,*]=GENERIC_DATA_RANGE;minMax[0,*]
-  scaledMinMaxs[1,*]=[0,INT_MAX]
+  scaledMinMaxs[1,*]=minMaxs[1,*]/bandSlopes[1]
   nanList[1]=INT_NAN
 
   minMaxs[2,*]=GENERIC_DATA_RANGE;minMax[0,*]
-  scaledMinMaxs[2,*]=[0,INT_MAX]
+  scaledMinMaxs[2,*]=minMaxs[2,*]/bandSlopes[2]
   nanList[2]=INT_NAN
 
   minMaxs[3,*]=GENERIC_DATA_RANGE;minMax[0,*]

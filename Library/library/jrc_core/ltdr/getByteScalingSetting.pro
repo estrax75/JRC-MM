@@ -1,6 +1,6 @@
-function getByteScalingSetting, ZEROISNAN=ZEROISNAN, TWO51_TO_TWO55_ISNAN=TWO51_TO_TWO55_ISNAN
+function getByteScalingSetting, ZEROISNAN=ZEROISNAN, TWO51_TO_TWO55_ISNAN=TWO51_TO_TWO55_ISNAN, TWO55_ISNAN=TWO55_ISNAN
 
-  
+
   catch, error_status
   if error_status NE 0 THEN BEGIN
     ERROR=1
@@ -14,7 +14,7 @@ function getByteScalingSetting, ZEROISNAN=ZEROISNAN, TWO51_TO_TWO55_ISNAN=TWO51_
   remarkableFlags=[255,254,253]
 
   if keyword_set(ZEROISNAN) then begin
-    ; MM check 
+    ; MM check
     DATA_NAN=-1
     BYTE_NAN=0
     BYTE_RANGE=[1,255]
@@ -26,6 +26,12 @@ function getByteScalingSetting, ZEROISNAN=ZEROISNAN, TWO51_TO_TWO55_ISNAN=TWO51_
       BYTE_RANGE=[0,250]
     endif
   endelse
+  if keyword_set(TWO55_ISNAN) then begin
+    DATA_NAN=2^15
+    BYTE_NAN=255
+    BYTE_RANGE=[0,254]
+    remarkableFlags[*]=BYTE_NAN
+  endif
   return, { $
     DATA_NAN: DATA_NAN, $
     BYTE_NAN:BYTE_NAN, $

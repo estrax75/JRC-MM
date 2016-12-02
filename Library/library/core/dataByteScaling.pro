@@ -7,9 +7,9 @@ FUNCTION dataByteScaling, data, flagMatrix, $;, FLAG_VALUES=FLAG_VALUES, $
 
   outInterval=(BYTE_RANGE[1]-BYTE_RANGE[0])
   stepRange=(1d*DATA_RANGE[1]-1d*DATA_RANGE[0])/(outInterval)
-  nanIdxs=where(data eq DATA_NAN, preNanCount, complement=validIdxs)
-
-  resData=bytscl(resData, MIN=DATA_RANGE[0], MAX=DATA_RANGE[1], TOP=outInterval);+VALUE_BYTES[0]
+  if finite(DATA_NAN) eq 0 then nanIdxs=where(finite(data) eq 0, preNanCount, complement=validIdxs) else nanIdxs=where(data eq DATA_NAN, preNanCount, complement=validIdxs) 
+  
+  resData=bytscl(resData, MIN=DATA_RANGE[0], MAX=DATA_RANGE[1], TOP=outInterval, /NAN);+VALUE_BYTES[0]
   resData=resData+BYTE_RANGE[0]
 
   idxneg=where(data lt DATA_RANGE[0])

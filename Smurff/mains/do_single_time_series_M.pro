@@ -76,7 +76,8 @@ PRO do_single_time_series_M, dataList, fName=fName, xTickNames=xTickNames, yMeas
     extraData=extraSerieData
     extraPSyms=intarr(extraSeriesNo)
     ;extraColors=['Aquamarine', 'Purple', 'Dark Goldenrod', 'Lawn Green', 'Gray']
-    extraColors=['Blue Violet', 'Blue', 'Aquamarine', 'Green Yellow', 'Yellow', 'Orange', 'Orange Red', 'Red', 'Black']
+    extraColors=['Blue Violet', 'Blue', 'Aquamarine', 'Green Yellow', 'Yellow', 'Orange', 'Orange Red', 'Red', 'Black', 'Pink', 'Gray']
+    ;extraPSyms[*]=-1 & extraColors=extraColors[0:extraSeriesNo<n_elements(extraColors)-1] & extraLineStyle=3
     extraPSyms[*]=-1 & extraColors=extraColors[0:extraSeriesNo-1] & extraLineStyle=3
   endif
   

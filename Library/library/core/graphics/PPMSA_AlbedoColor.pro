@@ -1,4 +1,4 @@
-PRO PPMSA_AlbedoColor
+PRO PPMSA_AlbedoColor, r_curr=r_curr, g_curr=g_curr, b_curr=b_curr
 
   NBR_COL = 256
   pcolor = bytarr( 3, NBR_COL )

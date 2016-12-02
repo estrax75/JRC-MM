@@ -1,7 +1,8 @@
 ;launch_brf, 1988, 1988, 11, 12, format, MISSIONOVERLAPINDEX=1, OVERWRITE=1
 ;launch_brf, 1988, 1988, 11, 12, format, MISSIONOVERLAPINDEX=0, OVERWRITE=0
+;launch_brf, 1985, 1985, 4, 4, 'NC', MISSIONOVERLAPINDEX=0, OVERWRITE=0
 pro launch_brf, startYear, endYear, startMonth, endMonth, format, missionIndex, $
-  MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, OVERWRITE=OVERWRITE
+  MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, OVERWRITE=OVERWRITE, singleday=singleday, OLDSTYLE=OLDSTYLE
 
  confDir='/home/mariomi/config/data'
  ;rootDir=''
@@ -37,7 +38,7 @@ pro launch_brf, startYear, endYear, startMonth, endMonth, format, missionIndex, 
 
  runDailyBrf, confDir, rootDir, tempDir, outputBaseDir2, $
   startYear, endYear, startMonth, endMonth, missionIndex, $
-  HDF=HDF, NC=NC, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, OVERWRITE=OVERWRITE
+  HDF=HDF, NC=NC, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, OVERWRITE=OVERWRITE, OLDSTYLE=OLDSTYLE, singleday=singleday
 
 end
 

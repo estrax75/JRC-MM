@@ -4,8 +4,8 @@
 FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, inputLevel, missionName, mainVarName, missionCode, year, month, day, $
   sourceDir, outputDir, tempdir, $
   FIRST_LOOK=FIRST_LOOK, $
-  TYPE1=TYPE1, TYPE2=TYPE2, NC=NC, HDF=HDF, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
-  OVERWRITE=OVERWRITE, TC_TYPE=TC_TYPE, TA_TYPE=TA_TYPE
+  NC=NC, HDF=HDF, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
+  OVERWRITE=OVERWRITE, TC_TYPE=TC_TYPE, TA_TYPE=TA_TYPE, UNC=UNC, data_dir=data_dir
   ;
   ;
   ;COMMON bigData
@@ -91,24 +91,31 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
       ;if sensor eq 'MODIS' then sourceFileName=buildMODISFileName_D(sensor, resolution, year, month, firstDay, missionName, missionCode, mainVarName, sourceLevel)
       ;hdffilename=ST_fileSystem->addFileExtension(new_file, 'HDF'); hdf
 
-      fileDir=sourceDir+ncfilename.filePath
-      fileDir=ST_fileSystem->adjustDirSep(fileDir, /ADD)
-      fileDir=fileDir+'v1.5'+path_sep()
-      ; new temp test
-      fileDir='E:\mariomi\Documents\projects\ldtr\data\AVHRR\FP'+path_sep()
+      if keyword_set(data_dir) then begin
+        fileDir=data_dir
+        ;fileDir='E:\mariomi\Documents\projects\ldtr\data\AVHRR\FP'+path_sep()
+      endif else begin
+        fileDir=sourceDir+ncfilename.filePath
+        fileDir=ST_fileSystem->adjustDirSep(fileDir, /ADD)
+        fileDir=fileDir+'v1.5'+path_sep()
+        ; new temp test
+      endelse
       thisFileName=fileDir+ncfilename.fileName
 
       ;destDir=outputDir+hdfFileInfo.filePath
       ;destDir=ST_fileSystem->adjustDirSep(sourceDir, /ADD)
       ;resFileNC=destDir+ncFileInfo.fileName
       ;resFileHDF=destDir+hdfFileInfo.fileName
-      
+
       print, 'searching...',  fileDir, ncfilename.fileName
       ff1 = (file_search(fileDir, ncfilename.fileName, COUNT=cnt))[0];, /FULL_QUALIFY)
       ;ff2 = FILE_SEARCH(dir_in+hdffilename, COUNT=cnt2)
+      nodata=0
       if cnt ne 1 then begin
         cc++
-        continue
+        if cc le last[type] then continue
+        nodata=1
+        break
       endif
       print, '*********'
       print, 'day-->', first[type]
@@ -128,7 +135,7 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
       ;faparData.red=1.*faparData.red*faparData.slope_red+faparData.offset_red
       checkFirst=0
     endwhile
-
+    if keyword_set(nodata) then message, 'no data for this time composite!!!'
     expectedDays=last[type]-first[type]+1
     foundDays=0
 
@@ -156,11 +163,15 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
       ;if sensor eq 'MODIS' then sourceFileName=buildMODISFileName_D(sensor, resolution, year, month, firstDay, missionName, missionCode, mainVarName, level)
       ;hdffilename=ST_fileSystem->addFileExtension(new_file, 'HDF'); hdf
 
-      fileDir=sourceDir+ncfilename.filePath
-      fileDir=ST_fileSystem->adjustDirSep(fileDir, /ADD)
-      fileDir=fileDir+'v1.5'+path_sep()
-      ; new temp test
-      fileDir='E:\mariomi\Documents\projects\ldtr\data\AVHRR\FP'+path_sep()
+      if keyword_set(data_dir) then begin
+        fileDir=data_dir
+        ;fileDir='E:\mariomi\Documents\projects\ldtr\data\AVHRR\FP'+path_sep()
+      endif else begin
+        fileDir=sourceDir+ncfilename.filePath
+        fileDir=ST_fileSystem->adjustDirSep(fileDir, /ADD)
+        fileDir=fileDir+'v1.5'+path_sep()
+        ; new temp test
+      endelse
       thisFileName=fileDir+ncfilename.fileName
 
       ;destDir=outputDir+hdfFileInfo.filePath
@@ -177,6 +188,7 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
       print, '*********'
       ;faparData=readFAPAR(dir_in, ncfilename, FOUND=FOUND)
       if cnt eq 1 then begin
+        print, 'found'
         storeFileInfos[d-first[type]].fDir=fileDir
         storeFileInfos[d-first[type]].fName=ncfilename.fileName
       endif
@@ -242,10 +254,6 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
       trueSlopes=bandSlopes
       trueIntercepts=bandIntercepts
 
-      TYPE1=1
-      ZEROISNAN=keyword_set(TYPE1) ;0
-      TWO51_TO_TWO55_ISNAN=keyword_set(TYPE2) ;0
-      bSInfo=getByteScalingSetting(ZEROISNAN=keyword_set(TYPE1), TWO51_TO_TWO55_ISNAN=keyword_set(TYPE2))
       ;byteOutput=dataByteScaling(output.fpar, NAN_BYTE_VALUE=0, VALUE_BYTES=[1,255])
       ;byteOutput=dataByteScaling(output.fpar, NAN_BYTE_VALUE=0, VALUE_BYTES=[1,255])
       ;byteOutput=dataByteScaling(output.fpar, VALUE_BYTES=[0,250])
@@ -324,6 +332,8 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
       ;          ptr_new(data_tc.flag, /NO_COPY), $
       ;          ptr_new(data_tc.toc_red, /NO_COPY), ptr_new(data_tc.toc_nir, /NO_COPY), $
       ;          ptr_new(data_tc.nday, /NO_COPY)]
+      if keyword_set(UNC) then id='unc' else id=''
+      save, data_tc, filename='E:\mariomi\Desktop\fapar_presentation\tc_result'+id+'.sav'
       dataSets=[ptr_new(data_tc.fapar, /NO_COPY), $
         ptr_new(data_tc.red, /NO_COPY),$
         ptr_new(data_tc.nir, /NO_COPY), $
@@ -331,9 +341,14 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
 
       boundary=[-180.0, 180.0, -90, 90.]
 
-      outputDir='E:\mariomi\Documents\projects\ldtr\data\AVHRR\FP\output\'
-      destncfilename=outputDir+destncfilename.filepath+destncfilename
-      desthdffilename=outputDir+desthdffilename.filepath+desthdffilename
+      ;outputDir='E:\mariomi\Documents\projects\ldtr\data\AVHRR\FP\output\'
+      if keyword_set(data_dir) then begin
+        destncfilename=data_Dir+destncfilename
+        desthdffilename=data_Dir+desthdffilename
+      endif else begin
+        destncfilename=outputDir+destncfilename.filepath+destncfilename
+        desthdffilename=outputDir+desthdffilename.filepath+desthdffilename
+      endelse
       header.cdr_variable=['cdr_variable', 'FAPAR']
 
       write_georef_ncdf, destncfilename, $
@@ -342,6 +357,8 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
         /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, $
         trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, $
         header=header
+      print, 'finish writing ncdf'
+      ;stop
       write_hdf, desthdffilename, $
         bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
         dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
@@ -366,24 +383,34 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
           destncFileNameInfo=build_JRC_FPA_AVH_TCAlg_Monthly_Product_FileName(instrument, fix(year), fix(month), first[type], undef, undef, undef, spatialResolution, undef, undef, 'n.NC', undef, indicator='LAN')
           desthdfFileNameInfo=build_JRC_FPA_AVH_TCAlg_Monthly_Product_FileName(instrument, fix(year), fix(month), first[type], undef, undef, undef, spatialResolution, undef, undef, 'n.HDF', undef, indicator='LAN')
         endif
-;        if TC_TYPE eq 'YEARLY' then begin
-;          destncFileNameInfo=build_JRC_FPA_AVH_TCAlg_Yearly_Product_FileName(instrument, fix(year), fix(month), first[type], undef, undef, undef, spatialResolution, undef, undef, 'NC', undef, indicator='LAN')
-;          desthdfFileNameInfo=build_JRC_FPA_AVH_TCAlg_Yearly_Product_FileName(instrument, fix(year), fix(month), first[type], undef, undef, undef, spatialResolution, undef, undef, 'HDF', undef, indicator='LAN')
-;        endif
+        ;        if TC_TYPE eq 'YEARLY' then begin
+        ;          destncFileNameInfo=build_JRC_FPA_AVH_TCAlg_Yearly_Product_FileName(instrument, fix(year), fix(month), first[type], undef, undef, undef, spatialResolution, undef, undef, 'NC', undef, indicator='LAN')
+        ;          desthdfFileNameInfo=build_JRC_FPA_AVH_TCAlg_Yearly_Product_FileName(instrument, fix(year), fix(month), first[type], undef, undef, undef, spatialResolution, undef, undef, 'HDF', undef, indicator='LAN')
+        ;        endif
       endif
       if n_elements(desthdfFileNameInfo) eq 0 then message, 'TC_TYPE: ' + TC_TYPE + ' not allowed!!!!'
       ;if sensor eq 'MODIS' then destTCFile=buildMODISFileName_TC(sensor, resolution, year, month, first[type], missionName, missionCode, mainVarName, destLevel, startDay=first[type], endDay=last[type])
-      outputDir='E:\mariomi\Documents\projects\ldtr\data\AVHRR\FP\'
-      fileDir=outputDir+destncFileNameInfo.filePath
-      fileDir=ST_fileSystem->adjustDirSep(outputDir, /ADD)+'test'+path_sep()
-      destncfilename=fileDir+destncFileNameInfo.fileName
+      if keyword_set(UNC) then subVer='unc'+path_sep() else subVer=''
 
-      fileDir=outputDir+desthdfFileNameInfo.filePath
-      fileDir=ST_fileSystem->adjustDirSep(outputDir, /ADD)+'test'+path_sep()
+      ;outputDir='E:\mariomi\Documents\projects\ldtr\data\AVHRR\FP\'
+      if keyword_set(data_dir) then begin
+        ;fileDir=data_Dir
+        fileDir=ST_fileSystem->adjustDirSep(data_Dir, /ADD)
+      endif else begin
+        fileDir=sourceDir+destncFileNameInfo.filePath
+        fileDir=ST_fileSystem->adjustDirSep(fileDir, /ADD)
+      endelse
+      ;fileDir=outputDir+destncFileNameInfo.filePath
+      ;fileDir=ST_fileSystem->adjustDirSep(outputDir, /ADD)+'test'+subVer+path_sep()
+      fileDir=fileDir+subVer
+      destncfilename=fileDir+destncFileNameInfo.fileName
       desthdffilename=fileDir+desthdfFileNameInfo.fileName
 
+      ; without uncertainties
       ;sm_call_composite, expectedDays, storeFileInfos, data_tc, 10
-      sm_call_composite, expectedDays, storeFileInfos, data_tc, 10
+      ; with uncertainties
+      ;if keyword_set(UNC) then sm_call_composite_w_unc, expectedDays, storeFileInfos, data_tc, 10 else sm_call_composite, expectedDays, storeFileInfos, data_tc, 10
+      if keyword_set(UNC) then sm_call_composite_w_unc, expectedDays, storeFileInfos, data_tc, 20, prevflag=prevflag else sm_call_composite, expectedDays, storeFileInfos, data_tc, 20, prevflag=prevflag
       ;call_composite, expectedDays, data_day1, data_tc
       endTime=systime(1)-starttime
       print, 'computed in about:', strcompress(endTime), 'seconds'
@@ -414,22 +441,23 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
       ;true_tc_fapar=data_tc.fapar
       ;save, true_tc_fapar, fileName=tempDir+ncfilename+'_TC.sav'
       ;true_tc_fapar=0
-
-      TYPE1=1
-      ZEROISNAN=keyword_set(TYPE1) ;0
-      TWO51_TO_TWO55_ISNAN=keyword_set(TYPE2) ;0
-      bSInfo=getByteScalingSetting(ZEROISNAN=keyword_set(TYPE1), TWO51_TO_TWO55_ISNAN=keyword_set(TYPE2))
       ;byteOutput=dataByteScaling(output.fpar, NAN_BYTE_VALUE=0, VALUE_BYTES=[1,255])
       ;byteOutput=dataByteScaling(output.fpar, NAN_BYTE_VALUE=0, VALUE_BYTES=[1,255])
       ;byteOutput=dataByteScaling(output.fpar, VALUE_BYTES=[0,250])
-      remarkableFlags=bSInfo.remarkableFlags
-      DATA_NAN=bSInfo.DATA_NAN
-      BYTE_NAN=bSInfo.BYTE_NAN
-      BYTE_RANGE=bSInfo.BYTE_RANGE
+      ;remarkableFlags=bSInfo.remarkableFlags
+      ;DATA_NAN=bSInfo.DATA_NAN
+      ;BYTE_NAN=bSInfo.BYTE_NAN
+      ;BYTE_RANGE=bSInfo.BYTE_RANGE
+      validIdxs=where(data_tc.flag eq 0 or data_tc.flag eq 4 or data_tc.flag eq 5, watCount, compl=notValidIdxs, ncompl=notValidCount)
+      ;waterIdxs=where(data_tc.flag eq 3, watCount)
+
       res=dataByteScaling(data_tc.fapar, data_tc.flag, $
-        DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
-        DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
+        DATA_NAN=!VALUES.F_NAN, BYTE_NAN=faparTCDSInfo.nans[2], $
+        DATA_RANGE=faparTCDSInfo.minMaxs[2,*], BYTE_RANGE=faparTCDSInfo.scaledminmaxs[2,*], outSlope, outIntercept)
+      ;DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
+      ;DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
       data_tc.fapar=res.resultData
+      if notValidCount gt 0 then data_tc.fapar[notValidIdxs]=faparTCDSInfo.nans[2]
       ; overwrite slope & intercept for fapar band
       trueIntercepts[2]=outIntercept
       trueSlopes[2]=outSlope
@@ -437,9 +465,12 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
 
       ;tv, rebin(bytscl(data_tc.sigma), 720, 360) ;*
       res=dataByteScaling(data_tc.sigma, data_tc.flag, $
-        DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
-        DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
+        DATA_NAN=!VALUES.F_NAN, BYTE_NAN=faparTCDSInfo.nans[3], $
+        DATA_RANGE=faparTCDSInfo.minMaxs[3,*], BYTE_RANGE=faparTCDSInfo.scaledminmaxs[3,*], outSlope, outIntercept)
+      ;        DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
+      ;        DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
       data_tc.sigma=res.resultData
+      if notValidCount gt 0 then data_tc.sigma[notValidIdxs]=faparTCDSInfo.nans[3]
       ; overwrite slope & intercept for sigma band (fapar)
       trueIntercepts[3]=outIntercept
       trueSlopes[3]=outSlope
@@ -447,45 +478,71 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
 
       ;tv, rebin(bytscl(data_tc.dev_temp), 720, 360) ;*
       res=dataByteScaling(data_tc.dev_temp, data_tc.flag, $
-        DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
-        DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
+        DATA_NAN=!VALUES.F_NAN, BYTE_NAN=faparTCDSInfo.nans[4], $
+        DATA_RANGE=faparTCDSInfo.minMaxs[4,*], BYTE_RANGE=faparTCDSInfo.scaledminmaxs[4,*], outSlope, outIntercept)
+      ;        DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
+      ;        DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
       data_tc.dev_temp=res.resultData;data_tc.sigma=res.resultData
+      if notValidCount gt 0 then data_tc.dev_temp[notValidIdxs]=faparTCDSInfo.nans[4]
       ; overwrite slope & intercept for dev band (fapar)
       trueIntercepts[4]=outIntercept
       trueSlopes[4]=outSlope
-      
+
       ;filling Nan
+      nanIdx=where(finite(data_tc.red) eq 0, cnt)
+      if cnt ne 0 then begin
+        ;anglesNan=where(tv_avhrr eq -9999, cntAnglesNan)
+        ;ptr_new(data_tc.fapar, /NO_COPY), ptr_new(data_tc.dev_temp, /NO_COPY), ptr_new(data_tc.sigma, /NO_COPY), $
+        data_tc.red[nanIdx]=INT_NAN
+        data_tc.dev_red_temp[nanIdx]=INT_NAN
+        data_tc.sigma_red[nanIdx]=INT_NAN
+        data_tc.nir[nanIdx]=INT_NAN
+        data_tc.dev_nir_temp[nanIdx]=INT_NAN
+        data_tc.sigma_nir[nanIdx]=INT_NAN
+        data_tc.toc_red[nanIdx]=INT_NAN
+        data_tc.toc_nir[nanIdx]=INT_NAN
+        data_tc.ts[nanIdx]=INT_NAN
+        data_tc.tv[nanIdx]=INT_NAN
+      endif
+
       badIndexes=where(data_tc.dev_red_temp lt 0, count)
       if count gt 0 then data_tc.dev_red_temp[badIndexes]=INT_NAN
       badIndexes=where(data_tc.dev_nir_temp lt 0, count)
       if count gt 0 then data_tc.dev_nir_temp[badIndexes]=INT_NAN
-      
+
       byteFlagTags=['fapar', 'sigma', 'dev_temp']
+      waterIdxs=where(data_tc.flag eq 3, watCount)
       intFlagTags=['red', 'nir']
       tags=tag_names(data_tc)
 
-      waterIdxs=where(data_tc.flag eq 6, watCount)
-      for i=0, n_elements(flagTags)-1 do begin
-        thisIntIdx=(where(intFlagTags[i] eq tags, countInt))[0]
-        thisByteIdx=(where(byteFlagTags[i] eq tags, countByte))[0]
-        if watCount gt 0 then begin
-          if countInt eq 1 then data_tc.(thisIntIdx)=mapQualityFlags(data_tc.(thisIntIdx), waterIdxs, INT_NAN)
-          if countByte eq 1 then data_tc.(thisByteIdx)=mapQualityFlags(data_tc.(thisByteIdx), waterIdxs, BYTE_NAN)
-        endif
-      endfor
+;      for i=0, n_elements(flagTags)-1 do begin
+;        thisIntIdx=(where(intFlagTags[i] eq tags, countInt))[0]
+;        thisByteIdx=(where(byteFlagTags[i] eq tags, countByte))[0]
+;        if watCount gt 0 then begin
+;          if countInt eq 1 then data_tc.(thisIntIdx)=mapQualityFlags(data_tc.(thisIntIdx), waterIdxs, INT_NAN)
+;          if countByte eq 1 then data_tc.(thisByteIdx)=mapQualityFlags(data_tc.(thisByteIdx), waterIdxs, BYTE_NAN)
+;        endif
+;      endfor
 
-;      dataSets=[ptr_new(data_tc.day, /NO_COPY),ptr_new(data_tc.nday, /NO_COPY), $
-;        ptr_new(data_tc.fapar, /NO_COPY), ptr_new(data_tc.dev_temp, /NO_COPY), ptr_new(data_tc.sigma, /NO_COPY), $
-;        ptr_new(data_tc.red, /NO_COPY), ptr_new(data_tc.dev_red_temp, /NO_COPY), ptr_new(data_tc.sigma_red, /NO_COPY) ,$
-;        ptr_new(data_tc.nir, /NO_COPY), ptr_new(data_tc.dev_nir_temp, /NO_COPY), ptr_new(data_tc.sigma_nir, /NO_COPY), $
-;        ptr_new(data_tc.flag, /NO_COPY)]
+      ;      dataSets=[ptr_new(data_tc.day, /NO_COPY),ptr_new(data_tc.nday, /NO_COPY), $
+      ;        ptr_new(data_tc.fapar, /NO_COPY), ptr_new(data_tc.dev_temp, /NO_COPY), ptr_new(data_tc.sigma, /NO_COPY), $
+      ;        ptr_new(data_tc.red, /NO_COPY), ptr_new(data_tc.dev_red_temp, /NO_COPY), ptr_new(data_tc.sigma_red, /NO_COPY) ,$
+      ;        ptr_new(data_tc.nir, /NO_COPY), ptr_new(data_tc.dev_nir_temp, /NO_COPY), ptr_new(data_tc.sigma_nir, /NO_COPY), $
+      ;        ptr_new(data_tc.flag, /NO_COPY)]
 
+      if keyword_set(UNC) then id='_unc' else id=''
+      ;save, data_tc, filename='E:\mariomi\Desktop\fapar_presentation\tc_result'+id+'.sav', /COMPRESS
+      ;
+      ;data_tc1=data_tc
+      ;delIdlvar, data_tc
+      ;restore, 'E:\mariomi\Desktop\fapar_presentation\tc_resultunc.sav'
+      ;diff1=abs(data_tc1.day-data_tc.DAY)
       dataSets_test=[ptr_new(data_tc.day, /NO_COPY),ptr_new(data_tc.nday, /NO_COPY), $
         ptr_new(data_tc.fapar, /NO_COPY), ptr_new(data_tc.dev_temp, /NO_COPY), ptr_new(data_tc.sigma, /NO_COPY), $
         ptr_new(data_tc.red, /NO_COPY), ptr_new(data_tc.dev_red_temp, /NO_COPY), ptr_new(data_tc.sigma_red, /NO_COPY) ,$
         ptr_new(data_tc.nir, /NO_COPY), ptr_new(data_tc.dev_nir_temp, /NO_COPY), ptr_new(data_tc.sigma_nir, /NO_COPY), $
         ptr_new(data_tc.toc_red, /NO_COPY),ptr_new(data_tc.toc_nir, /NO_COPY), $
-        ptr_new(data_tc.flag, /NO_COPY), $
+        ptr_new(data_tc.flag, /NO_COPY),ptr_new(prevflag, /NO_COPY), $
         ptr_new(data_tc.ts, /NO_COPY), ptr_new(data_tc.tv, /NO_COPY)]
 
       boundary=[-180.0, 180.0, -90, 90.]
@@ -498,7 +555,15 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
       time_Coverage_End=ST_utils->formatDate([year, month, last[type], 23, 59, 59], template='satellite')
       header.cdr_variable=['cdr_variable', 'FAPAR']
       header.process='Time composite'
-      
+
+      write_georef_ncdf, destncfilename, $
+        bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
+        dataSets_test, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
+        ;dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
+        /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, scaledminmaxs=scaledminmaxs, $
+        trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, $
+        header=header, id=destncFileNameInfo.filename, satellite=satellite, $
+        date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End
       write_hdf, desthdffilename, $
         bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
         dataSets_test, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
@@ -507,14 +572,6 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
         trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, $
         header=header, id=desthdfFileNameInfo.filename, satellite=satellite, $
         date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End
-      write_georef_ncdf, destncfilename, $
-        bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
-        dataSets_test, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
-        ;dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
-        /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, scaledminmaxs=scaledminmaxs, $
-        trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, $
-        header=header, id=destncFileNameInfo.filename, satellite=satellite, $
-        date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End 
 
     endif
   endfor

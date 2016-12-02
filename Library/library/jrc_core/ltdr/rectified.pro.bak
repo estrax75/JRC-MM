@@ -27,117 +27,131 @@ PRO Rectified,sensor,sensorCode,ttasun,ttaview,phisun,phiview,$
   phisun  *= !dtor
   phiview *= !dtor
   ;stop
-  CASE sensor+sensorCode OF
-    'SEA' : BEGIN
-      print,'Coefficients for seaWiFS '
-      ;
-      ; for vegetated
-      ; As in ATBD FAPAR SeaWifs (Version 2.0 - January 22,2002)
-      ;G0coeffs=[0.25130709,0.30589629,-0.0048298022,-0.32136740,0.31415914,-0.01074418]
-      ;G1coeffs=[-9.8725,-0.027458,2.9144,0.059376,10.904,0.,0.,0.,0.,0.,1.0]
-      ;G2coeffs=[-0.66956,-0.16930,-0.071256,-0.090485,-0.81353,-0.035440,-1.3438,-0.41673,-0.45123,-0.99648,0.]
-      ; k,Theta,rhoc
-      ;RahmanCoeffs_BLUE=[0.56184,-0.04125,0.23265]
-      ;RahmanCoeffs_RED= [0.70535,0.03576,-0.44444]
-      ;RahmanCoeffs_NIR= [0.86644,-0.00102,0.63149]
-    END
-    'MER' : BEGIN
-      print,'Coefficients for MERIS '
-      ;
-      ; 2011 VERSION
-      ;
-      ; vegetated
-      ;Meris, as coded in BEAM
-      ;
-      ;
-      ;G0coeffs=[0.255,0.306,-0.0045,-0.32,0.32,-0.005]
-      ;G1coeffs=[-9.2615,-0.029011,3.2545,0.055845,9.8268,0.,0.,0.,0.,0.,1.0]
-      ;G2coeffs=[-0.47131,-0.21018,-0.045159,0.076505,-0.80707,-0.048362,-1.2471,-0.54507,-0.47602,-1.1027,0.]
-      ;k,Theta,rhoc
-      ;
-      ;RahmanCoeffs_BLUE=[0.56192,-0.04203,0.24012]
-      ;RahmanCoeffs_RED =[0.70879,0.037,-0.46273]
-      ;RahmanCoeffs_NIR =[0.86523,-0.00123,0.63841]
-    END
-    'MOD' : BEGIN
-      print,'Coefficients for MODIS '
-      ; vegetated
-      ;Modis
-      ;G0coeffs=[0.26130709,0.33489629,-0.0038298022,-0.32136740,0.31415914,-0.010744180]
-      ;G1coeffs=[-13.860,-0.018273,1.5824,0.081450,17.092,0.,0.,0.,0.,0.,1.0]
-      ;G2coeffs=[-0.036557,-3.5399,8.3076,0.18702,-13.294,0.77034,-4.9048,-2.3630,-2.6733,-37.297,0.]
-      ;
-      ;k,Theta,rhoc
-      ;     RahmanCoeffs_BLUE=[0.56177,-0.03204,0.13704]
-      ;    RahmanCoeffs_RED =[0.70116,0.03376,-0.39924]
-      ;   RahmanCoeffs_NIR =[0.86830,-0.00081,0.63537]
-    END
-    'OLCI' : BEGIN
-      ;
-      ; vegetated
-      ;print,'Coefficients for OLCI '
-      ;OLCI
-      ;G0coeffs=[0.254845,0.28550,-0.00440000,-0.322000,0.321000,-0.005079]
-      ;G1coeffs=[-9.1299,-0.028791,3.2,0.054,9.851,0.,0.,0.,0.,0.,1.0]
-      ;G2coeffs=[0.0082617,1.1027,0.64661,0.029443,-0.65340,0.19878,-0.95736,0.77296,0.054908,-1.6565,0.]
-      ;
-      ;     0.64295     1.02238    -0.09158
-      ;    -0.35287     0.66978     0.03698
-      ;k,Theta,rhoc
-      ;RahmanCoeffs_BLUE=[0.51669,-0.04434,0.30402]
-      ;RahmanCoeffs_RED =[0.66361,0.03840,-0.39471]
-      ;RahmanCoeffs_NIR =[0.86633,-0.00705,0.66537]
-      ;
-    END
-    'AVHRR16' : BEGIN
-      print,'Coefficients for AVHRR 16'
-      ; vegetated
-      ; G0coeffs=[0.25405,0.32031,0.0037285,-0.28734,0.27214,-0.015730]
-      ;k,Theta,rhoc
-      ;
-      ; facosi gives  xonst_lambda, k_lambda, xb_lambda
-      ;
-      ;
-      ;
-      ; Soil
-      ;
-      ;
-      ; S[02-06]
-      ; red = 0.584890    0.842280  -0.0694700
-      ; nir = 0.60614     0.84467    -0.06209
-      ; S[02-08]
-      ;
-      ; red    =      0.66953     0.86640    -0.05872
-      ;
-      ; nir = 0.68645     0.86993    -0.05275
-      ;
-      ; MM 20160506 coeffs from table 9 pag. 28
-      G0coeffs=[0.26676,0.33483,0.002950,-0.29184,0.27581,-0.011802]
+  coeffInfo=getSensorCoeffs(sensor, sensorCode, /SOIL)
 
-      ; MM 20160506 coeffs from table 8 pag. 28
-      RahmanCoeffs_RED =[0.97763,-0.06397,0.61133]
-      RahmanCoeffs_NIR =[0.84211,-0.02665,0.73745]
+  RahmanCoeffs_RED=coeffInfo.RahmanCoeffs_RED
+  RahmanCoeffs_NIR=coeffInfo.RahmanCoeffs_NIR
+  print, 'soil coeff (b1)-->', RahmanCoeffs_RED 
+  print, 'soil coeff (b2)-->', RahmanCoeffs_NIR
+  avTags=strupcase(tag_names(coeffInfo))
+  idx=where(strupcase('RahmanCoeffs_BLUE') eq avTags, count)
+  if count eq 1 then RahmanCoeffs_BLUE=coeffInfo.RahmanCoeffs_BLUE
+  G0coeffs=coeffInfo.G0coeffs
+  G1coeffs=coeffInfo.G1coeffs
+  G2coeffs=coeffInfo.G2coeffs
 
-    END
-    'AVHRR14' : BEGIN
-      print,'Coefficients for AVHRR 14 '
-      ;
-      ; only veg
-      ;     0.50901     0.92458    -0.06843
-      ;     0.74984     0.84273    -0.02358
-      ;   RahmanCoeffs_RED =[0.924580,-0.06843,0.509010]
-      ;  RahmanCoeffs_NIR =[0.84273,-0.02358,0.74984]
-
-      ; MM 20160506 coeffs from table 9 pag. 28
-      G0coeffs=[0.26676,0.33483,0.002950,-0.29184,0.27581,-0.011802]
-
-      ; MM 20160506 coeffs from table 8 pag. 28
-      RahmanCoeffs_RED =[0.95283,-0.05880,0.58979]
-      RahmanCoeffs_NIR =[0.84381,-0.02551,0.75070]
-
-
-    END
-  endcase
+;  CASE sensor+sensorCode OF
+;    'SEA' : BEGIN
+;      print,'Coefficients for seaWiFS '
+;      ;
+;      ; for vegetated
+;      ; As in ATBD FAPAR SeaWifs (Version 2.0 - January 22,2002)
+;      ;G0coeffs=[0.25130709,0.30589629,-0.0048298022,-0.32136740,0.31415914,-0.01074418]
+;      ;G1coeffs=[-9.8725,-0.027458,2.9144,0.059376,10.904,0.,0.,0.,0.,0.,1.0]
+;      ;G2coeffs=[-0.66956,-0.16930,-0.071256,-0.090485,-0.81353,-0.035440,-1.3438,-0.41673,-0.45123,-0.99648,0.]
+;      ; k,Theta,rhoc
+;      ;RahmanCoeffs_BLUE=[0.56184,-0.04125,0.23265]
+;      ;RahmanCoeffs_RED= [0.70535,0.03576,-0.44444]
+;      ;RahmanCoeffs_NIR= [0.86644,-0.00102,0.63149]
+;    END
+;    'MER' : BEGIN
+;      print,'Coefficients for MERIS '
+;      ;
+;      ; 2011 VERSION
+;      ;
+;      ; vegetated
+;      ;Meris, as coded in BEAM
+;      ;
+;      ;
+;      ;G0coeffs=[0.255,0.306,-0.0045,-0.32,0.32,-0.005]
+;      ;G1coeffs=[-9.2615,-0.029011,3.2545,0.055845,9.8268,0.,0.,0.,0.,0.,1.0]
+;      ;G2coeffs=[-0.47131,-0.21018,-0.045159,0.076505,-0.80707,-0.048362,-1.2471,-0.54507,-0.47602,-1.1027,0.]
+;      ;k,Theta,rhoc
+;      ;
+;      ;RahmanCoeffs_BLUE=[0.56192,-0.04203,0.24012]
+;      ;RahmanCoeffs_RED =[0.70879,0.037,-0.46273]
+;      ;RahmanCoeffs_NIR =[0.86523,-0.00123,0.63841]
+;    END
+;    'MOD' : BEGIN
+;      print,'Coefficients for MODIS '
+;      ; vegetated
+;      ;Modis
+;      ;G0coeffs=[0.26130709,0.33489629,-0.0038298022,-0.32136740,0.31415914,-0.010744180]
+;      ;G1coeffs=[-13.860,-0.018273,1.5824,0.081450,17.092,0.,0.,0.,0.,0.,1.0]
+;      ;G2coeffs=[-0.036557,-3.5399,8.3076,0.18702,-13.294,0.77034,-4.9048,-2.3630,-2.6733,-37.297,0.]
+;      ;
+;      ;k,Theta,rhoc
+;      ;     RahmanCoeffs_BLUE=[0.56177,-0.03204,0.13704]
+;      ;    RahmanCoeffs_RED =[0.70116,0.03376,-0.39924]
+;      ;   RahmanCoeffs_NIR =[0.86830,-0.00081,0.63537]
+;    END
+;    'OLCI' : BEGIN
+;      ;
+;      ; vegetated
+;      ;print,'Coefficients for OLCI '
+;      ;OLCI
+;      ;G0coeffs=[0.254845,0.28550,-0.00440000,-0.322000,0.321000,-0.005079]
+;      ;G1coeffs=[-9.1299,-0.028791,3.2,0.054,9.851,0.,0.,0.,0.,0.,1.0]
+;      ;G2coeffs=[0.0082617,1.1027,0.64661,0.029443,-0.65340,0.19878,-0.95736,0.77296,0.054908,-1.6565,0.]
+;      ;
+;      ;     0.64295     1.02238    -0.09158
+;      ;    -0.35287     0.66978     0.03698
+;      ;k,Theta,rhoc
+;      ;RahmanCoeffs_BLUE=[0.51669,-0.04434,0.30402]
+;      ;RahmanCoeffs_RED =[0.66361,0.03840,-0.39471]
+;      ;RahmanCoeffs_NIR =[0.86633,-0.00705,0.66537]
+;      ;
+;    END
+;    'AVHRR16' : BEGIN
+;      print,'Coefficients for AVHRR 16'
+;      ; vegetated
+;      ; G0coeffs=[0.25405,0.32031,0.0037285,-0.28734,0.27214,-0.015730]
+;      ;k,Theta,rhoc
+;      ;
+;      ; facosi gives  xonst_lambda, k_lambda, xb_lambda
+;      ;
+;      ;
+;      ;
+;      ; Soil
+;      ;
+;      ;
+;      ; S[02-06]
+;      ; red = 0.584890    0.842280  -0.0694700
+;      ; nir = 0.60614     0.84467    -0.06209
+;      ; S[02-08]
+;      ;
+;      ; red    =      0.66953     0.86640    -0.05872
+;      ;
+;      ; nir = 0.68645     0.86993    -0.05275
+;      ;
+;      ; MM 20160506 coeffs from table 9 pag. 28
+;      G0coeffs=[0.26676,0.33483,0.002950,-0.29184,0.27581,-0.011802]
+;
+;      ; MM 20160506 coeffs from table 8 pag. 28
+;      RahmanCoeffs_RED =[0.97763,-0.06397,0.61133]
+;      RahmanCoeffs_NIR =[0.84211,-0.02665,0.73745]
+;
+;    END
+;    'AVHRR14' : BEGIN
+;      print,'Coefficients for AVHRR 14 '
+;      ;
+;      ; only veg
+;      ;     0.50901     0.92458    -0.06843
+;      ;     0.74984     0.84273    -0.02358
+;      ;   RahmanCoeffs_RED =[0.924580,-0.06843,0.509010]
+;      ;  RahmanCoeffs_NIR =[0.84273,-0.02358,0.74984]
+;
+;      ; get
+;      ; MM 20160506 coeffs from table 9 pag. 28
+;      ;G0coeffs=[0.26676,0.33483,0.002950,-0.29184,0.27581,-0.011802]
+;
+;      ; MM 20160506 coeffs from table 8 pag. 28
+;      RahmanCoeffs_RED =[0.95283,-0.05880,0.58979]
+;      RahmanCoeffs_NIR =[0.84381,-0.02551,0.75070]
+;
+;
+;    END
+;  endcase
   ;stop
   ;For each band, 'rectification' value from Rahman
   ;window, 0, xsize=720, ysize=360, title='ttasun '+SENSOR

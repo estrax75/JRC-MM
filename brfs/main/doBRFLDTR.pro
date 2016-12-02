@@ -1,5 +1,5 @@
 function doBRFLDTR, sourceFile, confDir, year, month, day, sensor, missionCode, noaaCode, resolution, mainVar, outputBaseDir, tempDir, $
-  testFile=testFile, OVERWRITE=OVERWRITE, HDF=HDF, NC=NC
+  testFile=testFile, OVERWRITE=OVERWRITE, HDF=HDF, NC=NC, OLDSTYLE=OLDSTYLE
 
   COMMON singleTons, ST_utils, ST_operator, ST_fileSystem
 
@@ -18,7 +18,7 @@ function doBRFLDTR, sourceFile, confDir, year, month, day, sensor, missionCode, 
   ;NaN=-9999 ;!VALUES.F_NAN
   ;stop
   INT_NAN=2^15
-
+  
   outputBaseDir=ST_fileSystem->adjustDirSep(outputBaseDir, /ADD)
   confDir=ST_fileSystem->adjustDirSep(confDir, /ADD)
   tempDir=ST_fileSystem->adjustDirSep(tempDir, /ADD)
@@ -38,9 +38,9 @@ function doBRFLDTR, sourceFile, confDir, year, month, day, sensor, missionCode, 
 ;  resFileHDFInfo=build_JRC_BRDF_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
 ;    product, version, 'HDF',  indicator=indicator, level, projection=projection)
   resFileNCInfo=build_JRC_BRF_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
-    product, version, 'test.NC',  indicator=indicator, level, projection=projection)
+    product, version, 'NC',  indicator=indicator, level, projection=projection)
   resFileHDFInfo=build_JRC_BRF_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
-    product, version, 'test.HDF',  indicator=indicator, level, projection=projection)
+    product, version, 'HDF',  indicator=indicator, level, projection=projection)
 
   outputDir=outputBaseDir+resFileNCInfo.filePath
   outputDir=ST_fileSystem->adjustDirSep(outputDir, /ADD)
@@ -432,8 +432,11 @@ function doBRFLDTR, sourceFile, confDir, year, month, day, sensor, missionCode, 
   ;  bandSlopes=[10e-05, 10e-05, 10e-05, 10e-05,$
   ;    10e-03, 10e-03, 10e-03, $
   ;    1, 1, 1]
+  nanSigmaRed=where(red_brf eq INT_NAN, not_valid)
+  sigma_red[nanSigmaRed]=INT_NAN
+  nanSigmaNir=where(nir_brf eq INT_NAN, not_valid)
+  sigma_nir[nanSigmaNir]=INT_NAN
 
-  ; Watch out ts/tv switched!!!! Jun 06 2016
   dataSets=[ptr_new(red_brf, /NO_COPY), ptr_new(nir_brf, /NO_COPY), $
     ptr_new(sigma_red, /NO_COPY), ptr_new(sigma_nir, /NO_COPY), $
     ptr_new(native_ts, /NO_COPY), ptr_new(native_tv, /NO_COPY), ptr_new(new_phi_avhrr, /NO_COPY), $
@@ -461,7 +464,7 @@ function doBRFLDTR, sourceFile, confDir, year, month, day, sensor, missionCode, 
     dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, scaledminmaxs=scaledminmaxs, $
     postcompression=postcompression, gzipLevel=gzipLevel, NOREVERSE=NOREVERSE, trueMinMaxs=trueMinMaxs, nanlist=nanlist, $
     trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, header=header, id=resFileNCInfo.fileName, satellite=satellite, $
-    date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End;, cdr_variable=cdr_variable
+    date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End, OLDSTYLE=OLDSTYLE;, cdr_variable=cdr_variable
   print, '****'
   print, resFileNC
   print, 'done'

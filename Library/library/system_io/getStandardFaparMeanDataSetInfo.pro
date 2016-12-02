@@ -1,11 +1,12 @@
 function getStandardFaparMeanDataSetInfo
 
-  infoHeader=getJRCHeader_v1_3()
+  infoHeader=getJRCHeader_v1_5()
 
   INT_NAN=2^15
   INT_MAX=2^15-1
   UINT_MAX=2u^16-1
-  BYTE_NAN=0
+  BYTE_NAN1=0
+  BYTE_NAN2=255
 
   GENERIC_DATA_RANGE=[0., 1.]
   ANGLES_DATA_RANGE1=[0., 90.]

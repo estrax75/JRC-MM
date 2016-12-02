@@ -5,7 +5,6 @@ pro launch_fapar_comparisons_D, startYear, endYear, startMonth, endMonth, $
   outputFormat, OVERWRITE=OVERWRITE, TC_TYPE=TC_TYPE, TA_TYPE=TA_TYPE
 
   ;sourceDir=['/net/netsea2/vol/vol22_h07/aargau5/data/fapar_products/jrc/GLOBAL_PLC_0.05/daily', $
-  ;'/space3/storage/products/results/FAPAR/type1']
 
   SWFSourceDirM='/net/netsea2/vol/vol22_h07/aargau5/data/fapar_products/jrc/GLOBAL_PLC_0.05'
   SWFSourceDirD='/space4/storage/products/fapar_products/jrc/GLOBAL_PLC_0.05/daily'

@@ -1,5 +1,5 @@
 function doBRFLand, sourceFile, confDir, year, month, day, sensor, missionCode, noaaCode, resolution, mainVar, destBaseDir, tempDir, $
-  testFile=testFile, OVERWRITE=OVERWRITE, HDF=HDF, NC=NC
+  testFile=testFile, OVERWRITE=OVERWRITE, HDF=HDF, NC=NC, OLDSTYLE=OLDSTYLE
 
   COMMON singleTons, ST_utils, ST_operator, ST_fileSystem
 
@@ -31,18 +31,19 @@ function doBRFLand, sourceFile, confDir, year, month, day, sensor, missionCode, 
   version='N'+string(noaaCode, format='(I02)');version='001'
   indicator='LAN'
   spatialResolution='0005D'
-  level='L2'
+  level='L1'
 
   ;resFileNCInfo=build_JRC_BRF_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
   ;  product, version, 'NC',  indicator=indicator, level, projection=projection)
   ;resFileHDFInfo=build_JRC_BRDF_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
   ;  product, version, 'HDF',  indicator=indicator, level, projection=projection)
   resFileNCInfo=build_JRC_BRF_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
-    product, version, 'test.NC',  indicator=indicator, level, projection=projection)
+    product, version, 'NC',  indicator=indicator, level, projection=projection)
   resFileHDFInfo=build_JRC_BRF_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
-    product, version, 'test.HDF',  indicator=indicator, level, projection=projection)
+    product, version, 'HDF',  indicator=indicator, level, projection=projection)
 
-  destDir=destBaseDir+resFileNCInfo.filePath
+  destDir=ST_fileSystem->adjustDirSep(destBaseDir, /ADD)
+  destDir=destDir+resFileNCInfo.filePath
   destDir=ST_fileSystem->adjustDirSep(destDir, /ADD)
   resFileNC=destDir+resFileNCInfo.fileName
   resFileHDF=destDir+resFileHDFInfo.fileName
@@ -245,8 +246,8 @@ function doBRFLand, sourceFile, confDir, year, month, day, sensor, missionCode, 
       brefl = input_data[i,checkIndex]
       lsz = native_ts[checkIndex];
       ;    print, lsz
-      BRFVs = BRF_params[i].slope_v1[checkIndex];
-      BRFRs = BRF_params[i].slope_r1[checkIndex];
+      BRDFVs = BRF_params[i].slope_v1[checkIndex];
+      BRDFRs = BRF_params[i].slope_r1[checkIndex];
       ;     print, 'V, R', BRFVs, BRFRs
       ndvi_min = BRF_params[i].NDVImin[checkIndex];
       ndvi_max = BRF_params[i].NDVImax[checkIndex];
@@ -257,7 +258,7 @@ function doBRFLand, sourceFile, confDir, year, month, day, sensor, missionCode, 
       brf_v_param[i,checkIndex] = 0.0
 
       computationMask[i,checkIndex]=0
-      if ((BRFVs ne 0) and (BRDFRs ne 0)) then begin
+      if ((BRDFVs ne 0) and (BRDFRs ne 0)) then begin
 
         computationMask[i,checkIndex]=1
         if (ndvi_value lt ndvi_min) then ndvi_value = ndvi_min else if (ndvi_value gt ndvi_max) then ndvi_value = ndvi_max
@@ -439,8 +440,11 @@ function doBRFLand, sourceFile, confDir, year, month, day, sensor, missionCode, 
   ;  bandSlopes=[10e-05, 10e-05, 10e-05, 10e-05,$
   ;    10e-03, 10e-03, 10e-03, $
   ;    1, 1, 1]
+  nanSigmaRed=where(red_brf eq INT_NAN, not_valid)
+  sigma_red[nanSigmaRed]=INT_NAN
+  nanSigmaNir=where(nir_brf eq INT_NAN, not_valid)
+  sigma_nir[nanSigmaNir]=INT_NAN
 
-  ; Watch out ts/tv switched!!!! Jun 06 2016
   dataSets=[ptr_new(red_brf, /NO_COPY), ptr_new(nir_brf, /NO_COPY), $
     ptr_new(sigma_red, /NO_COPY), ptr_new(sigma_nir, /NO_COPY), $
     ptr_new(native_ts, /NO_COPY), ptr_new(native_tv, /NO_COPY), ptr_new(new_phi_avhrr, /NO_COPY), $
@@ -528,7 +532,7 @@ function doBRFLand, sourceFile, confDir, year, month, day, sensor, missionCode, 
     dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, scaledminmaxs=scaledminmaxs, $
     postcompression=postcompression, gzipLevel=gzipLevel, NOREVERSE=NOREVERSE, trueMinMaxs=trueMinMaxs, nanlist=nanlist, $
     trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, header=header, id=resFileNCInfo.filename, satellite=satellite, $
-    date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End
+    date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End, OLDSTYLE=OLDSTYLE
   print, '****'
   print, resFileNC
   print, 'done'

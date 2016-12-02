@@ -34,12 +34,14 @@ pro testCompareFAPAR, latPos, lonPos, year, month, noaa, TO_PIX=TO_PIX, RESET=RE
   myDailyPixSigma=fltarr(days)
   ext='NC'
 
+  parName='fpa'
   selDailyMain='FAPAR'
   selDailySigma='Sigma_FAPAR'
   tcMain='FAPAR'
   tcSigma='Dev_Temp_FAPAR'
   title='FAPAR'
   if keyword_set(RED) then begin
+    parName='red'
     selDailyMain='rectified_band_1'
     selDailySigma='Sigma_RECTIFIED_BAND_1'
     tcMain='rectified_red'
@@ -47,6 +49,7 @@ pro testCompareFAPAR, latPos, lonPos, year, month, noaa, TO_PIX=TO_PIX, RESET=RE
     title='Red'
   endif
   if keyword_set(NIR) then begin
+    parName='nir'
     selDailyMain='rectified_band_2'
     selDailySigma='Sigma_RECTIFIED_BAND_2'
     tcMain='rectified_nir'
@@ -109,27 +112,35 @@ pro testCompareFAPAR, latPos, lonPos, year, month, noaa, TO_PIX=TO_PIX, RESET=RE
 
   print, 'Before outliers'
   restore, filename='first_distance.sav'
-  restore, filename='first_meandat.sav'
-  restore, filename='first_std_mean.sav'
+  ;restore, filename='first_meandat.sav'
+  ;restore, filename='first_std_mean.sav'
   offset=1440
   ; distance from call mean 3 computation
   myDailyPixDistance=reform(distance[*,pixLonPos-offset, pixLatPos])
 
   ; mean...
-  myDailyPixmeandat=meandat.fapar[pixLonPos-offset, pixLatPos]
+  ;myDailyPixmeandat=meandat.fapar[pixLonPos-offset, pixLatPos]
 
   ; std dev...
-  myDailyPixstd_mean=std_mean.temp[pixLonPos-offset, pixLatPos]
+  ;myDailyPixstd_mean=std_mean.temp[pixLonPos-offset, pixLatPos]
 
   myDailyPixDistanceMx=myDailyPixFaparMx
   myDailyPixmeandatMx=fltarr(3,3)
   myDailyPixstd_meanMx=fltarr(3,3)
 
-  for k=-1, 1 do begin
-    for j=-1, 1 do begin
-      myDailyPixDistanceMx[k+1,j+1,*]=reform(distance[*,pixLonPos-offset+k, pixLatPos+j])
-      myDailyPixmeandatMx[k+1,j+1]=meandat.fapar[pixLonPos-offset+k, pixLatPos+j]
-      myDailyPixstd_meanMx[k+1,j+1]=std_mean.temp[pixLonPos-offset+k, pixLatPos+j]
+  for k=0, 2 do begin
+    for j=0, 2 do begin
+      myDailyPixFapar=reform(myDailyPixFaparMx[k,j,*])
+
+      firstMoment=moment(myDailyPixFapar, /NAN)
+      firstMean=firstMoment[0]
+      firstStdDev=sqrt(firstMoment[1])
+
+      myDailyPixDistanceMx[k,j,*]=reform(distance[*,pixLonPos-offset+k, pixLatPos+j])
+;      myDailyPixmeandatMx[k+1,j+1]=meandat.fapar[pixLonPos-offset+k, pixLatPos+j]
+;      myDailyPixstd_meanMx[k+1,j+1]=std_mean.temp[pixLonPos-offset+k, pixLatPos+j]
+      myDailyPixmeandatMx[k,j]=firstMean
+      myDailyPixstd_meanMx[k,j]=firstStdDev
     endfor
   endfor
 
@@ -151,8 +162,8 @@ pro testCompareFAPAR, latPos, lonPos, year, month, noaa, TO_PIX=TO_PIX, RESET=RE
 
       RoughDistance=abs(myDailyPixFapar-(reform(myDailyPixmeandat))[0])
 
-      indexEucl=(where(min(myDailyPixDistance, /NAN) eq myDailyPixDistance))[0]
-      indexRD=(where(min(RoughDistance, /NAN) eq RoughDistance))[0]
+      indexEucl=(where(min(myDailyPixDistance, /NAN, max=maxEucl) eq myDailyPixDistance))[0]
+      indexRD=(where(min(RoughDistance, /NAN, max=maxRD) eq RoughDistance))[0]
 
       print, 'best euclidean distance (min):', myDailyPixDistance[indexEucl], ', index(', indexEucl, ')'
       print, 'best rough distance value (min):', RoughDistance[indexRD], ', index(', indexRD, ')'
@@ -167,22 +178,6 @@ pro testCompareFAPAR, latPos, lonPos, year, month, noaa, TO_PIX=TO_PIX, RESET=RE
   endfor
   ;remake...
   print, '*******'
-
-  ;  firstMoment=moment(data, /NAN)
-  ;  firstMean=firstMoment[0]
-  ;  firstStdDev=sqrt(firstMoment[1])
-  ;  firstOut=where((data ge firstMean+firstStdDev or data le firstMean-firstStdDev) and finite(data) ne 0, countFirst)
-  ;
-  ;  countSecond=0
-  ;  if countFirst gt 0 then begin
-  ;    data[firstOut]=!VALUES.F_NAN
-  ;    firstMoment=moment(data, /NAN)
-  ;    firstMean=firstMoment[0]
-  ;    firstStdDev=sqrt(firstMoment[1])
-  ;    ERR_YLow=(firstStdDev)>0
-  ;    ERR_YHIGH=firstStdDev
-  ;    secondOut=where((data ge firstMean+firstStdDev or data le firstMean-firstStdDev) and finite(data) ne 0, countSecond)
-  ;  endif
 
   print, '****After outliers out***'
 
@@ -213,6 +208,10 @@ pro testCompareFAPAR, latPos, lonPos, year, month, noaa, TO_PIX=TO_PIX, RESET=RE
   theChosenEuclidean2=fltarr(9,2)
   outLiersMean=fltarr(3,3)
   i=0
+  maxEuclMx=fltarr(9)
+  maxRDMx=fltarr(9)
+  maxVals=fltarr(9)
+  minVals=fltarr(9)
   for k=0, 2 do begin
     for j=0, 2 do begin
       ;testEuclDistances=myDailyPixDistanceMx[k,l,*]
@@ -230,22 +229,25 @@ pro testCompareFAPAR, latPos, lonPos, year, month, noaa, TO_PIX=TO_PIX, RESET=RE
       outLiersMean[k,j]=firstMean
       if countFirst gt 0 then begin
         myDailyPixFapar[firstOut]=!VALUES.F_NAN
-        firstMoment=moment(myDailyPixFapar, /NAN)
-        firstMean=firstMoment[0]
-        firstStdDev=sqrt(firstMoment[1])
-        ERR_YLow=(firstStdDev)>0
-        ERR_YHIGH=firstStdDev
-        secondOut=where((myDailyPixFapar ge firstMean+firstStdDev or myDailyPixFapar le firstMean-firstStdDev) and finite(myDailyPixFapar) ne 0, countSecond)
-        myDailyPixmeandat=firstMean
-        outLiersMean[k,j]=firstMean
+        filterMoment=moment(myDailyPixFapar, /NAN)
+        filterMean=filterMoment[0]
+        filterStdDev=sqrt(filterMoment[1])
+        ;ERR_YLow=(firstStdDev)>0
+        ;ERR_YHIGH=firstStdDev
+        ;secondOut=where((myDailyPixFapar ge firstMean+firstStdDev or myDailyPixFapar le firstMean-firstStdDev) and finite(myDailyPixFapar) ne 0, countSecond)
+        outLiersMean[k,j]=filterMean
       endif
 
       ;;
-      RoughDistance=abs(myDailyPixFapar-(reform(myDailyPixmeandat))[0])
+      RoughDistance=abs(myDailyPixFapar-(reform(outLiersMean[k,j]))[0])
 
-      indexEucl=(where(min(myDailyPixDistance, /NAN) eq myDailyPixDistance))[0]
-      indexRD=(where(min(RoughDistance, /NAN) eq RoughDistance))[0]
-
+      maxVal=max(myDailyPixFapar, /NAN, min=minVal)
+      MinVals[i]=minVal & MaxVals[i]=maxVal 
+      
+      indexEucl=(where(min(myDailyPixDistance, /NAN, max=maxEucl) eq myDailyPixDistance))[0]
+      indexRD=(where(min(RoughDistance, max=maxRD, /NAN) eq RoughDistance))[0]
+      maxEuclMx[i]=maxEucl
+      maxRDMx[i]=maxRD
       print, 'best euclidean distance (min):', myDailyPixDistance[indexEucl], ', index(', indexEucl, ')'
       print, 'best rough distance value (min):', RoughDistance[indexRD], ', index(', indexRD, ')'
 
@@ -309,7 +311,7 @@ pro testCompareFAPAR, latPos, lonPos, year, month, noaa, TO_PIX=TO_PIX, RESET=RE
   ;ERR_YLow=(-myDailyPixSigma)>0
   ;ERR_YHIGH=myDailyPixSigma
   maxx=max(data+ERR_YHIGH, /NAN)
-  yrange=[0, maxx+maxx/10.]
+  yrange=[0, 1.]
 
   devErr=fltarr(days)
   highDevErr=devErr
@@ -482,10 +484,52 @@ pro testCompareFAPAR, latPos, lonPos, year, month, noaa, TO_PIX=TO_PIX, RESET=RE
       ;      ;  Position=position, linestyle=3, color='Blue', thick=1.1
       cgLegend, COLORS=['Green','Pink','Red', 'Red', 'Blue', 'Blue'], BACKGROUND='snow', BG_COLOR='snow', /BOX, LOCATION=[0.7,0.9], $
         titles=['Original (mean + stddev)','Filtered mean', 'Rough Mean (diamond)', 'Rough Mean + Filter', 'Euclidean (diamond)', 'Euclidean + Filter'], linestyle=[0,5,0,0,1,1]
+      filename=parName+'_pix'+strcompress(i)+'.png'
+      WRITE_PNG, 'E:\mariomi\Desktop\fapar_presentation\'+filename, TVRD(/TRUE)
     endfor
   endfor
+  window, i+1, XSIZE=float(scr_dims[0])/4*3, YSIZE=float(scr_dims[1])/4*3
+  restore, 'red_diff.sav'
+  restore, 'nir_diff.sav'
+  restore, 'fpa_diff.sav'
+  normFpaDiff=reform(diffFpa[*,0])/(maxFpa-minFpa)*100
+  normRedDiff=reform(diffRed[*,0])/(maxRed-minRed)*100
+  normNirDiff=reform(diffNir[*,0])/(maxNir-minNir)*100
+  ;normalized (%)
+  cgPlot, reform(normFpaDiff[*,0]), Title=MTitle, XTitle=xtitle, YTitle=ytitle, $
+    Position=position, color='Green', YRANGE=[0.,100.], /LOWER_ZERO
+  cgOPlot, reform(normRedDiff[*,0]), $
+    Position=position, color='Red', YRANGE=[0.,100.], /LOWER_ZERO
+  cgOPlot, reform(normNirDiff[*,0]), $
+    Position=position, color='Blue', YRANGE=[0.,100.], /LOWER_ZERO
+  ;absolute
+  window, i+1, XSIZE=float(scr_dims[0])/4*3, YSIZE=float(scr_dims[1])/4*3
+  cgOPlot, reform(diffFpa[*,0]), Title=MTitle, XTitle=xtitle, YTitle=ytitle, $
+    Position=position, color='Green', YRANGE=YRANGE, /LOWER_ZERO
+  cgOPlot, reform(diffRed[*,0]), $
+    Position=position, color='Red', YRANGE=YRANGE, /LOWER_ZERO
+  cgOPlot, reform(diffNir[*,0]), $
+    Position=position, color='Blue', YRANGE=YRANGE, /LOWER_ZERO
+  
 
-
+  if keyword_set(RED) then begin
+    diffRed=abs(theChosenRough2-theChosenEuclidean2)
+    maxRed=maxVal
+    minRed=minVal
+    save, minRed, maxRed, diffRed, fileName='red_diff.sav'
+  endif
+  if keyword_set(NIR) then begin
+    diffNir=abs(theChosenRough2-theChosenEuclidean2)
+    maxNir=maxVal
+    minNir=minVal
+    save, diffNir, maxNir, minNir, fileName='nir_diff.sav'
+  endif
+  if ~keyword_set(NIR) and ~keyword_set(RED) then begin
+    diffFpa=abs(theChosenRough2-theChosenEuclidean2)
+    maxFpa=maxVal
+    minFpa=minVal
+    save, diffFpa, maxFpa, minFpa, fileName='fpa_diff.sav'
+  endif
   device, decompose=0
   loadct, 73
   tvlct,r,g,b, /get

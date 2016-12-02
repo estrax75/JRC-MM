@@ -32,13 +32,15 @@ function searchProductFile, productName, instrument, spatialResolution, indicato
     end
     'FAPAR':begin
       fileInfo=build_JRC_FPA_AVH_Daily_Product_FileName(instrument, year, month, startDay, timestamp, temporalResolution, location, spatialResolution, $
-        product, version, formatType,  indicator=indicator, level, projection=projection)
+        product, version, formatType,  indicator=indicator, 'L1', projection=projection)
       ;fileToSearch=inputDir+fileInfo.fileName
       searchDir=inputDir
       searchDir=searchDir+fileInfo.filePath
 
+      ;resFile=file_search(searchDir+'/v1.5',fileInfo.fileName, count=count, /FULLY_QUALIFY_PATH)
       resFile=file_search(searchDir,fileInfo.fileName, count=count, /FULLY_QUALIFY_PATH)
-      if count eq 1 then begin
+      if count ge 1 then begin
+        resFile=resFile[0]
         onlyFileName=ST_fileSystem->getFileNameInfo(resFile, filePath=filePath, extension=extension)
         res={fullFileName:resFile[0], fileName:onlyFileName[0], filePath:filePath[0], FOUND:1}
       endif

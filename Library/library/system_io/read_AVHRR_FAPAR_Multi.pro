@@ -3,7 +3,7 @@
 ;-
 ;@.\Library\library\objects\GenericOperator.pro
 ;@../Library/library/objects/FileSystem.pro
-function read_AVHRR_FAPAR_Multi, folder, fileName, FOUND=FOUND, SWITCH_TS_TV=SWITCH_TS_TV, $
+function read_AVHRR_FAPAR_Multi, folder, fileName, FOUND=FOUND, $
   FULL=FULL, APPLY_SLOPE=APPLY_SLOPE, varName=varName, offset=offset, count=count, fid=fid
 
 
@@ -21,7 +21,6 @@ function read_AVHRR_FAPAR_Multi, folder, fileName, FOUND=FOUND, SWITCH_TS_TV=SWI
 
   faparDSInfo=getStandardFaparDataSetInfo()
   avBandNames=faparDSInfo.bandNames
-  if keyword_set(SWITCH_TS_TV) then print, avBandNames
 
   ; 0, 1, 2,3,4,5,6,(7),(8),(9),10,11,(12)
 

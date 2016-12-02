@@ -1,6 +1,6 @@
 function getStandardDiffDataSetInfo
 
-  infoHeader=getJRCHeader_v1_3()
+  infoHeader=getJRCHeader_v1_5()
   
   INT_NAN=2^15
   INT_MAX=2^15-1

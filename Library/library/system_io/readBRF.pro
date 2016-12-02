@@ -3,7 +3,7 @@
 ;-
 ;@.\Library\library\objects\GenericOperator.pro
 ;@../Library/library/objects/FileSystem.pro
-function readBRF, folder, fileName, FOUND=FOUND, FULL=FULL
+function readBRF, folder, fileName, bandName, FOUND=FOUND, FULL=FULL, USENAN=USENAN
 
   ;  avBandNames=['BRF_BAND_1', 'BRF_BAND_2', 'SIGMA_BRF_BAND_1', 'SIGMA_BRF_BAND_2', $
   ;    'TS', 'TV', 'PHI', 'QA', 'Q1', 'Q2']
@@ -16,30 +16,49 @@ function readBRF, folder, fileName, FOUND=FOUND, FULL=FULL
   newFolder=fsObj->adjustDirSep(folder, /ADD)
   fullFileName=newFolder+fileName
 
+  if n_elements(bandName) eq 1 then return, operatorObj->readNcdfVar(fullFileName, bandName, FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
   fName=fsObj->getFileNameInfo(fullFileName, filePath=dir, extension=ext)
 
   ; 0, 1, 4,5,6,7
   dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[0], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
   if keyword_set(FOUND) then begin
-    red_avhrr=dataSet.data
+    countNan=-1
+    if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
+    red_avhrr=1.*dataSet.data
     slope_red=dataSet.slope
     offset_red=dataSet.intercept
+    if countNan gt 0 then begin
+      if size(red_avhrr, /TYPE) eq 4 then red_avhrr[nanList]=!VALUES.F_NAN
+      if size(red_avhrr, /TYPE) eq 5 then red_avhrr[nanList]=!VALUES.D_NAN
+    endif
   endif
 
   dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[1], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
   if keyword_set(FOUND) then begin
-    nir_avhrr=dataSet.data
+    countNan=-1
+    if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
+    nir_avhrr=1.*dataSet.data
     slope_nir=dataSet.slope
     offset_nir=dataSet.intercept
+    if countNan gt 0 then begin
+      if size(nir_avhrr, /TYPE) eq 4 then nir_avhrr[nanList]=!VALUES.F_NAN
+      if size(nir_avhrr, /TYPE) eq 5 then nir_avhrr[nanList]=!VALUES.D_NAN
+    endif
   endif
 
   sigma_red=0
   if keyword_set(FULL) then begin
     dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[2], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
     if keyword_set(FOUND) then begin
-      sigma_red=dataSet.data
+      countNan=-1
+      if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
+      sigma_red=1.*dataSet.data
       slope_sigma_red=dataSet.slope
       offset_sigma_red=dataSet.intercept
+      if countNan gt 0 then begin
+        if size(sigma_red, /TYPE) eq 4 then sigma_red[nanList]=!VALUES.F_NAN
+        if size(sigma_red, /TYPE) eq 5 then sigma_red[nanList]=!VALUES.D_NAN
+      endif
     endif
   endif
 
@@ -47,61 +66,96 @@ function readBRF, folder, fileName, FOUND=FOUND, FULL=FULL
   if keyword_set(FULL) then begin
     dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[3], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
     if keyword_set(FOUND) then begin
-      sigma_nir=dataSet.data
+      countNan=-1
+      if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
+      sigma_nir=1.*dataSet.data
       slope_sigma_nir=dataSet.slope
       offset_sigma_nir=dataSet.intercept
+      if countNan gt 0 then begin
+        if size(sigma_nir, /TYPE) eq 4 then sigma_nir[nanList]=!VALUES.F_NAN
+        if size(sigma_nir, /TYPE) eq 5 then sigma_nir[nanList]=!VALUES.D_NAN
+      endif
     endif
   endif
 
-  if keyword_set(SWITCH_TS_TV) then begin
-    avBandNames[4]='TV'
-    avBandNames[5]='TS'
-  endif else begin
-    avBandNames[4]='TS'
-    avBandNames[5]='TV'
-  endelse
 
   dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[4], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
   if keyword_set(FOUND) then begin
-    ts_avhrr=dataSet.data
+    countNan=-1
+    if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
+    ts_avhrr=1.*dataSet.data
     slope_ts=dataSet.slope
     offset_ts=dataSet.intercept
+    if countNan gt 0 then begin
+      if size(ts_avhrr, /TYPE) eq 4 then ts_avhrr[nanList]=!VALUES.F_NAN
+      if size(ts_avhrr, /TYPE) eq 5 then ts_avhrr[nanList]=!VALUES.D_NAN
+    endif
   endif
 
   dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[5], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
   if keyword_set(FOUND) then begin
-    tv_avhrr=dataSet.data
+    countNan=-1
+    if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
+    tv_avhrr=1.*dataSet.data
     slope_tv=dataSet.slope
     offset_tv=dataSet.intercept
+    if countNan gt 0 then begin
+      if size(tv_avhrr, /TYPE) eq 4 then tv_avhrr[nanList]=!VALUES.F_NAN
+      if size(tv_avhrr, /TYPE) eq 5 then tv_avhrr[nanList]=!VALUES.D_NAN
+    endif
   endif
 
   dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[6], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
   if keyword_set(FOUND) then begin
-    print, dataSet.fillValue
-    phi_avhrr=dataSet.data
+    countNan=-1
+    if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
+    ;print, dataSet.fillValue
+    phi_avhrr=1.*dataSet.data
     slope_phi=dataSet.slope
     offset_phi=dataSet.intercept
+    if countNan gt 0 then begin
+      if size(phi_avhrr, /TYPE) eq 4 then phi_avhrr[nanList]=!VALUES.F_NAN
+      if size(phi_avhrr, /TYPE) eq 5 then phi_avhrr[nanList]=!VALUES.D_NAN
+    endif
   endif
 
   dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[7], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
   if keyword_set(FOUND) then begin
+    countNan=-1
+    if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
     brf_qa_avhrr=dataSet.data
     slope_qa=dataSet.slope
     offset_qa=dataSet.intercept
+    if countNan gt 0 then begin
+      if size(flag, /TYPE) eq 4 then brf_qa_avhrr[nanList]=!VALUES.F_NAN
+      if size(flag, /TYPE) eq 5 then brf_qa_avhrr[nanList]=!VALUES.D_NAN
+    endif
   endif else begin
     dataSet=operatorObj->readNcdfVar(fullFileName, 'QA', FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
+    countNan=-1
+    if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
     brf_qa_avhrr=dataSet.data
     slope_qa=dataSet.slope
     offset_qa=dataSet.intercept
+    if countNan gt 0 then begin
+      if size(brf_qa_avhrr, /TYPE) eq 4 then brf_qa_avhrr[nanList]=!VALUES.F_NAN
+      if size(brf_qa_avhrr, /TYPE) eq 5 then brf_qa_avhrr[nanList]=!VALUES.D_NAN
+    endif
   endelse
 
   cMask1=0
   if keyword_set(FULL) then begin
     dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[8], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
     if keyword_set(FOUND) then begin
+      countNan=-1
+      if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
       cMask1=dataSet.data
       slope_nir=dataSet.slope
       offset_nir=dataSet.intercept
+      if countNan gt 0 then begin
+        if size(cMask1, /TYPE) eq 4 then cMask1[nanList]=!VALUES.F_NAN
+        if size(cMask1, /TYPE) eq 5 then cMask1[nanList]=!VALUES.D_NAN
+      endif
     endif
   endif
 
@@ -109,9 +163,15 @@ function readBRF, folder, fileName, FOUND=FOUND, FULL=FULL
   if keyword_set(FULL) then begin
     dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[9], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
     if keyword_set(FOUND) then begin
+      countNan=-1
+      if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
       cMask2=dataSet.data
       slope_cMask2=dataSet.slope
       offset_cMask2=dataSet.intercept
+      if countNan gt 0 then begin
+        if size(cMask2, /TYPE) eq 4 then cMask2[nanList]=!VALUES.F_NAN
+        if size(cMask2, /TYPE) eq 5 then cMask2[nanList]=!VALUES.D_NAN
+      endif
     endif
   endif
 

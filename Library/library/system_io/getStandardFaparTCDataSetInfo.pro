@@ -89,33 +89,33 @@ function getStandardFaparTCDataSetInfo
 
   ;'RECTIFIED_RED','Dev_Temp_Red', 'Sigma_RECTIFIED_RED', $
   minMaxs[5,*]=GENERIC_DATA_RANGE;minMax[0,*]
-  scaledMinMaxs[5,*]=[0,INT_MAX]
+  scaledMinMaxs[5,*]=minMaxs[5,*]/bandSlopes[5]
   nanList[5]=INT_NAN
 
   minMaxs[6,*]=GENERIC_DATA_RANGE;minMax[0,*]
-  scaledMinMaxs[6,*]=[0,INT_MAX]
+  scaledMinMaxs[6,*]=minMaxs[6,*]/bandSlopes[6]
   nanList[6]=INT_NAN
 
   minMaxs[7,*]=GENERIC_DATA_RANGE;minMax[0,*]
-  scaledMinMaxs[7,*]=[0,INT_MAX]
+  scaledMinMaxs[7,*]=minMaxs[7,*]/bandSlopes[7]
   nanList[7]=INT_NAN
 
   ;'RECTIFIED_NIR','Dev_Temp_Nir', 'Sigma_RECTIFIED_NIR', $
   minMaxs[8,*]=GENERIC_DATA_RANGE;minMax[0,*]
-  scaledMinMaxs[8,*]=[0,INT_MAX]
+  scaledMinMaxs[8,*]=minMaxs[8,*]/bandSlopes[8]
   nanList[8]=INT_NAN
 
   minMaxs[9,*]=GENERIC_DATA_RANGE;minMax[0,*]
-  scaledMinMaxs[9,*]=[0,INT_MAX]
+  scaledMinMaxs[9,*]=minMaxs[9,*]/bandSlopes[9]
   nanList[9]=INT_NAN
 
   minMaxs[10,*]=GENERIC_DATA_RANGE;minMax[0,*]
-  scaledMinMaxs[10,*]=[0,INT_MAX]
+  scaledMinMaxs[10,*]=minMaxs[10,*]/bandSlopes[10]
   nanList[10]=INT_NAN
 
   ;'JRC_FLAG', $
-  minMaxs[11,*]=[0,14]
-  scaledMinMaxs[11,*]=[0,14]
+  minMaxs[11,*]=[0,15]
+  scaledMinMaxs[11,*]=[0,15]
   nanList[11]=255
 
   return, { $

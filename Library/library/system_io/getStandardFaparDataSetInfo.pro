@@ -140,11 +140,11 @@ function getStandardFaparDataSetInfo, Type=Type
   nanList[11]=INT_NAN
 
   minMaxs[12,*]=[0b,14b]
-  scaledMinMaxs[12,*]=[0,14]
+  scaledMinMaxs[12,*]=[0,15]
   nanList[12]=255
 
   minMaxs[13,*]=[0.,1.]
-  scaledMinMaxs[12,*]=[0.,1.]
+  scaledMinMaxs[13,*]=[0.,1.]
   nanList[13]=-1
 
 

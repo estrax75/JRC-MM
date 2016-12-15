@@ -11,12 +11,12 @@
 ;level='L2'
 ;missionName='N'
 
-function doFaparComparison, confDir, sensors, sourceDirs, mainVarNames, sourceFormats, $
+function doFaparSWF, confDir, sensors, sourceDirs, mainVarNames, sourceFormats, $
   missionNames, missionCodes, resolutions, level, $
   tempDir, outputBaseDir, plotDir, $
   year, month, HDF=HDF, NC=NC, $
   OVERWRITE=OVERWRITE, NODIRBUILD=NODIRBUILD, $
-  TA_TYPE=TA_TYPE, TC_TYPE=TC_TYPE, CLOUD_TYPE=CLOUD_TYPE
+  TA_TYPE=TA_TYPE, TC_TYPE=TC_TYPE
 
   COMMON singleTons, ST_utils, ST_operator, ST_fileSystem
 
@@ -54,22 +54,10 @@ function doFaparComparison, confDir, sensors, sourceDirs, mainVarNames, sourceFo
       hdfoutfileInfo=build_JRC_FPA_Diff_Daily_Product_FileName(instrument, year, month, first[j], timestamp, temporalResolution, location, resolutions[0], product, '', 'NC',$
         indicator='LAN', level, projection=projection);, resolutions[i]
     endif
-    if TC_TYPE eq 'MONTHLY' then begin
-;      ncoutfileInfo=build_JRC_FPA_Diff_TCAlg_Monthly_Product_FileName(instrument, year, month, first[j], timestamp, temporalResolution, location, resolutions[0], product, '', 'NC',$
-;        indicator='LAN', level, projection=projection)
-      ncoutfileInfo=build_JRC_FPA_Diff_TCAlg_Monthly_Product_FileName(instrument, year, month, first[j], timestamp, temporalResolution, location, resolutions[0], product, '', 'CLOUDTYPE_'+strcompress(CLOUD_TYPE, /REMOVE)+'.NC',$
-        indicator='LAN', level, projection=projection)
-      hdfoutfileInfo=build_JRC_FPA_Diff_TCAlg_Monthly_Product_FileName(instrument, year, month, first[j], timestamp, temporalResolution, location, resolutions[0], product, '', 'CLOUDTYPE_'+strcompress(CLOUD_TYPE, /REMOVE)+'.HDF',$
-        indicator='LAN', level, projection=projection)
-    endif
+    if TC_TYPE eq 'TC' then outputFile=build_JRC_FPA_Diff_TCAlg_Monthly_Product_FileName('', resolutions[i], year, month, first[j], missionNames[i], missionCode, mainVarNames[i], level, startDay=first[j], endDay=last[j])
+    if TA_TYPE eq 'MEAN' then outputFile=build_JRC_FPA_Diff_AVH_MeanAlg_Monthly_Product_FileName('', resolutions[i], year, month, first[j], missionNames[i], missionCode, mainVarNames[i], level, startDay=first[j], endDay=last[j])
 
-    ;if TA_TYPE eq 'MEAN' then outputFile=build_JRC_FPA_Diff_AVH_MeanAlg_Monthly_Product_FileName('', resolutions[i], year, month, first[j], missionNames[i], missionCode, mainVarNames[i], level, startDay=first[j], endDay=last[j])
-
-    diffFileName=(strsplit(ncoutfileInfo.fileName, '.', /EXTRACT, /PRESERVE))
-    resdiffFileName=''
-    for i=0, n_elements(diffFileName)-2 do resdiffFileName=resdiffFileName+'_'+diffFileName[i]
-    resdiffFileName=strmid(resdiffFileName, 1, strlen(resdiffFileName)-1) 
-    
+    diffFileName=(strsplit(ncoutfileInfo.fileName, '.', /EXTRACT, /PRESERVE))[0]
     baseDir=ST_fileSystem->adjustDirSep(outputBaseDir, /ADD)
 
     fileDir=baseDir+ncoutfileInfo.filePath
@@ -100,28 +88,25 @@ function doFaparComparison, confDir, sensors, sourceDirs, mainVarNames, sourceFo
           indicator='LAN', level, projection=projection)
         ;ncFileInfo=build_JRC_FPA_AVH_Daily_Product_FileName(sensors[i], year, month, day, timestamp, temporalResolution, location, spatialResolution, $
         ;  product, version, 'NC',  indicator=indicator, level, projection=projection)
-        if TC_TYPE eq 'MONTHLY' then inputFileInfo=build_JRC_FPA_AVH_TCAlg_Monthly_Product_FileName(sensors[i], year, month, first[j], timestamp, temporalResolution, location, resolutions[0], product, version, 'CLOUDTYPE_'+strcompress(CLOUD_TYPE, /REMOVE)+'.'+sourceFormats[i],$
-          indicator='LAN', level, projection=projection)
-        ;if TA_TYPE eq 'MEAN' then inputFileInfo=build_JRC_FPA_AVH_MeanAlg_Monthly_Product_FileName(sensors[i], resolutions[i], year, month, first[j], missionNames[i], missionCode, mainVarNames[i], level, startDay=first[j], endDay=last[j])
+        if TC_TYPE eq 'TC' then inputFileInfo=build_JRC_FPA_AVH_TCAlg_Monthly_Product_FileName(sensors[i], resolutions[i], year, month, first[j], missionNames[i], missionCode, mainVarNames[i], level, startDay=first[j], endDay=last[j])
+        if TA_TYPE eq 'MEAN' then inputFileInfo=build_JRC_FPA_AVH_MeanAlg_Monthly_Product_FileName(sensors[i], resolutions[i], year, month, first[j], missionNames[i], missionCode, mainVarNames[i], level, startDay=first[j], endDay=last[j])
         DelIdlVAr, version
         inputFile=inputFileInfo.fileName
-        ;checkDir=sourceDirs[i]+inputFileInfo.filePath
-        checkDir=sourceDirs[i];+inputFileInfo.filePath
+        checkDir=sourceDirs[i]+inputFileInfo.filePath  
       endif
       if sensors[i] eq 'SWF' then begin
         missionCode=0
         if TC_TYPE eq 'DAILY' then inputFile=buildSWFFAPARFileName_D(sensors[i], resolutions[i], year, month, first[j], missionNames[i], missionCode, mainVarNames[i], level, startDay=first[j], endDay=last[j]); else inputFiles[i]=buildSWFFAPARFileName_TC(sensors[i], resolutions[i], year, month, first[j], missionNames[i], missionCode, mainVarNames[i], level, startDay=first[j], endDay=last[j])
-        if TC_TYPE eq 'MONTHLY' then inputFile=buildSWFFAPARFileName_M(sensors[i], resolutions[i], year, month, first[j], missionNames[i], missionCode, mainVarNames[i], 'L2', startDay=first[j], endDay=last[j]); else inputFiles[i]=buildSWFFAPARFileName_TC(sensors[i], resolutions[i], year, month, first[j], missionNames[i], missionCode, mainVarNames[i], level, startDay=first[j], endDay=last[j])
+        if TC_TYPE eq 'MONTHLY' then inputFile=buildSWFFAPARFileName_M(sensors[i], resolutions[i], year, month, first[j], missionNames[i], missionCode, mainVarNames[i], level, startDay=first[j], endDay=last[j]); else inputFiles[i]=buildSWFFAPARFileName_TC(sensors[i], resolutions[i], year, month, first[j], missionNames[i], missionCode, mainVarNames[i], level, startDay=first[j], endDay=last[j])
         inputFile=ST_fileSystem->addFileExtension(inputFile, sourceFormats[i])
-        checkDir=sourceDirs[i]
-        ;checkDir=['/space4/storage/products/fapar_products/jrc/GLOBAL_PLC_0.05/daily', '/net/netsea2/vol/vol22_h07/aargau5/data/fapar_products/jrc/GLOBAL_PLC_0.05/daily']
+        checkDir=['/space4/storage/products/fapar_products/jrc/GLOBAL_PLC_0.05/daily', '/net/netsea2/vol/vol22_h07/aargau5/data/fapar_products/jrc/GLOBAL_PLC_0.05/daily', 'C:\data\SWF']  
       endif
       ;SWF /net/netsea2/vol/vol22_h07/aargau5/data/fapar_products/jrc/GLOBAL_PLC_0.05/daily
       ;SWF /space4/storage/products/fapar_products/jrc/GLOBAL_PLC_0.05/daily
 
       ;fullFileNames[i]=sourceDirs[i]+inputFile
       ; force swf search
-
+      
       ;check=file_info(fullFileNames[i])
       for k=0, n_elements(checkDir)-1 do begin
         findFile=(file_search(checkDir[k], inputFile, COUNT=check))[0]
@@ -133,19 +118,18 @@ function doFaparComparison, confDir, sensors, sourceDirs, mainVarNames, sourceFo
       endfor
 
       if check ne 1 then begin
-        print, 'skip:', inputFile, 'file does''nt exist'
-        skip=1
-        break
+            print, 'skip:', inputFile, 'file does''nt exist'
+            skip=1
+            break
       endif
       inputFiles[i]=ST_fileSystem->getFileNameInfo(findFile, filePath=filePath, extension=extension)
       sourceDirs[i]=filePath
       FOUND=0
       print, 'reading: ...'+sourceDirs[i]+inputFiles[i]
-      if sensors[i] eq 'SWF' then res=read_SWF_FAPAR(sourceDirs[i], inputFiles[i], FOUND=FOUND, /REVERSE, /APPLY)
+      if sensors[i] eq 'SWF' then res=read_SWF_Fapar(sourceDirs[i], inputFiles[i], FOUND=FOUND, /REVERSE, /APPLY)
       if sensors[i] eq 'AVH' then res=read_AVHRR_FAPAR(sourceDirs[i], inputFiles[i], FOUND=FOUND, varName=varName, /APPLY)
-      tvscl, congrid(res.fapar, 720, 360), /NAN
       if FOUND then begin
-        validIdxs=where(res.fapar gt 0.0 and res.fapar lt 1.0, count, COMPLEMENT=setNan, ncomplement=ncomplement)
+        validIdxs=where(res.fapar ge 0.0 and res.fapar le 1.0, count, COMPLEMENT=setNan, ncomplement=ncomplement)
         if ncomplement gt 0 then res.fapar[setNan]=!VALUES.F_NAN
         matrixS[i]=ptr_new(res.fapar, /NO_COPY)
       endif else begin
@@ -223,10 +207,10 @@ function doFaparComparison, confDir, sensors, sourceDirs, mainVarNames, sourceFo
       ;byteOutput=dataByteScaling(output.fpar, NAN_BYTE_VALUE=0, VALUE_BYTES=[1,255])
       ;byteOutput=dataByteScaling(output.fpar, NAN_BYTE_VALUE=0, VALUE_BYTES=[1,255])
       ;byteOutput=dataByteScaling(output.fpar, VALUE_BYTES=[0,250])
-      ;remarkableFlags=bSInfo.remarkableFlags
-      ;DATA_NAN=bSInfo.DATA_NAN
-      ;BYTE_NAN=bSInfo.BYTE_NAN
-      ;BYTE_RANGE=bSInfo.BYTE_RANGE
+      remarkableFlags=bSInfo.remarkableFlags
+      DATA_NAN=bSInfo.DATA_NAN
+      BYTE_NAN=bSInfo.BYTE_NAN
+      BYTE_RANGE=bSInfo.BYTE_RANGE
 
       DATA_NAN=2^15
       faparDiffInfo=getStandardDiffDataSetInfo()
@@ -240,24 +224,23 @@ function doFaparComparison, confDir, sensors, sourceDirs, mainVarNames, sourceFo
       bandIntercepts=faparDiffInfo.bandIntercepts
       minMaxs=faparDiffInfo.minMaxs
       nanList=faparDiffInfo.nans
-      header=faparDiffInfo.header
-      scaledminmaxs=faparDiffInfo.scaledminmaxs
 
       trueSlopes=bandSlopes
       trueIntercepts=bandIntercepts
+      header=faparDiffInfo.header
 
       fapar1=*(matrixS[0])
       fapar2=*(matrixS[1])
       negIdxs=where(finite(difference) ne 1 or finite(fapar1) ne 1 or finite(fapar2) ne 1, count, ncompl=ncompl, complement=complement)
-      xtitle=sensors[0] & ytitle=sensors[1] & title='Fapar Comparison '+yearS+'-'+monthS+'-'+string(first[j], format='(I02)')+'_'+string(last[j], format='(I02)')
+      xtitle='SWF' & ytitle='AVHRR' & title='Fapar Comparison '+yearS+'-'+monthS+'-'+string(first[j], format='(I02)')+'_'+string(last[j], format='(I02)')
       ; without removing Nan
-      scatplotFileName=plotDir+'scatter_with_nan_'+resdiffFileName
+      scatplotFileName=plotDir+'scatter_with_nan_'+diffFileName
       print, 'scatplotFileName (nan):', scatplotFileName
       plotscat, reform(fapar1, n_elements(fapar1)), reform(fapar2, n_elements(fapar2)),  $
         xtitle=xtitle, ytitle=ytitle, title=title, /STAT, $
         filename=scatplotFileName
       ; removing wherever we have Nan
-      scatplotFileName=plotDir+'scatter_without_nan_'+resdiffFileName
+      scatplotFileName=plotDir+'scatter_without_nan_'+diffFileName
       plotscat, reform(fapar1[complement], n_elements(complement)), reform(fapar2(complement), n_elements(complement)),  $
         xtitle=xtitle, ytitle=ytitle, title=title, /STAT, $
         filename=scatplotFileName
@@ -339,13 +322,6 @@ function doFaparComparison, confDir, sensors, sourceDirs, mainVarNames, sourceFo
       boundary=[-180.0, 180.0, -90, 90.]
       filePath=outDir
 
-      date_created=ST_utils->getSysTime(/FILECOMPATIBILITY)
-      satellite='NOAA '+strcompress(missionCode, /REMOVE)
-      time_Coverage_Start=ST_utils->formatDate([year, month, first[j], 0, 0, 0], template='satellite')
-      time_Coverage_End=ST_utils->formatDate([year, month, last[j], 23, 59, 59], template='satellite')
-      header.cdr_variable=['cdr_variable', 'FAPAR']
-      header.Process=['process', 'JRC FAPAR TOC algorithm - see QA4ECV ATBD']
-
       bandNames[1]='fapar_'+TC_TYPE+sensors[0]
       bandNames[2]='fapar_'+TC_TYPE+sensors[1]
       bandStandardNames[1]=bandNames[1]
@@ -353,34 +329,25 @@ function doFaparComparison, confDir, sensors, sourceDirs, mainVarNames, sourceFo
       bandLongNames[1]=bandNames[1]
       bandLongNames[2]=bandNames[2]
 
-;      write_georef_ncdf, destncfilename, $
-;        bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
-;        dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, scaledminmaxs=scaledminmaxs, $
-;        /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, $
-;        id=ncFileInfo.filename, satellite=satellite, header=header, $
-;        date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End
-
       if keyword_set(NC) then begin
         print,'Write the results in ',ncoutfilename
         write_georef_ncdf, ncoutfilename, $
           bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
-          dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, scaledminmaxs=scaledminmaxs, $
+          dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
           /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes, $
-          id=inputFileInfo.filename, satellite=satellite, header=header, $
-          date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End
+          header=header
       endif
 
       if keyword_set(HDF) then begin
         print,'Write the results in ',hdfoutfilename
         write_hdf, hdfoutfilename, $
           bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
-          dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, scaledminmaxs=scaledminmaxs, $
-          /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes, $
-          id=inputFileInfo.filename, satellite=satellite, header=header, $
-          date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End
+          dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
+          trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes, $
+          header=header
       endif
     endif
-    print, '**', resdiffFileName, '**done**'
+    print, '**', diffFileName, '**done**'
     ptr_free, matrixS
 
   endfor

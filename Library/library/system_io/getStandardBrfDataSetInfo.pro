@@ -82,7 +82,7 @@ function getStandardBrfDataSetInfo
   ;  nanList[7]=BYTE_NAN
 
   minMaxs[7,*]=[0, UINT_MAX]
-  scaledMinMaxs[7,*]=0
+  scaledMinMaxs[7,*]=minMaxs[7,*]/bandSlopes[7]
   nanList[7]=INT_NAN
 
   ;manual setting???

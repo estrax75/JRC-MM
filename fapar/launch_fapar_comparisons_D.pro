@@ -6,8 +6,10 @@ pro launch_fapar_comparisons_D, startYear, endYear, startMonth, endMonth, $
 
   ;sourceDir=['/net/netsea2/vol/vol22_h07/aargau5/data/fapar_products/jrc/GLOBAL_PLC_0.05/daily', $
 
-  SWFSourceDirM='/net/netsea2/vol/vol22_h07/aargau5/data/fapar_products/jrc/GLOBAL_PLC_0.05'
-  SWFSourceDirD='/space4/storage/products/fapar_products/jrc/GLOBAL_PLC_0.05/daily'
+  ;SWFSourceDirM='/net/netsea2/vol/vol22_h07/aargau5/data/fapar_products/jrc/GLOBAL_PLC_0.05'
+  ;SWFSourceDirD='/space4/storage/products/fapar_products/jrc/GLOBAL_PLC_0.05/daily'
+  SWFSourceDirD='C:\data\SWF'
+  SWFSourceDirM='C:\data\SWF'
 
   sensors = ['SWF', 'AVH']
   sourceFormats=['HDF', 'NC']
@@ -26,6 +28,8 @@ pro launch_fapar_comparisons_D, startYear, endYear, startMonth, endMonth, $
   tempDir='/home/mariomi/temp/'
   outputDir3='/space2/storage/projects'
   plotDir='/home/mariomi/data/PLOTS/DAILY'
+  outputDir3='C:\data\SWF'
+  plotDir='C:\data\SWF'
   ;TC_TYPE='DAILY'
   ;TA_TYPE='NONE'
 

@@ -32,11 +32,11 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
   fName=fsObj->getFileNameInfo(fullFileName, filePath=dir, extension=ext)
 
   if n_elements(varName) eq 1 then begin
-    slope=1
-    offset=0
-    fillValue=2^15
+    ;slope=1
+    ;offset=0
+    ;fillValue=2^15
     ;dataSet=operatorObj->readNcdfVar(fullFileName, varName, slope=slope, intercept=intercept, fillvalue=fillvalue, FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
-    dataSet=operatorObj->readNcdfVar(fullFileName, varName, slope=slope, intercept=intercept, fillvalue=fillvalue, FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count, fid=fid)
+    dataSet=operatorObj->readNcdfVar(fullFileName, varName, FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count, fid=fid)
     if keyword_set(FOUND) then begin
       countNan=-1
       if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
@@ -55,7 +55,7 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
         if size(flag, /TYPE) eq 4 then fapar[nanList]=!VALUES.F_NAN
         if size(flag, /TYPE) eq 5 then fapar[nanList]=!VALUES.D_NAN
       endif
-      return, {fapar:fapar, slope_fapar:slope_fapar, offset_fapar:offset_fapar, fillValue:fillValue, valid:valid}
+      return, {fapar:fapar, slope_fapar:slope_fapar, offset_fapar:offset_fapar, fillValue:!VALUES.F_NAN, valid:valid}
     endif
     return, 0
   endif

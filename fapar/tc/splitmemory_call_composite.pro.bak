@@ -39,10 +39,8 @@ Pro sm_make_tc_distance_eu_vegetation_m, daysNumber, data_in, idx_doIt, day, mea
   if nfield eq 3 then thres = 7.915
   if nfield eq 2 then thres = 5.991
   ; this setting coming from SeaWifs l3time C-Code
-;  if nfield eq 3 then thres = 3.53
-;  if nfield eq 2 then thres = 2.30
-  
-  
+  ;  if nfield eq 3 then thres = 3.53
+  ;  if nfield eq 2 then thres = 2.30
   ;
   ;=================================================================
   ;
@@ -57,26 +55,25 @@ Pro sm_make_tc_distance_eu_vegetation_m, daysNumber, data_in, idx_doIt, day, mea
   ;tt=size(data_in.day)
   tt=[0, daysNumber]
   ;try to avoid indexing/masking...
-  
+  ;tt=[0,n_elements(data_in)]
   for t=0, tt(1)-1 do begin
     ;buf(*,*)=-1.0
     ;buf(idx_doIt)=distance(t,*)
-    buf=reform(distance(t,*,*))
+    buf=reform(distance[t,*,*])
     ;stop
     ; MM & NG 22/09/2016
     idx_valid = where(buf le thres and buf ge 0.0, validCount); and distance(t,*,*) lt 50.0)
     ; check our distance vs StdDev
     ;idx_valid = where(buf le std_mean.temp and std_mean.temp gt 0, validCount); and distance(t,*,*) lt 50.0)
     if validCount gt 0 then index_2(idx_valid)=index_2(idx_valid)+one(idx_valid)
-    
-    ; remove outliers using flag 11
+    ; remove outliers using flag 21
     if nfield eq 2 then idx_bad_mask = where(buf gt thres and (data_in(t).flag eq 4 or data_in(t).flag eq 5), outliersCount)
     if nfield eq 3 then idx_bad_mask = where(buf gt thres and data_in(t).flag eq 0, outliersCount)
     vld=where(buf lt 100)
     ;if max(buf[vld]) gt thres then stop
     ;if nfield eq 2 then idx_bad_mask = where(buf gt thres and (data_in(t).flag eq 4 or data_in(t).flag eq 5), outliersCount)
     ;if nfield eq 3 then idx_bad_mask = where(buf gt std_mean.temp and data_in(t).flag eq 0, outliersCount)
-    if outliersCount gt 1 then data_in(t).flag(idx_bad_mask)=11.0
+    if outliersCount gt 1 then data_in(t).flag(idx_bad_mask)=21.0
     ; remove mask ONLY to work on bare soil (We need original daily flag values...)...
     ;if idx_bad_mask(0) ge 0 and nfield eq 2 then data_in(t).flag(idx_bad_mask)=21.0
     ;if idx_bad_mask(0) ge 0 then print, data_in(t).fapar(idx_bad_mask(0)), t
@@ -98,23 +95,34 @@ Pro sm_make_tc_distance_eu_vegetation_m, daysNumber, data_in, idx_doIt, day, mea
     ;saveDistance=distance[saveIndexes]
     ;idx_remake1=where(data_in.flag eq 0.0 and index_2 ge 3 and distance ne 100.0, complement=saveIndexes1)
     ;print, distance[*,280, ]
-    save, distance, filename='first_distance_.sav', /compress
-    save, meandat, filename='first_meandat_.sav', /compress
-    save, std_mean, filename='first_std_mean_.sav', /compress
-    DelidlVar, distance
+    ;save, distance, filename='first_distance_.sav', /compress
+    ;save, meandat, filename='first_meandat_.sav', /compress
+    ;save, std_mean, filename='first_std_mean_.sav', /compress
+    ;DelidlVar, distance
     ;saveMean=meandat[saveIndexes]
-    DelidlVar, meandat
+    ;DelidlVar, meandat
     ;savemean_std_mean=std_mean[saveIndexes]
-    DelidlVar, std_mean
-    
+    ;DelidlVar, std_mean
     sm_FindEuclideanMatricDistance, daysNumber, data_in, idx_remake, distanceRes, meandatRes, std_meanRes, nfield, flagNan, splitDims
-    distance=temporary(distanceRes)
-    meandat=temporary(meandatRes)
-    std_mean=temporary(std_meanRes)
-    save, distance, filename='new_distance_.sav', /compress
-    save, meandat, filename='new_meandat_.sav', /compress
-    save, std_mean, filename='new_std_mean_.sav', /compress
-     
+    ;stop
+    distance(*,idx_remake)=distanceRes(*,idx_remake)
+    DelidlVar, distanceRes
+    meandat.red(idx_remake)=meandatRes.red(idx_remake)
+    meandat.nir(idx_remake)=meandatRes.nir(idx_remake)
+    meandat.fapar(idx_remake)=meandatRes.fapar(idx_remake)
+    DelidlVar, meandatRes
+    ;help, std_mean, std_meanRes
+    std_mean.red(idx_remake)=std_meanRes.red(idx_remake)
+    std_mean.nir(idx_remake)=std_meanRes.nir(idx_remake)
+    std_mean.temp(idx_remake)=std_meanRes.temp(idx_remake)
+
+    DelidlVar, std_meanRes
+
+    ;meandat=temporary(meandatRes)
+    ;std_mean=temporary(std_meanRes)
+    ;save, distance, filename='new_distance_.sav', /compress
+    ;save, meandat, filename='new_meandat_.sav', /compress
+    ;save, std_mean, filename='new_std_mean_.sav', /compress
     ;    restore, 'distance.sav'
     ;    resDist=distanceRes-distance
     ;    restore, 'meandat.sav'
@@ -186,7 +194,7 @@ Pro sm_make_tc_distance_eu_vegetation_m, daysNumber, data_in, idx_doIt, day, mea
 END
 ;
 ;
-PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
+PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFlag
   ;
   ;
   ;
@@ -194,8 +202,6 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
   ;
   ; data_tc = time-composite results
   ;
-  ; switch this flag if you want water from mask or from jrc_flag (50%)
-  water_jrc=1
   ; test pixel position
 
   INT_NAN=2^15
@@ -207,8 +213,13 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
   daysNumber=count
   print, 'In the time composite program ...'
   ;
+  ; !!!!!!!!!!!!!!!!
+  ; NG 2016: YOU HAVE TO CHANGE THIS AS IF THERE IS MISSING DAILY FILE THE DAY WILL NOT CORRESPOND TO THE T ...
+  ;         I suggest that you add and save the DOY to replace in to DAY fiels in the output files
+  ;
+  ;
   ;tt=size(data_day.day)
-  tt=[0, daysNumber]
+  tt=[0, daysNumber-1]    ; ng ++
   print, 'daysNumber', daysnumber
   ;
   ;
@@ -227,6 +238,7 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
   ;    flag: bytarr(7200,3600)}
 
   ;only for test
+  prevflag=bytarr(7200,3600)
   data_tc= {day: bytarr(7200,3600), $
     nday: bytarr(7200,3600), $
     fapar: fltarr(7200,3600), $
@@ -240,8 +252,8 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
     sigma_nir: fltarr(7200,3600), $
     qa: intarr(7200,3600), $
     flag: bytarr(7200,3600), $
-    ts: intarr(7200,3600), $
-    tv: intarr(7200,3600), $
+    ts: fltarr(7200,3600), $
+    tv: fltarr(7200,3600), $
     toc_red: fltarr(7200,3600), $
     toc_nir: fltarr(7200,3600)}
   ;end test
@@ -285,16 +297,18 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
   xSplitDim=7200/nSlice
   ySplitDim=3600; full dim,
 
-  tt=[0, daysNumber]
+  tt=[0, daysNumber-1]    ; ng ++
   pixel_position=[460, 1680]
   ;720*3
   ;slBasedPix=[pixel_position[0]-(720*3), pixel_position[1]]
   ;print, SLBASEDPIX
 
-  ;startSlice=0
-  ;startSlice=nSlice
+  startSlice=0;2
+  endSlice=nSlice;2
+;  startSlice=10;2
+;  endSlice=11;2
 
-  for slice=2, 2 do begin ;nSlice-1 do begin
+  for slice=startSlice, endSlice-1 do begin ;nSlice-1 do begin
     ; good test: vertical slice #5 (on 10) shows "Europe and Africa"
     ;slice=
 
@@ -334,8 +348,8 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
       sigma_nir: fltarr(xSplitDim,ySplitDim), $
       flag: bytarr(xSplitDim,ySplitDim), $
       qa: intarr(xSplitDim,ySplitDim), $
-      ts: intarr(xSplitDim,ySplitDim), $
-      tv: intarr(xSplitDim,ySplitDim), $
+      ts: fltarr(xSplitDim,ySplitDim), $
+      tv: fltarr(xSplitDim,ySplitDim), $
       toc_red: fltarr(xSplitDim,ySplitDim), $
       toc_nir: fltarr(xSplitDim,ySplitDim), $
       valid:0}
@@ -372,14 +386,14 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
       sigma_nir: fltarr(xSplitDim,ySplitDim), $
       flag: bytarr(xSplitDim,ySplitDim), $
       qa: intarr(xSplitDim,ySplitDim), $
-      ts: intarr(xSplitDim,ySplitDim), $
-      tv: intarr(xSplitDim,ySplitDim), $
+      ts: fltarr(xSplitDim,ySplitDim), $
+      tv: fltarr(xSplitDim,ySplitDim), $
       toc_red: fltarr(xSplitDim,ySplitDim), $
       toc_nir: fltarr(xSplitDim,ySplitDim), $
       valid:0}
     ; end test
-
-    data_tc_split.flag=11 ; 1 means invalid for flag coding....
+    notAssignedFlag=15
+    data_tc_split.flag=notAssignedFlag ; init to not-assigned flag coding....
     data_tc_split.fapar[*,*]=DATA_NAN
     data_tc_split.red[*,*]=DATA_NAN
     data_tc_split.nir[*,*]=DATA_NAN
@@ -406,7 +420,9 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
 
     print, 'reading day from: ', tt[0]+1, 'to: ', tt[1]+1
     print, '...'
-    for t=0, tt[1]-1 do begin
+    resFlags=0
+    for t=0, tt[1] do begin   ; ng ++
+
       ;fInfo=file_info('testData10.sav')
       ;if fInfo.size gt 10 then begin
       ;  restore, 'testData10.sav'
@@ -420,10 +436,9 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
 
       ;restore, data_day_f[t].data_file
       ; only for test add "FULL" keyword
-      print, 'reading day...', t+1, '/', tt[1]
-      if data_day_f[t].fid gt 0 then faparData=read_AVHRR_FAPAR_1(data_day_f[t].fDir, data_day_f[t].fName, FOUND=FOUND, /APPLY, offset=[subXStart, 0], count=[xSplitDim, ySplitDim], fid=data_day_f[t].fid, /FULL) $
-      else faparData=read_AVHRR_FAPAR_1(data_day_f[t].fDir, data_day_f[t].fName, FOUND=FOUND, /APPLY, offset=[subXStart, 0], count=[xSplitDim, ySplitDim], fid=fid, /FULL)
-      ;stop
+      print, 'reading day...', t+1, '/', tt[1]+1
+      if data_day_f[t].fid gt 0 then faparData=read_AVHRR_FAPAR(data_day_f[t].fDir, data_day_f[t].fName, FOUND=FOUND, /APPLY, offset=[subXStart, 0], count=[xSplitDim, ySplitDim], fid=data_day_f[t].fid, /FULL) $
+      else faparData=read_AVHRR_FAPAR(data_day_f[t].fDir, data_day_f[t].fName, FOUND=FOUND, /APPLY, offset=[subXStart, 0], count=[xSplitDim, ySplitDim], fid=fid, /FULL)
       print, 'done'
       ;if fid ne -1 then data_day_f[t].fid=fid
       data_day_split[t].valid=0
@@ -435,7 +450,10 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
         data_day_split[t].sigma_red=faparData.sigma_red
         data_day_split[t].nir=faparData.nir
         data_day_split[t].sigma_nir=faparData.sigma_nir
-        data_day_split[t].flag=fapardata.flag
+        flagMatrix=fapardata.flag
+        data_day_split[t].flag=flagMatrix
+        resFlags=[resFlags,flagMatrix[UNIQ(flagMatrix, SORT(flagMatrix))]]
+        flagMatrix=0
         data_day_split[t].qa=faparData.qa
         data_day_split[t].ts=fapardata.ts
         data_day_split[t].tv=faparData.tv
@@ -496,18 +514,21 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
         data_day_split[t].valid=1
       endif
     endfor
+    !EXCEPT=2
+    resFlags=resFlags[UNIQ(resFlags, SORT(resFlags))]
+    print, resFlags
     ;save, data_day_split, filename='testData10.sav', /COMPRESS
     ;a=data_day_split
     vIdxs=where(data_day_split.valid eq 1, dNumber)
     daysNumber=dNumber
     data_day_split=data_day_split[vIdxs]
-    tt=[0, daysNumber]
+    tt=[0, daysNumber-1]
     waterMask=data_day_split[0].flag*0
 
-    indexVeg=bytarr(xSplitDim,ySplitDim)
-    indexVeg(*,*)=0
+    dayVeg=bytarr(xSplitDim,ySplitDim)
+    dayVeg(*,*)=0
     ;indexBareSoil=indexVeg
-    one=indexVeg
+    one=dayVeg
     one(*,*)=1
 
     ;window,1,xsize=360, ysize=360, title='flag 1'
@@ -515,17 +536,45 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
     ;tvscl, congrid(array, 72, 360)
     ;print, array[UNIQ(array, SORT(array))]
     pixel_position=[460, 1680]
-    for t=0, tt(1)-1 do begin
-      waterIdxs=where(data_day_split[t].flag eq 3,waterCnt)
-      if waterCnt ne 0 then waterMask[waterIdxs]=waterMask[waterIdxs]+1
-      idx_maskVeg = where(data_day_split(t).flag(*,*) eq 0.0 and data_day_split(t).fapar(*,*) gt 0.0 and $
-        data_day_split(t).red(*,*) gt 0.0 and data_day_split(t).red(*,*) lt 1.0 and $
-        data_day_split(t).nir(*,*) gt 0.0 and data_day_split(t).nir(*,*) lt 1.0)
-      idx_maskBareSoil = where((data_day_split(t).flag(*,*) eq 4.0 or data_day_split(t).flag(*,*) eq 5.0) and $
-        data_day_split(t).fapar(*,*) ge 0.0 and $
-        data_day_split(t).red(*,*) gt 0.0 and data_day_split(t).red(*,*) lt 1.0 and $
-        data_day_split(t).nir(*,*) gt 0.0 and data_day_split(t).nir(*,*) lt 1.0)
-      if idx_maskVeg(0) ge 0 then indexVeg(idx_maskVeg)=indexVeg(idx_maskVeg)+one(idx_maskVeg)
+    for t=0, tt(1) do begin
+      ;waterIdxs=where(data_day_split[t].flag eq 3,waterCnt)
+      ;if waterCnt ne 0 then waterMask[waterIdxs]=waterMask[waterIdxs]+1
+      ; cut off Nan
+      validMask=finite(data_day_split(t).fapar(*,*)) and finite(data_day_split(t).red(*,*)) and finite(data_day_split(t).nir(*,*))
+      goodIndexes=where(validMask eq 1)
+      ;indexPos=ARRAY_INDICES(data_day_split(t).fapar(*,*), goodIndexes)
+      idxMaskSoil=where(data_day_split(t).fapar[goodIndexes] ge 0.0 and $
+        data_day_split(t).red[goodIndexes] gt 0.0 and data_day_split(t).red[goodIndexes] lt 1.0 and $
+        data_day_split(t).nir[goodIndexes] gt 0.0 and data_day_split(t).nir[goodIndexes] lt 1.0)
+      validMaskSoil=validMask*0
+      validMaskSoil[goodIndexes[idxMaskSoil]]=1
+      ;create soil mask
+      validMaskSoil=validMask*validMaskSoil
+
+      idxMaskVeg=where(data_day_split(t).fapar[goodIndexes] gt 0.0 and $
+        data_day_split(t).red[goodIndexes] gt 0.0 and data_day_split(t).red[goodIndexes] lt 1.0 and $
+        data_day_split(t).nir[goodIndexes] gt 0.0 and data_day_split(t).nir[goodIndexes] lt 1.0)
+      validMaskVeg=validMask*0
+      validMaskVeg[goodIndexes[idxMaskVeg]]=1
+      ;create Veg mask
+
+      validMaskVeg=validMask*validMaskVeg
+      ;final Veg Mask
+      idx_maskVeg = where(validMaskVeg eq 1 and data_day_split(t).flag(*,*) eq 0.0, countVeg)
+      ;final Soil Mask
+      idx_maskSoil = where(validMaskSoil eq 1 and (data_day_split(t).flag(*,*) eq 4.0 or data_day_split(t).flag(*,*) eq 5.0), countSoil)
+      ; previous version (without Nan)
+      ;      idx_maskVeg = where(data_day_split(t).fapar(*,*) gt 0.0 and data_day_split(t).flag(*,*) eq 0.0 and  $
+      ;        data_day_split(t).red(*,*) gt 0.0 and data_day_split(t).red(*,*) lt 1.0 and $
+      ;        data_day_split(t).nir(*,*) gt 0.0 and data_day_split(t).nir(*,*) lt 1.0, count1)
+      ;      idx_maskBareSoil = where((data_day_split(t).flag(*,*) eq 4.0 or data_day_split(t).flag(*,*) eq 5.0) and $
+      ;        data_day_split(t).fapar(*,*) ge 0.0 and $
+      ;        data_day_split(t).red(*,*) gt 0.0 and data_day_split(t).red(*,*) lt 1.0 and $
+      ;        data_day_split(t).nir(*,*) gt 0.0 and data_day_split(t).nir(*,*) lt 1.0, count1)
+      ;window,3
+      ;tvscl, congrid(diff, 36,720)
+      if countVeg gt 0 then dayVeg[idx_maskVeg]=dayVeg[idx_maskVeg]+one[idx_maskVeg]
+      ;if countBSoil gt 0 then indexVeg[idx_maskVeg]=indexVeg[idx_maskVeg]+one[idx_maskVeg]
       ;if idx_maskBareSoil(0) ge 0 then indexBareSoil(idx_maskBareSoil)=indexBareSoil(idx_maskBareSoil)+one(idx_maskBareSoil)
     endfor
     ;==========================================================================================
@@ -538,7 +587,7 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
     ;
     ; associated values for the number of date is bigger or equal to 3
     ;
-    idx_third = where(indexVeg ge 3, complement=flagNan)
+    idx_third = where(dayVeg ge 3, complement=flagNan)
     ;
     ;dims = SIZE(indexVeg, /DIMENSIONS)
     ;ind = ARRAY_INDICES(dims, idx_third, /DIMENSIONS)
@@ -560,12 +609,12 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
     ;
     ;for t=0, tt(1)-1 do data_day_split(t).fapar=meandat(2,*,*)
     ;
-    for t =0 , tt(1) -1 do begin
+    for t =0 , tt(1)  do begin      ; ng ++
       ;idx_t=where(day eq float(t) and index ge 3)
       ; MM & NG 22/09/2016
       idx_t=where(day eq t and index_2 ge 3)
       if idx_t(0) ge 0 then begin
-        data_tc_split.nday[idx_t]=indexVeg[idx_t]
+        data_tc_split.nday[idx_t]=dayVeg[idx_t]
         data_tc_split.red(idx_t)= data_day_split(t).red(idx_t)
         data_tc_split.nir(idx_t)= data_day_split(t).nir(idx_t)
         data_tc_split.fapar(idx_t)= data_day_split(t).fapar(idx_t)
@@ -584,7 +633,7 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
         data_tc_split.toc_nir(idx_t) = data_day_split(t).toc_nir(idx_t)
         ; data_tc_split.dev_temp not time-dependent
       endif
-      ;tv, congrid(reform(data_tc_split.fapar[*,*]), 72, 360)
+      tv, congrid(reform(data_tc_split.fapar[*,*]), 72, 360)
       ;meandatFapar=meandat[2,*,*]
       ;      checkConsistency=where(data_tc_split.day(*) lt 255 and $
       ;        (data_tc_split.fapar(*) lt (MEANDATFAPAR(*)+std_mean.temp(*)) and $
@@ -644,11 +693,24 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
     ;
     ;
     ;
-    idx_one=where(indexVeg eq 1 or index_2 eq 1)
+    idx_one=where(dayVeg eq 1 or index_2 eq 1)
     ;totDay=data_day_split[0].flag*0
     ;
-    for t=0, tt(1)-1 do begin
-      idx_time = where((data_day_split(t).flag eq 0.0) and (data_day_split(t).fapar gt 0.0) and (indexVeg eq 1 or index_2 eq 1), countSingleDay)
+    for t=0, tt(1) do begin     ;   ng ++
+      validMask=finite(data_day_split(t).fapar)
+      goodIndexes=where(validMask eq 1)
+      ;indexPos=ARRAY_INDICES(data_day_split(t).fapar(*,*), goodIndexes)
+      idxMaskVeg=where(data_day_split(t).fapar[goodIndexes] gt 0.0)
+      validMaskVeg=validMask*0
+      validMaskVeg[goodIndexes[idxMaskVeg]]=1
+      ;create Veg mask
+
+      validMaskVeg=validMask*validMaskVeg
+      ;final Veg Mask
+      idx_time = where(validMaskVeg eq 1 and (data_day_split(t).flag eq 0.0) and (dayVeg eq 1 or index_2 eq 1), countSingleDay)
+
+;      idx_timeOld = where((data_day_split(t).flag eq 0.0) and (data_day_split(t).fapar gt 0.0) and (dayVeg eq 1 or index_2 eq 1), countSingleDayOld)
+;      if countSingleDay ne countSingleDayOld then stop
       print, 'singleDay for day: ', t, countSingleDay
       if countSingleDay gt 0 then begin
         data_tc_split.nday(idx_time)=1
@@ -702,14 +764,28 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
     ;
     ; associated values for the only dates
     ;
-    idx_two = where(indexVeg eq 2 or index_2 eq 2)
+    idx_two = where(dayVeg eq 2 or index_2 eq 2)
     ;
     fapar_two=fltarr(xSplitDim,3600)
     ;
-    for t=0, tt(1)-1 do begin
+    for t=0, tt(1)  do begin      ; ng ++
       buf=data_day_split(t).flag
       buf1=data_day_split(t).fapar
-      idx_time = where((buf eq 0.0) and (buf1 gt 0.0) and (indexVeg eq 2 or index_2 eq 2), coundTwoDays)
+
+      validMask=finite(buf) and finite(buf1)
+      goodIndexes=where(validMask eq 1)
+      ;indexPos=ARRAY_INDICES(data_day_split(t).fapar(*,*), goodIndexes)
+      idxMaskVeg=where(buf[goodIndexes] eq 0.0 and (buf1[goodIndexes] gt 0.0))
+      validMaskVeg=validMask*0
+      validMaskVeg[goodIndexes[idxMaskVeg]]=1
+      ;create Veg mask
+
+      validMaskVeg=validMask*validMaskVeg
+      ;final Veg Mask
+      idx_time = where(validMaskVeg eq 1 and (dayVeg eq 2 or index_2 eq 2), coundTwoDays)
+
+;      idx_timeOld = where((buf eq 0.0) and (buf1 gt 0.0) and (dayVeg eq 2 or index_2 eq 2), coundTwoDaysOld)
+;      if coundTwoDays ne coundTwoDaysOld then stop
       print, 'DoubleDay for day: ', t, coundTwoDays
       if coundTwoDays gt 0 then begin
         idx_lp= where(buf1(idx_time) gt fapar_two(idx_time))
@@ -746,10 +822,23 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
     ;
     ; compute the deviation ???? ---> do it after the third call ....
     ;
-    for t=0, tt(1)-1 do begin
+    for t=0, tt(1)  do begin        ; NG ++
       ;idx_ok=where(data_day_split(t).flag eq 0.0 and data_day_split(t).fapar gt 0.0 and index eq 2 and data_tc_split.day ne t)
       ; MM & NG 22/9/2016
-      idx_ok=where((data_day_split(t).flag eq 0.0) and (data_day_split(t).fapar gt 0.0) and (indexVeg eq 2 or index_2 eq 2) and (data_tc_split.day ne t))
+      validMask=finite(data_day_split(t).fapar(*,*))
+      goodIndexes=where(validMask eq 1)
+      ;indexPos=ARRAY_INDICES(data_day_split(t).fapar(*,*), goodIndexes)
+      idxMaskVeg=where(data_day_split(t).fapar[goodIndexes] gt 0.0)
+      validMaskVeg=validMask*0
+      validMaskVeg[goodIndexes[idxMaskVeg]]=1
+      ;create Veg mask
+
+      validMaskVeg=validMask*validMaskVeg
+      ;final Veg Mask
+      idx_ok = where(validMaskVeg eq 1 and (dayVeg eq 2 or index_2 eq 2) and (data_tc_split.day ne t) and data_day_split(t).flag eq 0.0, countDay)
+
+;      idx_okOld=where((data_day_split(t).flag eq 0.0) and (data_day_split(t).fapar gt 0.0) and (dayVeg eq 2 or index_2 eq 2) and (data_tc_split.day ne t), countDayOld)
+;      if countDay ne countDayOld then stop
       if idx_ok(0) ge 0 then begin
         data_tc_split.dev_red_temp(idx_ok)=abs(data_tc_split.red(idx_ok)-data_day_split(t).red(idx_ok))
         data_tc_split.dev_nir_temp(idx_ok)=abs(data_tc_split.nir(idx_ok)-data_day_split(t).nir(idx_ok))
@@ -813,10 +902,37 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
     indexBareSoil(*,*)=0
     one=indexBareSoil
     one(*,*)=1
-    for t=0, tt(1)-1 do begin
-      idx_masks = where(data_day_split(t).fapar eq 0 and $
-        data_day_split(t).red(*,*) gt 0.0 and data_day_split(t).red(*,*) lt 1.0 and $
-        data_day_split(t).nir(*,*) gt 0.0 and data_day_split(t).nir(*,*) lt 1.0 and indexVeg eq 0.0)
+    for t=0, tt(1)  do begin        ;  ng ++
+      validMask=finite(data_day_split(t).fapar(*,*)) and finite(data_day_split(t).red(*,*)) and finite(data_day_split(t).nir(*,*))
+      goodIndexes=where(validMask eq 1)
+      ;indexPos=ARRAY_INDICES(data_day_split(t).fapar(*,*), goodIndexes)
+      idxMaskSoil=where(data_day_split(t).fapar[goodIndexes] ge 0.0 and $
+        data_day_split(t).red[goodIndexes] gt 0.0 and data_day_split(t).red[goodIndexes] lt 1.0 and $
+        data_day_split(t).nir[goodIndexes] gt 0.0 and data_day_split(t).nir[goodIndexes] lt 1.0)
+      validMaskSoil=validMask*0
+      validMaskSoil[goodIndexes[idxMaskSoil]]=1
+      ;create soil mask
+      validMaskSoil=validMask*validMaskSoil
+
+      ;      idxMaskVeg=where(data_day_split(t).fapar[goodIndexes] gt 0.0 and $
+      ;        data_day_split(t).red[goodIndexes] gt 0.0 and data_day_split(t).red[goodIndexes] lt 1.0 and $
+      ;        data_day_split(t).nir[goodIndexes] gt 0.0 and data_day_split(t).nir[goodIndexes] lt 1.0)
+      ;      validMaskVeg=validMask*0
+      ;      validMaskVeg[goodIndexes[idxMaskVeg]]=1
+      ;      ;create Veg mask
+      ;
+      ;      validMaskVeg=validMask*validMaskVeg
+      ;      ;final Veg Mask
+      ;      idx_maskVeg = where(validMaskVeg eq 1 and data_day_split(t).flag(*,*) eq 0.0, countVeg)
+      ;final Soil Mask
+      idx_masks = where(validMaskSoil eq 1 and (data_day_split(t).flag(*,*) eq 4.0 or data_day_split(t).flag(*,*) eq 5.0), countSoil)
+      ;;; fixed
+
+;      idx_masksOld = where(data_day_split(t).fapar eq 0 and $
+;        data_day_split(t).red(*,*) gt 0.0 and data_day_split(t).red(*,*) lt 1.0 and $
+;        data_day_split(t).nir(*,*) gt 0.0 and data_day_split(t).nir(*,*) lt 1.0 and data_day_split(t).flag(*,*) eq 4.0 or $
+;        data_day_split(t).flag(*,*) eq 5.0, countSoilOld)                                                                                       ; ng 2016
+;      if countSoilOld ne countSoil then stop
       if idx_masks(0) ge 0 then indexBareSoil(idx_masks)=indexBareSoil(idx_masks)+one(idx_masks)
     endfor
 
@@ -844,6 +960,9 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
     ; associated values for the number of dates is bigger than 3
     ;
     idx_thirds = where(indexBareSoil ge 3, complement=flagNan)
+    print, '# soil pixels more than 3 times', N_elements(idx_thirds)
+    ;stop
+
     ;==========================================================================================
     ;dims = SIZE(indexBareSoil, /DIMENSIONS)
     ;ind = ARRAY_INDICES(dims, idx_thirds, /DIMENSIONS)
@@ -867,7 +986,7 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
     bareSday=data_tc_split.red
     bareSday[*]=0
 
-    for t=0 , tt(1) -1 do begin
+    for t=0 , tt(1) do begin        ; ng ++
       ;
       idx_t1=where(days eq t and index_2s ge 3, countThreeDays1)
       idx_t=where(days eq t and index_2s ge 3 and (data_day_split(t).flag eq 4. or $
@@ -910,7 +1029,7 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
       tvscl, congrid(reform(bareSday), 72, 360)
       ;
     endfor
-
+    ;stop
     ;idx_third=where(index_2s ge 3)
     ;data_tc_split.nday(idx_third)=indexBareSoil(idx_third)
     tvscl, congrid(reform(data_tc_split.nday), 72, 360)
@@ -943,8 +1062,9 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
     ;
     ; MM & NG 23/9/2016
     idx_ones = where(((indexBareSoil eq 1) or (index_2s eq 1)) and data_tc_split.flag ne 0)
+    ones=0b*data_tc_split.day+1
     ;
-    for t=0, tt(1)-1 do begin
+    for t=0, tt(1)  do begin          ;  ng ++
       ;idx_time = where(data_day_split(t).flag(idx_ones) eq 4.0)
       ; MM & NG 22/9/2016
       idx_time = where((data_day_split(t).flag(idx_ones) eq 4.0) or (data_day_split(t).flag(idx_ones) eq 5.0) , countSingleDay)
@@ -1006,13 +1126,37 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
     ;
     nir_two=fltarr(xSplitDim,3600)
     ;
-    for t=0, tt(1)-1 do begin
+    for t=0, tt(1)  do begin      ; ng ++
       buf=reform(data_day_split(t).flag)
       buf1=reform(data_day_split(t).nir)
       ;idx_time = where(buf eq 0.0 and buf1 gt 0.0 and indexs eq 2 or index_2s eq 2)
       ; MM & NG 22/9/2016
-      idx_time = where((buf eq 4.0 or buf eq 5.0) and data_tc_split.flag ne 0 and (buf1 gt 0.0) and (indexBareSoil eq 2 or index_2s eq 2), countTwoDays)
+      ;;;;  check here!!!!
+      validMask=finite(buf1)
+      goodIndexes=where(validMask eq 1)
+      ;indexPos=ARRAY_INDICES(data_day_split(t).fapar(*,*), goodIndexes)
+      idxMaskSoil=where(buf1[goodIndexes] gt 0.0)
+      validMaskSoil=validMask*0
+      validMaskSoil[goodIndexes[idxMaskSoil]]=1
+      ;create soil mask
+      validMaskSoil=validMask*validMaskSoil
+
+      ;      idxMaskVeg=where(data_day_split(t).fapar[goodIndexes] gt 0.0 and $
+      ;        data_day_split(t).red[goodIndexes] gt 0.0 and data_day_split(t).red[goodIndexes] lt 1.0 and $
+      ;        data_day_split(t).nir[goodIndexes] gt 0.0 and data_day_split(t).nir[goodIndexes] lt 1.0)
+      ;      validMaskVeg=validMask*0
+      ;      validMaskVeg[goodIndexes[idxMaskVeg]]=1
+      ;      ;create Veg mask
+      ;
+      ;      validMaskVeg=validMask*validMaskVeg
+      ;      ;final Veg Mask
+      ;      idx_maskVeg = where(validMaskVeg eq 1 and data_day_split(t).flag(*,*) eq 0.0, countVeg)
+      ;final Soil Mask
+      idx_time = where(validMaskSoil eq 1 and (buf eq 4.0 or buf eq 5.0) and data_tc_split.flag ne 0 and (indexBareSoil eq 2 or index_2s eq 2), countTwoDays)
+      ;;;;
+      ;idx_timeOld = where((buf eq 4.0 or buf eq 5.0) and data_tc_split.flag ne 0 and (buf1 gt 0.0) and (indexBareSoil eq 2 or index_2s eq 2), countTwoDaysOld)
       print, 'DoubleDay (bare soil) for day: ', t, coundTwoDays
+      ;if countTwoDaysOld ne  countTwoDays then stop
       if countTwoDays gt 0 then begin
         idx_lp= where(buf1(idx_time) gt nir_two(idx_time))
         if idx_lp(0) ge 0 then begin
@@ -1027,6 +1171,7 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
           data_tc_split.toc_red(idx_time(idx_lp))= data_day_split(t).toc_red(idx_time(idx_lp))
           data_tc_split.toc_nir(idx_time(idx_lp))= data_day_split(t).toc_nir(idx_time(idx_lp))
           wrongIndex=where(data_day_split(t).flag(idx_time(idx_lp)) eq 21, countWrong)
+          if countWrong ne 0 then stop
           data_tc_split.flag(idx_time(idx_lp))= data_day_split(t).flag(idx_time(idx_lp))
           ;overwriteCheck=where(data_tc_split.day(idx_time(idx_lp)) ne 255, overWriteCount)
           ;if overWriteCount then stop
@@ -1034,6 +1179,7 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
           bareSday(idx_time(idx_lp))=1.
         endif
       endif
+      ;tvscl, congrid(reform(data_tc_split.nday), 72, 360)
       ;tvscl, congrid(reform(bareSday), 72, 360)
       DelIdlVar, buf
       DelIdlVar, buf1
@@ -1043,7 +1189,21 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
     ;    bareSday[*]=0
     ;    bareSday[aa]=1
     ;tvscl, congrid(reform(bareSday), 72, 360)
-    tvscl, congrid(reform(data_tc_split.nday), 72, 360)
+    ;tvscl, congrid(reform(bareSday), 360, 500)
+    ;print, data_day_split[*].flag[Nodata[0]]
+    ;buf=reform(data_tc_split.flag)
+    ;buf=buf[355:385,2100:2200]
+    ;Nodata=where(buf eq 11, ccc)
+    ;print, ccc
+    ;for i=0, tt(1)-1 do begin
+    ;  testImage=(data_day_split[i].flag[355:385,2100:2200])[Nodata]
+    ;  boh=where ((testImage eq 4) or (testImage eq 5) or (testImage eq 0), errorCount)
+    ;  if errorCount ne 0 then stop
+    ;endfor
+    ;buf[*]=0
+    ;buf[Nodata]=1
+    ;tvscl, buf
+    ;tvscl, congrid(reform(data_tc_split.nday), 72, 360)
     ;array=data_tc_split.flag
     ;window,3, xsize=72*3, ysize=360*3, title='-->3<--'
     ;window,11,xsize=360, ysize=360, title='flag 11'
@@ -1057,9 +1217,18 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
     ;
     ; compute the deviation ???? ---> do it after the third call ....
     ;
-    for t=0, tt(1)-1 do begin
+    tempFlag=data_tc_split.flag
+    notAssigned1=where(data_tc_split.flag eq notAssignedFlag and data_tc_split.fapar gt 0., notAssignedCount)
+    if notAssignedCount gt 0 then stop
+    nCloudIceMx=0b*data_tc_split.flag
+    nSeaMx=nCloudIceMx
+
+    for t=0, tt(1)   do begin       ;  ng ++
       ;idx_ok=where(data_day_split(t).flag eq 4.0 and data_day_split(t).fapar eq 0.0 and indexs eq 2 and data_tc_split.day ne t)
       ; MM & NG 22/9/2016
+      ;fill jrc_flag (composite) with water ONLY if fapar is lt 0 (invalid, never computed)
+      idx_water=where((data_day_split(t).flag eq 3 and data_tc_split.fapar lt 0.0), checkWater)
+      if checkWater ne 0 then data_tc_split.flag[idx_water]=3
       idx_ok=where((data_day_split(t).flag eq 4.0 or data_day_split(t).flag eq 5.0) and (data_day_split(t).fapar eq 0.0) and (indexBareSoil eq 2 or index_2s eq 2) and data_tc_split.day ne t)
       if idx_ok(0) ge 0 then begin
         data_tc_split.dev_red_temp(idx_ok)=abs(data_tc_split.red(idx_ok)-data_day_split(t).red(idx_ok))
@@ -1075,13 +1244,126 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
         data_tc_split.toc_red[thisDayIndexes]=data_day_split[t].toc_red[thisDayIndexes]
         data_tc_split.toc_nir[thisDayIndexes]=data_day_split[t].toc_nir[thisDayIndexes]
       endif
-      ;fill jrc_flag (composite) with water ONLY if fapar is lt 0 (invalid, never computed)
-      idx_water=where((data_day_split(t).flag eq 3 and data_tc_split.fapar lt 0.0), checkWater)
-      if checkWater ne 0 then data_tc_split.flag[idx_water]=3
+
       ;tvscl, congrid(data_tc_split.flag, 72, 360)
       ;tvscl, congrid(data_day_split(t).flag, 72, 360)
       ;end test
+      idxSea=where(data_day_split(t).flag eq 3, cntSea)
+      idxCloudIce=where(data_day_split(t).flag eq 2, cntCloudIce)
+      if cntCloudIce gt 0 then nSeaMx[idxSea]=nseaMx[idxSea]+ones[idxSea]
+      if cntSea gt 0 then nCloudIceMx[idxCloudIce]=nCloudIceMx[idxCloudIce]+ones[idxCloudIce]
     endfor
+
+    ; remap only not-yet-assigned pixels (when flag eq notAssignedFlag)... (?)
+    ;    window, 0
+    ;    tvscl, congrid(reform(data_tc_split.day), 72, 360)
+    ;    dd=data_tc_split.day
+    tempFlag=data_tc_split.flag
+    notAssigned=where(data_tc_split.flag eq notAssignedFlag, notAssignedCount)
+    if notAssignedCount gt 1 then begin
+      print, '**Flag = ', notAssignedFlag, '!!! (not assigned value)***'
+      ;at least one pixel classified as sea...
+      idxSea=where(nSeaMx ne 0 and data_tc_split.flag eq notAssignedFlag, cntSea)
+      ;at least one pixel classified as cloud...
+      idxCloudIce=where(nCloudIceMx ne 0 and data_tc_split.flag eq notAssignedFlag, cntCloudIce)
+
+      choosenDay=-1
+      if cntSea gt 0 then begin
+        for pix=0, cntSea-1 do begin
+          ; lowest flag values... (?)
+          flagList=data_day_split[*].flag[idxSea[pix]]
+          unikFlags=flagList[UNIQ(flagList, SORT(flagList))]
+          if n_elements(unikFlags) ne 1 then stop
+          ; work around to map best flag using C/Seawifs approach
+          mapFlagList=mapFaparFlag(flagList)
+          selectedFlag=min(mapFlagList)
+          selectedDay=(where(selectedFlag eq mapFlagList))[0]
+          selectedFlag=mapFaparFlag(selectedFlag,/REVERT)
+          ; come back to AVHRR standard
+          data_tc_split.flag[idxSea[pix]]=selectedFlag
+          ;data_tc_split.flag[idxSea[pix]]=data_day_split[selectedDay].flag[idxSea[pix]]
+          data_tc_split.fapar[idxSea[pix]] = data_day_split[selectedDay].fapar[idxSea[pix]]
+          data_tc_split.red[idxSea[pix]]=data_day_split[selectedDay].red[idxSea[pix]]
+          data_tc_split.day[idxSea[pix]]=data_day_split[selectedDay].day
+          data_tc_split.nir[idxSea[pix]]= data_day_split[selectedDay].nir[idxSea[pix]]
+          data_tc_split.sigma_red[idxSea[pix]]= data_day_split[selectedDay].sigma_red[idxSea[pix]]
+          data_tc_split.sigma_nir[idxSea[pix]]= data_day_split[selectedDay].sigma_nir[idxSea[pix]]
+          data_tc_split.sigma[idxSea[pix]]= data_day_split[selectedDay].sigma[idxSea[pix]]
+          data_tc_split.toc_red[idxSea[pix]]= data_day_split[selectedDay].toc_red[idxSea[pix]]
+          data_tc_split.toc_nir[idxSea[pix]]= data_day_split[selectedDay].toc_nir[idxSea[pix]]
+          data_tc_split.ts[idxSea[pix]]=data_day_split[selectedDay].ts[idxSea[pix]]
+          data_tc_split.tv[idxSea[pix]]=data_day_split[selectedDay].tv[idxSea[pix]]
+          data_tc_split.toc_red[idxSea[pix]]=data_day_split[selectedDay].toc_red[idxSea[pix]]
+          data_tc_split.toc_nir[idxSea[pix]]=data_day_split[selectedDay].toc_nir[idxSea[pix]]
+        endfor
+      endif else begin
+        nSeaMx[*]=0
+        if cntCloudIce gt 0 then begin
+          print, 'clouds:', cntCloudIce
+          for pix=0, cntCloudIce-1 do begin
+            ; just for "tv" test recycle nSeaMx variable
+            nSeaMx[idxCloudIce[pix]]=1
+            flagList=data_day_split[*].flag[idxCloudIce[pix]]
+            unikFlags=flagList[UNIQ(flagList, SORT(flagList))]
+            aa=where(unikFlags eq 21,c)
+            ;if n_elements(unikFlags) ne 1 and c eq 0 then stop
+            ; work around to map best flag using C/Seawifs approach
+            mapFlagList=mapFaparFlag(flagList)
+            notBad=where(mapFlagList ne 255, cnt)
+            if cnt gt 0 then selectedFlag=max(mapFlagList[notBad]) else selectedFlag=255
+            selectedDay=(where(selectedFlag eq mapFlagList))[0]
+            selectedFlag=mapFaparFlag(selectedFlag,/REVERT)
+            ; come back to AVHRR standard
+            ;if selectedFlag ne 1 then begin
+            data_tc_split.flag[idxCloudIce[pix]] = selectedFlag
+            ;print, 'choose:', selectedFlag
+            ;print, 'from:', unikFlags
+            ; just for test
+            ;data_tc_split.flag[idxCloudIce[pix]] = 7
+            ;data_tc_split.flag[idxCloudIce[pix]]=data_day_split[selectedDay].flag[idxCloudIce[pix]]
+            data_tc_split.fapar[idxCloudIce[pix]] = data_day_split[selectedDay].fapar[idxCloudIce[pix]]
+            data_tc_split.day[idxCloudIce[pix]] = data_day_split[selectedDay].day
+            data_tc_split.red[idxCloudIce[pix]]=data_day_split[selectedDay].red[idxCloudIce[pix]]
+            data_tc_split.nir[idxCloudIce[pix]]= data_day_split[selectedDay].nir[idxCloudIce[pix]]
+            data_tc_split.sigma_red[idxCloudIce[pix]]= data_day_split[selectedDay].sigma_red[idxCloudIce[pix]]
+            data_tc_split.sigma_nir[idxCloudIce[pix]]= data_day_split[selectedDay].sigma_nir[idxCloudIce[pix]]
+            data_tc_split.sigma[idxCloudIce[pix]]= data_day_split[selectedDay].sigma[idxCloudIce[pix]]
+            data_tc_split.toc_red[idxCloudIce[pix]]= data_day_split[selectedDay].toc_red[idxCloudIce[pix]]
+            data_tc_split.toc_nir[idxCloudIce[pix]]= data_day_split[selectedDay].toc_nir[idxCloudIce[pix]]
+            data_tc_split.ts[idxCloudIce[pix]]=data_day_split[selectedDay].ts[idxCloudIce[pix]]
+            data_tc_split.tv[idxCloudIce[pix]]=data_day_split[selectedDay].tv[idxCloudIce[pix]]
+            data_tc_split.toc_red[idxCloudIce[pix]]=data_day_split[selectedDay].toc_red[idxCloudIce[pix]]
+            data_tc_split.toc_nir[idxCloudIce[pix]]=data_day_split[selectedDay].toc_nir[idxCloudIce[pix]]
+            ;endif
+          endfor
+        endif else begin
+          for jj=0, n_elements(notAssigned)-1 do begin
+            fList=data_day_split[*].flag[notAssigned[jj]]
+            unikFlags=fList[UNIQ(fList, SORT(fList))]
+            if n_elements(unikFlags) ne 1 then stop
+            if unikFlags ne 1 then stop
+            data_tc_split.flag[notAssigned[jj]]=unikFlags
+            print, 'undetermined flag-->', unikFlags
+          endfor
+        endelse
+      endelse
+    endif
+    ;    diffDay=dd-data_tc_split.day
+    ;    window, 1
+    ;    tvscl, congrid(reform(data_tc_split.day), 72, 360)
+    ;    window, 2
+    ;    tvscl, congrid(reform(diffDay), 72, 360)
+    ;      for jj=0, notAssignedCount-1 do begin
+    ;        strangeReasonIdx=where((data_day_split[*].flag[notAssigned[jj]] ne 1) and (data_day_split[*].flag[notAssigned[jj]] ne 2), strangereasonCount)
+    ;        if strangereasonCount gt 1 then begin
+    ;          print, data_tc_split.fapar[notAssigned[jj]]
+    ;          print, data_day_split[*].fapar[notAssigned[jj]]
+    ;          print, data_day_split[*].flag[notAssigned[jj]]
+    ;        endif
+    ;      endfor
+    ;      print, '**Flag = ',notAssignedFlag,'!!! (end)***'
+    ;    endif
+
 
     ;array=data_tc_split.flag
     ;window,3, xsize=72*3, ysize=360*3, title='-->3<--'
@@ -1091,12 +1373,13 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
     ;tvscl, congrid(data_tc_split.flag, 72, 360)
     ;data_tc_split.nday(idx_two)=2
     ;data_tc_split.flag(idx_two)=4
-;    bareSday=data_tc_split.flag
-;    aa=where(bareSday eq 4)
-;    bareSday[*]=0
-;    bareSday[aa]=1
-;    tvscl, congrid(reform(bareSday), 72, 360)
+    ;    bareSday=data_tc_split.flag
+    ;    aa=where(bareSday eq 4)
+    ;    bareSday[*]=0
+    ;    bareSday[aa]=1
+    ;    tvscl, congrid(reform(bareSday), 72, 360)
     tvscl, congrid(reform(data_tc_split.nday), 72, 360)
+    ;tvscl, congrid(reform(nSeaMx), 72, 360)
     ;    window, 10, xsize=360, ysize=360, title='day - 4'
     ;    tvscl, congrid(data_tc_split.day, 72, 360)
     ;    window, 11, xsize=360, ysize=360, title='fapar - 4'
@@ -1110,6 +1393,7 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
     ;tv, reverse(congrid(data_tc_split.fapar*250.0, 720*2, 360*2),2)
     ;tv, congrid(data_tc_split.fapar*250.0, 72*3, 360*3)
     print, 'compute slice...', slice+1, '/', nSlice
+    prevflag[subXStart:subXEnd, subYStart:subYEnd]=tempFlag
     data_tc.nday[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.nday[*,*]
     data_tc.day[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.day[*,*]
 
@@ -1128,9 +1412,8 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
     ;      waterIdxs=where(waterMask ge 0.5, waterCnt)
     ;      if waterCnt gt 0 then data_tc_split.flag[waterIdxs]=3
     ;    endif
-    wrong=where(data_tc_split.flag[*,*] eq 3 and data_tc_split.fapar[*,*] gt 0.0, cntWrng)
-    if cntWrng ne 0 then stop
-
+    ;wrong=where(data_tc_split.flag[*,*] eq 3 and data_tc_split.fapar[*,*] gt 0.0, cntWrng)
+    ;if cntWrng ne 0 then stop
 
     data_tc.flag[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.flag[*,*]
     data_tc.fapar[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.fapar[*,*]
@@ -1165,6 +1448,9 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
   ;  endif
   ;window,2, xsize=720*2, ysize=360*2, title='Water from land use!!!'
   ;tvscl, congrid(data_tc.flag, 720*2, 360*2)
+  NanDay=where(data_tc.day ne 255, validCountDay)
+  ; Add 1 to update 0-based day "index": more readable field
+  if validCountDay gt 0 then data_tc.day=data_tc.day+1
 
 
   tNames=tag_names(data_tc)
@@ -1175,6 +1461,11 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice
       if nanCount gt 0 then data_tc.(i)[nanIndexes]=INT_NAN
     endif
   endfor
+  ; check Sahara mistery...
+
+  ;data_tc.fapar[3500:3700, 2100]=0.5
+
+  saharaIndex=where(data_tc.fapar eq 0 and data_tc.flag eq 6, countSahara)
   ;window,11, xsize=720, ysize=360, title='FAPAR'
   ;tv, reverse(congrid(data_tc_split.fapar*250.0, 720*2, 360*2),2)
   ;tv, congrid(data_tc.fapar*250.0, 720, 360)

@@ -23,10 +23,24 @@ Pro sm_call_mean_3,  daysNumber, data_in, mean_field, std_mean, std_field, nfiel
   if nfield eq 3 then begin
 
     for t=0, tt(1)-1 do begin
-      idx_c= where((data_in(t).red gt 0. and data_in(t).red lt 1.) and $
-        (data_in(t).nir gt 0. and data_in(t).nir lt 1.) and $
-        (data_in(t).fapar gt 0. and data_in(t).fapar le 1.) and $
-        (data_in(t).flag eq 0.))
+      validMask=finite(data_in(t).fapar(*,*)) and finite(data_in(t).red(*,*)) and finite(data_in(t).nir(*,*))
+      goodIndexes=where(validMask eq 1)
+
+      idxMaskVeg=where(data_in(t).fapar[goodIndexes] gt 0.0 and $
+        data_in(t).red[goodIndexes] gt 0.0 and data_in(t).red[goodIndexes] lt 1.0 and $
+        data_in(t).nir[goodIndexes] gt 0.0 and data_in(t).nir[goodIndexes] lt 1.0)
+      validMaskVeg=validMask*0
+      validMaskVeg[goodIndexes[idxMaskVeg]]=1
+      validMaskVeg=validMask*validMaskVeg
+      idx_c = where(validMaskVeg eq 1 and data_in(t).flag(*,*) eq 0.0, countVeg)
+
+      ; previous (without NaN)
+;      idx_cOld= where((data_in(t).red gt 0. and data_in(t).red lt 1.) and $
+;        (data_in(t).nir gt 0. and data_in(t).nir lt 1.) and $
+;        (data_in(t).fapar gt 0. and data_in(t).fapar le 1.) and $
+;        (data_in(t).flag eq 0.), countVegOld)
+;      if countVegOld ne countVeg then stop
+
       if idx_c(0) ge 0 then begin
         buf1(idx_c)= data_in(t).red(idx_c)+buf1(idx_c)
         buf2(idx_c)= data_in(t).nir(idx_c)+buf2(idx_c)
@@ -34,18 +48,33 @@ Pro sm_call_mean_3,  daysNumber, data_in, mean_field, std_mean, std_field, nfiel
         num_used(idx_c)=num_used(idx_c)+one(idx_c)
       endif
     endfor
-    print, data_in(*).fapar[280,2580]
+    ;print, data_in(*).fapar[280,2580]
   endif else begin
     for t=0, tt(1)-1 do begin
-      idx_c= where((data_in(t).red gt 0. and data_in(t).red lt 1.) and $
-        (data_in(t).nir gt 0. and data_in(t).nir lt 1.) and $
-        (data_in(t).fapar eq 0.) and $
-        (data_in(t).flag eq 4. or data_in(t).flag eq 5.))
+      ;;;;
+      validMask=finite(data_in(t).fapar(*,*)) and finite(data_in(t).red(*,*)) and finite(data_in(t).nir(*,*))
+      goodIndexes=where(validMask eq 1)
+
+      idxMaskSoil=where(data_in(t).fapar[goodIndexes] eq 0 and $
+        data_in(t).red[goodIndexes] gt 0.0 and data_in(t).red[goodIndexes] lt 1.0 and $
+        data_in(t).nir[goodIndexes] gt 0.0 and data_in(t).nir[goodIndexes] lt 1.0)
+      validMaskSoil=validMask*0
+      validMaskSoil[goodIndexes[idxMaskSoil]]=1
+      validMaskSoil=validMask*validMaskSoil
+      idx_c= where(validMaskSoil eq 1 and (data_in(t).flag eq 4. or data_in(t).flag eq 5.), countSoil)
+      ;;;;
+;      idx_cOld= where((data_in(t).red gt 0. and data_in(t).red lt 1.) and $
+;        (data_in(t).nir gt 0. and data_in(t).nir lt 1.) and $
+;        (data_in(t).fapar eq 0.) and $
+;        (data_in(t).flag eq 4. or data_in(t).flag eq 5.), countSoilOld)
+;      if countSoilOld ne countSoil then stop
       ;      a=where((data_in(t).red gt 0. and data_in(t).red lt 1.), redc)
       ;      b=where((data_in(t).nir gt 0. and data_in(t).nir lt 1.), nirc)
       ;      c=where(data_in(t).fapar eq 0., faparc)
       ;      d=where(data_in(t).flag eq 4. or data_in(t).flag eq 5., flagc)
       ;print,  redc, nirc, faparc, flagc
+      ; help, t, idx_c
+      ; stop
       if idx_c(0) ge 0 then begin
         buf1(idx_c)= data_in(t).red(idx_c)+buf1(idx_c)
         buf2(idx_c)= data_in(t).nir(idx_c)+buf2(idx_c)
@@ -55,27 +84,27 @@ Pro sm_call_mean_3,  daysNumber, data_in, mean_field, std_mean, std_field, nfiel
   endelse
   ;
   if nfield eq 3 then begin
-    idx_ok=where(num_used ge 1 and buf1 gt 0.0 and buf2 gt 0. and buf3 gt 0.)
+    idx_ok=where(num_used ge 3 and buf1 gt 0.0 and buf2 gt 0. and buf3 gt 0.)   ; ng 2016
     if idx_ok(0) ge 0 then begin
       buf1(idx_ok)=buf1(idx_ok)/float(num_used(idx_ok))
       buf2(idx_ok)=buf2(idx_ok)/float(num_used(idx_ok))
       buf3(idx_ok)=buf3(idx_ok)/float(num_used(idx_ok))
-      print, buf3[280,2580]
+      ;print, buf3[280,2580]
     endif
-    idx_nok=where(num_used lt 1.0 or buf1 le 0.0 or buf2 le 0.0 or buf3 le 0.0)
+    idx_nok=where(num_used le 2.0 or buf1 le 0.0 or buf2 le 0.0 or buf3 le 0.0)   ; ng 2016
     if idx_nok(0) ge 0 then begin
       buf1(idx_nok)=-1.0
       buf2(idx_nok)=-1.0
       buf3(idx_nok)=-1.0
     endif
   endif else begin
-    idx_ok=where(num_used ge 1 and buf1 gt 0.0 and buf2 gt 0.)
+    idx_ok=where(num_used ge 3 and buf1 gt 0.0 and buf2 gt 0.)  ;ng 2016
     ; bare soil here
     if idx_ok(0) ge 0 then begin
       buf1(idx_ok)=buf1(idx_ok)/float(num_used(idx_ok))
       buf2(idx_ok)=buf2(idx_ok)/float(num_used(idx_ok))
     endif
-    idx_nok=where(num_used lt 1.0 or buf1 lt 0.0 or buf2 lt 0.0)
+    idx_nok=where(num_used le 2.0 or buf1 lt 0.0 or buf2 lt 0.0)  ; ng 2016
     ; no data here
     if idx_nok(0) ge 0 then begin
       buf1(idx_nok)=-1.0
@@ -92,6 +121,7 @@ Pro sm_call_mean_3,  daysNumber, data_in, mean_field, std_mean, std_field, nfiel
   mean_field(*,*).nir=buf2(*,*)
   if nfield eq 3 then mean_field.fapar=buf3(*,*)
   ;
+  ;stop
   ;
   ;window, 0, xsize=splitDims(0), ysize=splitDims(1)/3.
   ;tvscl, congrid(buf1(*,*), splitDims(0), splitDims(1)/3.)
@@ -121,19 +151,53 @@ Pro sm_call_mean_3,  daysNumber, data_in, mean_field, std_mean, std_field, nfiel
       buf(*,*)=data_in(t).red(*,*)
       ;buff(*,*)=mean_field(0,*,*)
       buff(*,*)=mean_field(*,*).red
-      idx=where((buf gt 0. and buf lt 1.0) and (buff gt 0. and buff lt 1.) and data_in(t).flag eq 0.)
+
+      validMask=finite(buf) and finite(buff)
+      goodIndexes=where(validMask eq 1)
+
+      idxMaskVeg=where(buf[goodIndexes] gt 0.0 and buf[goodIndexes] lt 1.0 and $
+        buff[goodIndexes] gt 0.0 and buff[goodIndexes] lt 1.0)
+      validMaskVeg=validMask*0
+      validMaskVeg[goodIndexes[idxMaskVeg]]=1
+      validMaskVeg=validMask*validMaskVeg
+
+      idx=where(validMaskVeg eq 1 and data_in(t).flag eq 0. and num_used ge 3.0, countBuf) ;ng 2016
+      ; previous version without NaN
+      ;idx=where((buf gt 0. and buf lt 1.0) and (buff gt 0. and buff lt 1.) and data_in(t).flag eq 0. and num_used ge 3.0, countBuf) ;ng 2016
       if idx(0) ge 0 then buf1(idx) = abs(buf(idx)-buff(idx))
       ;
       buf=data_in(t).nir
       ;buff(*,*)=mean_field(1,*,*)
       buff(*,*)=mean_field(*,*).nir
-      idx=where((buf gt 0. and buf lt 1.0) and (buff gt 0. and buff lt 1.) and (data_in(t).flag eq 0.))
+
+      validMask=finite(buf) and finite(buff)
+      goodIndexes=where(validMask eq 1)
+
+      idxMaskVeg=where(buf[goodIndexes] gt 0.0 and buf[goodIndexes] lt 1.0 and $
+        buff[goodIndexes] gt 0.0 and buff[goodIndexes] lt 1.0)
+      validMaskVeg=validMask*0
+      validMaskVeg[goodIndexes[idxMaskVeg]]=1
+      validMaskVeg=validMask*validMaskVeg
+
+      idx=where(validMaskVeg eq 1 and data_in(t).flag eq 0. and num_used ge 3.0, countBuf) ;ng 2016
+      ; previous version without NaN
+      ;idx=where((buf gt 0. and buf lt 1.0) and (buff gt 0. and buff lt 1.) and (data_in(t).flag eq 0.) and num_used ge 3.0, countBuf) ;ng 2016 )
       if idx(0) ge 0 then buf2(idx)= abs(buf(idx)-buff(idx))
       ;
       buf=data_in(t).fapar
       ;buff(*,*)=mean_field(2,*,*)
       buff(*,*)=mean_field(*,*).fapar
-      idx=where((buf gt 0. and buf le 1.0) and (buff gt 0. and buff le 1.) and (data_in(t).flag eq 0.))
+      validMask=finite(buf) and finite(buff)
+      goodIndexes=where(validMask eq 1)
+
+      idxMaskVeg=where(buf[goodIndexes] gt 0.0 and buf[goodIndexes] lt 1.0 and $
+        buff[goodIndexes] gt 0.0 and buff[goodIndexes] lt 1.0)
+      validMaskVeg=validMask*0
+      validMaskVeg[goodIndexes[idxMaskVeg]]=1
+      validMaskVeg=validMask*validMaskVeg
+
+      idx=where(validMaskVeg eq 1 and data_in(t).flag eq 0. and num_used ge 3.0, countBuf) ;ng 2016
+      ;idx=where((buf gt 0. and buf le 1.0) and (buff gt 0. and buff le 1.) and (data_in(t).flag eq 0.) and num_used ge 3.0, countBuf) ;ng 2016
       if idx(0) ge 0 then buf3(idx)  = abs(buf(idx)-buff(idx))
       ;
       ;      std_field(0,t,*,*)=buf1
@@ -155,19 +219,45 @@ Pro sm_call_mean_3,  daysNumber, data_in, mean_field, std_mean, std_field, nfiel
       buf=data_in(t).red
       ;buff(*,*)=mean_field(0,*,*)
       buff(*,*)=mean_field(*,*).red
-      idx=where((buf gt 0. and buf lt 1.0) and (buff gt 0. and buff lt 1.) and (data_in(t).flag eq 4. or data_in(t).flag eq 5.))
+
+      validMask=finite(buf) and finite(buff)
+      goodIndexes=where(validMask eq 1)
+
+      idxMaskVeg=where(buf[goodIndexes] gt 0.0 and buf[goodIndexes] lt 1.0 and $
+        buff[goodIndexes] gt 0.0 and buff[goodIndexes] lt 1.0)
+      validMaskVeg=validMask*0
+      validMaskVeg[goodIndexes[idxMaskVeg]]=1
+      validMaskVeg=validMask*validMaskVeg
+
+      idx=where(validMaskVeg eq 1 and (data_in(t).flag eq 4. or data_in(t).flag eq 5.) and num_used ge 3.0, countBuf) ;ng 2016
+      ;;;;
+      ;idxOld=where((buf gt 0. and buf lt 1.0) and (buff gt 0. and buff lt 1.) and (data_in(t).flag eq 4. or data_in(t).flag eq 5.) and num_used ge 3.0, countBufOld) ; ng 2016
+      ;if countBufOld ne countBuf then stop
       if idx(0) ge 0 then buf1(idx) = abs(buf(idx)-buff(idx))
       ;
       buf=data_in(t).nir
-      ;buff(*,*)=mean_field(1,*,*)
       buff(*,*)=mean_field(*,*).nir
-      idx=where((buf gt 0. and buf lt 1.0) and (buff gt 0. and buff lt 1.) and (data_in(t).flag eq 4. or data_in(t).flag eq 4.))
+
+      ;;;
+      validMask=finite(buf) and finite(buff)
+      goodIndexes=where(validMask eq 1)
+
+      idxMaskVeg=where(buf[goodIndexes] gt 0.0 and buf[goodIndexes] lt 1.0 and $
+        buff[goodIndexes] gt 0.0 and buff[goodIndexes] lt 1.0)
+      validMaskVeg=validMask*0
+      validMaskVeg[goodIndexes[idxMaskVeg]]=1
+      validMaskVeg=validMask*validMaskVeg
+
+      idx=where(validMaskVeg eq 1 and (data_in(t).flag eq 4. or data_in(t).flag eq 5.) and num_used ge 3.0, countBuf) ;ng 2016
+      ;idxOld=where((buf gt 0. and buf lt 1.0) and (buff gt 0. and buff lt 1.) and (data_in(t).flag eq 4. or data_in(t).flag eq 5.) and num_used ge 3.0, countBufOld) ; ng 2016
+      ;if countBufOld-countBuf gt 1 then stop
       if idx(0) ge 0 then buf2(idx)= abs(buf(idx)-buff(idx))
       ;
       ;std_field(0,t,*,*)=buf1
       ;std_field(1,t,*,*)=buf2
       std_field.red(t,*,*)=buf1
       std_field.nir(t,*,*)=buf2
+      ;  stop
     endfor
   endelse
   ;where()
@@ -214,16 +304,20 @@ Pro sm_call_mean_3,  daysNumber, data_in, mean_field, std_mean, std_field, nfiel
   ;
   ;
   ;
-  idx_ok=where(num_used_1 ge 2.0)
+  idx_ok=where(num_used_1 ge 3.0) ; ng 2016
   if idx_ok(0) ge 0 then buf1(idx_ok)=sqrt(buf1(idx_ok)/float(num_used_1(idx_ok)-1))
-  idx_ok=where(num_used_2 ge 2.0)
+  idx_ok=where(num_used_2 ge 3.0) ; ng 2016
   if idx_ok(0) ge 0 then buf2(idx_ok)=sqrt(buf2(idx_ok)/float(num_used_2(idx_ok)-1))
   if nfield eq 3 then begin
-    idx_ok=where(num_used_3 ge 2.0)
+    idx_ok=where(num_used_3 ge 3.0) ; ng 2016
     if idx_ok(0) ge 0 then buf3(idx_ok)=sqrt(buf3(idx_ok)/float(num_used_3(idx_ok)-1))
   endif
   ;
-  idx_nok=where(num_used le 1.0)
+  ;erase
+  ;window,0
+  ;plot, num_used_1 , num_used_2, psym =2
+  ;stop
+  idx_nok=where(num_used le 2.0)  ; ng 2016
   if idx_nok(0) ge 0 then begin
     buf1(idx_nok)=-1.0
     buf2(idx_nok)=-1.0
@@ -234,13 +328,19 @@ Pro sm_call_mean_3,  daysNumber, data_in, mean_field, std_mean, std_field, nfiel
   std_mean.nir[*,*]=buf2[*,*]
   if nfield eq 3 then begin
     std_mean.temp[*,*]=buf3[*,*]
-    checkZeroes=where(std_mean.temp[*,*] eq 0 and mean_field[*,*].fapar eq 0, countZeroes)
-  endif
+    checkZeroes=where(std_mean.temp[*,*] eq 0, countZeroes)
+    print,'Find # points with Standard Deviation Mean FAPAR = 0 ', countZeroes
 
+  endif
+  ;
+  ;stop
   ;std_mean(0,*,*)=buf1(*,*)
   ;std_mean(1,*,*)=buf2(*,*)
   ;if nfield eq 3 then std_mean(2,*,*)=buf3(*,*)
-
+  ;plot, mean_field(*,*).red, mean_field(*,*).nir, psym=1
+  ;oplot, mean_field(*,*).nir, psym=4
+  ;oplot, mean_field(*,*).fapar, psym=6
+  ; stop
 end
 ;===================================================================================================
 ;
@@ -251,16 +351,16 @@ PRO sm_FindEuclideanMatricDistance, daysNumber, data_in, idx_third, distance, me
   ;
   ;
   ; inputs:
-  ;	data_in : daily data
-  ;	position of of valid points > 3
-  ;	nfield: 3 if vegetation - 2 if bare soil
+  ; data_in : daily data
+  ; position of of valid points > 3
+  ; nfield: 3 if vegetation - 2 if bare soil
   ;
   ; option: add weight with uncertainties
   ;
   ; outputs:
-  ;	distance : normalized euclidean distance
-  ;	mean_field: average over the valid dates
-  ;	std_mean: mean standard deviation over the valid dates
+  ; distance : normalized euclidean distance
+  ; mean_field: average over the valid dates
+  ; std_mean: mean standard deviation over the valid dates
   ;
   ;
   ;
@@ -280,6 +380,8 @@ PRO sm_FindEuclideanMatricDistance, daysNumber, data_in, idx_third, distance, me
   ;distance=fltarr(tt(1),okpix)
   distance=fltarr(tt(1),splitDims[0],splitDims[1], /NO)
   ;
+  ;help, distance
+  ;stop
   distance[*]=100.0
   ;
   ;buf=fltarr(okpix)
@@ -337,7 +439,27 @@ PRO sm_FindEuclideanMatricDistance, daysNumber, data_in, idx_third, distance, me
           buf5(idx_ca)^2/buf2(idx_ca)^2 +$
           buf6(idx_ca)^2/buf3(idx_ca)^2 )
       endif
-      
+      idx_ca1=where(buf1 eq 0.0 and buf4  ge 0.0, count1)
+      idx_ca2=where(buf2 eq 0.0 and buf5  ge 0.0, count2)
+      idx_ca3=where(buf3 eq 0.0 and buf6  ge 0.0, count3)
+      ;
+      print, '# std = 0:', count1, count2, count3 ; ng 2016
+      if count1 gt 0 then begin      ; ng 2016
+        buf(idx_ca1)= sqrt($
+          buf5(idx_ca1)^2/buf2(idx_ca1)^2 +$
+          buf6(idx_ca1)^2/buf3(idx_ca1)^2 )
+      endif
+      if count2 gt 0 then begin      ; ng 2016
+        buf(idx_ca2)= sqrt($
+          buf4(idx_ca2)^2/buf1(idx_ca2)^2 +$
+          buf6(idx_ca2)^2/buf3(idx_ca2)^2 )
+      endif
+      if count3 gt 0 then begin      ; ng 2016
+        buf(idx_ca3)= sqrt($
+          buf4(idx_ca3)^2/buf1(idx_ca3)^2 +$
+          buf5(idx_ca3)^2/buf2(idx_ca3)^2 )
+      endif
+
       ; simplified computation of distance
       ;      if foundElements gt 0 then begin
       ;        buf(idx_ca)= abs(buf6(idx_ca)-buf3(idx_ca))
@@ -349,24 +471,25 @@ PRO sm_FindEuclideanMatricDistance, daysNumber, data_in, idx_third, distance, me
       ;      idx_ca1=where(buf1 eq 0.0 and buf4  ge 0.0, count1)
       ;      idx_ca2=where(buf2 eq 0.0 and buf5  ge 0.0, count2)
       ;      idx_ca3=where(buf3 eq 0.0 and buf6  ge 0.0, count3)
-      b1=buf[idx_third] & b2=buf2[idx_third] & b3=buf3[idx_third] & b4=buf4[idx_third] & b5=buf5[idx_third] & b6=buf6[idx_third]
+      ;b1=buf[idx_third] & b2=buf2[idx_third] & b3=buf3[idx_third] & b4=buf4[idx_third] & b5=buf5[idx_third] & b6=buf6[idx_third]
+      ;stop
+      ; if count1 gt 0 then begin
+      ;   buf(idx_third(idx_ca1))= sqrt( $
+      ;     buf5(idx_third(idx_ca1))^2/buf2(idx_third(idx_ca1))^2 +$
+      ;    buf6(idx_third(idx_ca1))^2/buf3(idx_third(idx_ca1))^2 )
+      ; endif
 
-      idx_ca1=where(b1 eq 0.0 and b4  ge 0.0, count1)
-      idx_ca2=where(b2 eq 0.0 and b5  ge 0.0, count2)
-      idx_ca3=where(b3 eq 0.0 and b6  ge 0.0, count3)
-      ;
-      ;if count1 gt 0 or count2 gt 0 or count3 gt 0  then stop
-      if count3 gt 0 then begin
-        ; set a very low stddev
-        buf[idx_third[idx_ca3]]=0.0001
-        print, '**'
-        for kkk=0, count3-1 do begin
-          for jjj=0, tt(1)-1 do begin
-            print, data_in[jjj].fapar[idx_third[idx_ca3[kkk]]]
-          endfor
-        endfor
-        print, '**'
-      endif
+      ;  if count3 gt 0 then begin
+      ; set a very low stddev
+      ;   buf[idx_third[idx_ca3]]=0.0001
+      ;  print, '**'
+      ; for kkk=0, count3-1 do begin
+      ;  for jjj=0, tt(1)-1 do begin
+      ;   print, data_in[jjj].fapar[idx_third[idx_ca3[kkk]]]
+      ; endfor
+      ;endfor
+      ;print, '**'
+      ;endif
       ;if count1 gt 0 or count2 gt 0 then stop
       ;        buf[idx_third[idx_ca3]]=0.0001 ; set an epsilon only where necessary
       ;        print, data_in[jjj].fapar[idx_third[idx_ca3]]
@@ -384,16 +507,12 @@ PRO sm_FindEuclideanMatricDistance, daysNumber, data_in, idx_third, distance, me
       ;
       ;
       ;distance(t,*)=buf(*)
-      distance(t,*,*)=buf
+      distance[t,*,*]=buf
     endfor
   endif else begin
     for t=0, tt(1)-1 do begin
       img=fltarr(splitDims[0],splitDims[1])
-      ;img=std_field(0,t,*,*)
-      ;buf4=img(idx_third)
       buf4=reform(std_field.red(t,*,*))
-      ;img=std_field(1,t,*,*)
-      ;buf5=img(idx_third)
       buf5=reform(std_field.nir(t,*,*))
       buf(*)=100.0
       ;
@@ -403,6 +522,7 @@ PRO sm_FindEuclideanMatricDistance, daysNumber, data_in, idx_third, distance, me
 
       idx_ca=where(buf1 gt 0.0 and buf2 gt 0.0 and $
         buf4 gt 0.0 and  buf5 gt 0.0, validDataCount)
+      ;   stop
       ;
       ;
       if validDataCount gt 0 then begin
@@ -410,44 +530,55 @@ PRO sm_FindEuclideanMatricDistance, daysNumber, data_in, idx_third, distance, me
           buf4(idx_ca)^2/buf1(idx_ca)^2 +$
           buf5(idx_ca)^2/buf2(idx_ca)^2)
       endif
+      idx_ca1=where(buf1 eq 0.0 and buf4 ge 0.0, count1)
+      idx_ca2=where(buf2 eq 0.0 and buf5 ge 0.0, count2)
+      print, '# std = 0 for soil pixels ', count1, count2; ng 2016
+      if count1 gt 0 then begin      ; ng 2016
+        buf(idx_ca1)= sqrt($
+          buf5(idx_ca1)^2/buf2(idx_ca1)^2 )
+      endif
+      if count2 gt 0 then begin      ; ng 2016
+        buf(idx_ca2)= sqrt($
+          buf4(idx_ca2)^2/buf1(idx_ca2)^2)
+      endif
       ;
       ;
       ; second case if one is equal to zero ... i.e no change during the period
       ;
-      b1=buf[idx_third] & b2=buf2[idx_third] & b4=buf4[idx_third] & b5=buf5[idx_third]
+      ;b1=buf[idx_third] & b2=buf2[idx_third] & b4=buf4[idx_third] & b5=buf5[idx_third]
 
-      idx_ca1=where(b1 eq 0.0 and b4 ge 0.0, count1)
-      idx_ca2=where(b2 eq 0.0 and b5 ge 0.0, count2)
+
       ; on short period sometimes happen: check here...
-      if count1 gt 0 then begin
-        ; set a very low stddev
-        buf1[idx_third[idx_ca1]]=0.0001
-        print, '**'
-        for kkk=0, count1-1 do begin
-          for jjj=0, tt(1)-1 do begin
-            print, data_in[jjj].red[idx_third[idx_ca1[kkk]]]
-          endfor
-        endfor
-        print, '**'
-      endif
-      if count2 gt 0 then begin
-        ; set a very low stddev
-        buf2[idx_third[idx_ca2]]=0.0001
-        print, '**'
-        for kkk=0, count2-1 do begin
-          for jjj=0, tt(1)-1 do begin
-            print, data_in[jjj].nir[idx_third[idx_ca2[kkk]]]
-          endfor
-        endfor
-        print, '**'
-      endif
+      ;     if count1 gt 0 then begin
+      ; set a very low stddev
+      ;      buf1[idx_third[idx_ca1]]=0.0001
+      ;     print, '**'
+      ;    for kkk=0, count1-1 do begin
+      ;     for jjj=0, tt(1)-1 do begin
+      ;      print, data_in[jjj].red[idx_third[idx_ca1[kkk]]]
+      ;    endfor
+      ;  endfor
+      ;  print, '**'
+      ;endif
+      ;     if count2 gt 0 then begin
+      ;      ; set a very low stddev
+      ;     buf2[idx_third[idx_ca2]]=0.0001
+      ;    print, '**'
+      ;   for kkk=0, count2-1 do begin
+      ;    for jjj=0, tt(1)-1 do begin
+      ;     print, data_in[jjj].nir[idx_third[idx_ca2[kkk]]]
+      ;  endfor
+      ;endfor
+      ;print, '**'
+      ;endif
       ;
       ;
       ;
       ;
       ;distance(t,*)=buf(*)
-      distance(t,*,*)=buf
+      distance[t,*,*]=buf
     endfor
+    ;stop
   endelse
 
   ; stop

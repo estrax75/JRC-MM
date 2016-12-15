@@ -250,6 +250,7 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
       minMaxs=(faparTCDSInfo.minMaxs);[avgIdx,*]
       nanList=(faparTCDSInfo.nans);[avgIdx]
       header=faparTCDSInfo.header
+      scaledminmaxs=faparTCDSInfo.scaledminmaxs
 
       trueSlopes=bandSlopes
       trueIntercepts=bandIntercepts
@@ -262,7 +263,7 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
       BYTE_NAN=bSInfo.BYTE_NAN
       BYTE_RANGE=bSInfo.BYTE_RANGE
 
-      ;true_mean_fapar=data_tc.fapar
+      realFapar=data_tc.fapar
       ;save, true_mean_fapar, fileName=tempDir+destncfilename+'_MEAN.sav'
       ;true_mean_fapar=0
 
@@ -351,12 +352,36 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
       endelse
       header.cdr_variable=['cdr_variable', 'FAPAR']
 
+      date_created=ST_utils->getSysTime(/FILECOMPATIBILITY)
+      satellite='NOAA '+strcompress(missionCode, /REMOVE)
+      time_Coverage_Start=ST_utils->formatDate([year, month, day, 0, 0, 0], template='satellite')
+      time_Coverage_End=ST_utils->formatDate([year, month, day, 23, 59, 59], template='satellite')
+      header.cdr_variable=['cdr_variable', 'FAPAR']
+      header.Process=['process', 'JRC FAPAR TOC algorithm - see QA4ECV ATBD']
+
+      ;most of information coming from getStandardFaparDataSetInfo()
+      ;writer did most of the dirty job (setting min, max, add_offset, scale_factor...)
+      ;only peculiar variables (fapar & sigma fapar) are still ready and we DON'T need more computation
+;      if keyword_set(NC) then write_georef_ncdf, destncfilename, $
+;        bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
+;        dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, scaledminmaxs=scaledminmaxs, $
+;        /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes, $
+;        id=ncFileInfo.filename, satellite=satellite, header=header, $
+;        date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End
+;
+;      if keyword_set(HDF) then write_hdf, resFileHDF, $
+;        bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
+;        dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, scaledminmaxs=scaledminmaxs, $
+;        trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes, $
+;        id=hdfFileInfo.filename, satellite=satellite, header=header, $
+;        date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End
+      ;;
       write_georef_ncdf, destncfilename, $
         bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $
-        dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, $
-        /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, $
-        trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, $
-        header=header
+        dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, scaledminmaxs=scaledminmaxs, $
+        /NOREVERSE, trueMinMaxs=minMaxs, nanList=nanList, trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, $
+        id=ncFileInfo.filename, satellite=satellite, header=header, $
+        date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End
       print, 'finish writing ncdf'
       ;stop
       write_hdf, desthdffilename, $
@@ -370,18 +395,19 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
     if TA_TYPE eq 'TC' then begin
 
       starttime=systime(1)
+      cloudType=3
       if instrument eq 'AVH' then begin
         ;  change procedure by TC type (monthly, multiple day...)
         if TC_TYPE eq '5D' or TC_TYPE eq '10D' or TC_TYPE eq '16D' then begin
           tResolution=strsplit(TC_TYPE, 'D', /EXTRACT, /PRESERVE)
           tResolution=STRING(tResolution[0], FORMAT='(i03)')
           tResolution=tResolution+'D'
-          destncFileNameInfo=build_JRC_FPA_AVH_TCAlg_DailyInterval_Product_FileName(instrument, fix(year), fix(month), first[type], undef, tResolution, undef, spatialResolution, undef, undef, 'n.NC', undef, indicator='LAN')
-          desthdfFileNameInfo=build_JRC_FPA_AVH_TCAlg_DailyInterval_Product_FileName(instrument, fix(year), fix(month), first[type], undef, tResolution, undef, spatialResolution, undef, undef, 'n.HDF', undef, indicator='LAN')
+          destncFileNameInfo=build_JRC_FPA_AVH_TCAlg_DailyInterval_Product_FileName(instrument, fix(year), fix(month), first[type], undef, tResolution, undef, spatialResolution, undef, undef, 'CLOUDTYPE'+strcompress(cloudType, /REMOVE)+'.NC', undef, indicator='LAN')
+          desthdfFileNameInfo=build_JRC_FPA_AVH_TCAlg_DailyInterval_Product_FileName(instrument, fix(year), fix(month), first[type], undef, tResolution, undef, spatialResolution, undef, undef, 'CLOUDTYPE'+strcompress(cloudType, /REMOVE)+'.HDF', undef, indicator='LAN')
         endif
         if TC_TYPE eq 'MONTHLY' then begin
-          destncFileNameInfo=build_JRC_FPA_AVH_TCAlg_Monthly_Product_FileName(instrument, fix(year), fix(month), first[type], undef, undef, undef, spatialResolution, undef, undef, 'n.NC', undef, indicator='LAN')
-          desthdfFileNameInfo=build_JRC_FPA_AVH_TCAlg_Monthly_Product_FileName(instrument, fix(year), fix(month), first[type], undef, undef, undef, spatialResolution, undef, undef, 'n.HDF', undef, indicator='LAN')
+          destncFileNameInfo=build_JRC_FPA_AVH_TCAlg_Monthly_Product_FileName(instrument, fix(year), fix(month), first[type], undef, undef, undef, spatialResolution, undef, undef, 'CLOUDTYPE'+strcompress(cloudType, /REMOVE)+'.NC', undef, indicator='LAN')
+          desthdfFileNameInfo=build_JRC_FPA_AVH_TCAlg_Monthly_Product_FileName(instrument, fix(year), fix(month), first[type], undef, undef, undef, spatialResolution, undef, undef, 'CLOUDTYPE'+strcompress(cloudType, /REMOVE)+'.HDF', undef, indicator='LAN')
         endif
         ;        if TC_TYPE eq 'YEARLY' then begin
         ;          destncFileNameInfo=build_JRC_FPA_AVH_TCAlg_Yearly_Product_FileName(instrument, fix(year), fix(month), first[type], undef, undef, undef, spatialResolution, undef, undef, 'NC', undef, indicator='LAN')
@@ -410,8 +436,95 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
       ;sm_call_composite, expectedDays, storeFileInfos, data_tc, 10
       ; with uncertainties
       ;if keyword_set(UNC) then sm_call_composite_w_unc, expectedDays, storeFileInfos, data_tc, 10 else sm_call_composite, expectedDays, storeFileInfos, data_tc, 10
-      if keyword_set(UNC) then sm_call_composite_w_unc, expectedDays, storeFileInfos, data_tc, 20, prevflag=prevflag else sm_call_composite, expectedDays, storeFileInfos, data_tc, 20, prevflag=prevflag
+
+      nslice=20
+      if keyword_set(UNC) then sm_call_composite_w_unc, expectedDays, storeFileInfos, data_tc, nslice, prevflag=prevflag, cloudtype=cloudtype else sm_call_composite, expectedDays, storeFileInfos, data_tc, nslice, prevflag=prevflag, cloudtype=cloudtype
       ;call_composite, expectedDays, data_day1, data_tc
+      ;;
+      fNames=['both', 'only_cloudy', 'only_shadow_cloud', 'no_mask']
+      tempDir='E:\mariomi\Documents\projects\ldtr\data\pics\avhrr\'
+
+      restore, filename='fpa_'+strcompress(cloudtype, /REMOVE)+'.sav'
+      device, decomposed=0
+      faparcolor
+      titles=['mask bit 1 or 2 (cloudy/shadow cloud)', 'mask bit 1 (cloudy)', 'mask bit 2 (shadow cloud)', 'no mask']
+      inputFiles=['fpa_'+strcompress(cloudtype, /REMOVE), 'red_'+strcompress(cloudtype, /REMOVE), 'nir_'+strcompress(cloudtype, /REMOVE)]
+      yMinMax=[0., 1.]
+      for jj=0, n_elements(inputFiles)-1 do begin
+        window, jj+3, title=inputFiles[jj]+' - '+titles[cloudtype]
+        restore, filename=inputFiles[jj]+'.sav'
+        device, decomposed=0
+        plot, reform(all_day_data[*,0]), yr=yMinMax, min=0.01, psym = 3, max=0.9, title=inputFiles[jj]+' - '+titles[cloudtype]
+        nData=float(n_elements(all_day_data[*,0]))
+        nday=float(n_elements(all_day_data[0,*]))
+        for t=0, nday-1 do begin
+          oplot, reform(all_day_data[*,t]), col=fix(float(t)*255/nday), psym = 2, min=0.01
+          oplot, reform(meandata)+reform(stddata[t]), col=fix(float(t)*255/nday), min=0.01
+          plots, [0., .05], [1.*t/nday,1.*t/nday], /NORM, col=fix(float(t)*255/nday), thick=4.
+          xyouts, .05, 1.*t/nday, string(t+1, format='(I02)'), /NORM, col=fix(float(t)*255/nday), charsize=1.2, ALIGN=1.;fix(float(t)*255/nday)
+        endfor
+        device, decomposed=1
+        ;oplot, reform(stdmean), min=0.01, col=0l, thick=2.5
+        oplot, reform(meandata), line = 0, min=0.01, thick=2.5, color=255l*255*255
+        oplot, reform(meandata)+ reform(stdmean), min=0.01, col=255l*255*255, thick=1.5, max=0.9, linestyle=3
+        oplot, reform(meandata)- reform(stdmean), min=0.01, col=255l*255*255, thick=1.5, linestyle=3
+        offset=7200.*10/nslice
+        if jj eq 0 then begin
+          dataToPlot=reform(data_tc.fapar(offset,1950:2100))
+          nanToFill=where(finite(dataToPlot) eq 0 or dataToPlot le 0, cnt)
+          ;oplot, dataToPlot, min=0.01, col=255l, thick=1.5, psym=6
+          for kk=0, cnt-1 do begin
+            values=reform(all_day_data[nanToFill[kk],*])
+            idx=where(values ne 0, cnt2)
+            if cnt2 gt 0 then values=values[idx]
+            replaceV=mean(values, /NAN)
+            if replaceV ne 0 then dataToPlot[nanToFill[kk]]=replaceV 
+          endfor
+          nanToFill1=where(finite(dataToPlot) eq 0 or dataToPlot le 0, cnt1)
+          ;print, cnt1, cnt
+          oplot, dataToPlot, min=0.01, col=255l*256*256, thick=1.5, linestyle=0
+          oplot, dataToPlot, min=0.01, col=255l*256*256, thick=1.5, psym=4
+        endif
+        if jj eq 1 then begin
+          dataToPlot=reform(data_tc.red(offset,1950:2100))
+          nanToFill=where(finite(dataToPlot) eq 0 or dataToPlot le 0, cnt)
+          ;oplot, dataToPlot, min=0.01, col=255l, thick=1.5, psym=6
+          for kk=0, cnt-1 do begin
+            values=reform(all_day_data[nanToFill[kk],*])
+            idx=where(values ne 0, cnt2)
+            if cnt2 gt 0 then values=values[idx]
+            replaceV=mean(values, /NAN)
+            if replaceV ne 0 then dataToPlot[nanToFill[kk]]=replaceV 
+          endfor
+          nanToFill1=where(finite(dataToPlot) eq 0 or dataToPlot le 0, cnt1)
+          ;print, cnt1, cnt
+          oplot, dataToPlot, min=0.01, col=255l*256*256, thick=1.5, linestyle=0
+          oplot, dataToPlot, min=0.01, col=255l*256*256, thick=1.5, psym=4
+        endif
+        if jj eq 2 then begin
+          dataToPlot=reform(data_tc.nir(offset,1950:2100))
+          nanToFill=where(finite(dataToPlot) eq 0 or dataToPlot le 0, cnt)
+          ;oplot, dataToPlot, min=0.01, col=255l, thick=1.5, psym=6
+          for kk=0, cnt-1 do begin
+            values=reform(all_day_data[nanToFill[kk],*])
+            idx=where(values ne 0, cnt2)
+            if cnt2 gt 0 then values=values[idx]
+            replaceV=mean(values, /NAN)
+            if replaceV ne 0 then dataToPlot[nanToFill[kk]]=replaceV 
+          endfor
+          nanToFill1=where(finite(dataToPlot) eq 0 or dataToPlot le 0, cnt1)
+          ;print, cnt1, cnt
+          oplot, dataToPlot, min=0.01, col=255l*256*256, thick=1.5, linestyle=0
+          oplot, dataToPlot, min=0.01, col=255l*256*256, thick=1.5, psym=4
+        endif
+
+        plotimg=tvrd(true=1)
+        fName=tempDir+inputFiles[jj]+'_'+fNames[cloudtype]+'_'+destncFileNameInfo.fileName+'.png'
+        write_png,fName,plotimg
+      endfor
+      ;;;;
+
+      ;data_tc.fapar(offset,1950:2100)=1.
       endTime=systime(1)-starttime
       print, 'computed in about:', strcompress(endTime), 'seconds'
 
@@ -449,6 +562,7 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
       ;BYTE_NAN=bSInfo.BYTE_NAN
       ;BYTE_RANGE=bSInfo.BYTE_RANGE
       validIdxs=where(data_tc.flag eq 0 or data_tc.flag eq 4 or data_tc.flag eq 5, watCount, compl=notValidIdxs, ncompl=notValidCount)
+      realFapar=data_tc.fapar
       ;waterIdxs=where(data_tc.flag eq 3, watCount)
 
       res=dataByteScaling(data_tc.fapar, data_tc.flag, $
@@ -515,14 +629,14 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
       intFlagTags=['red', 'nir']
       tags=tag_names(data_tc)
 
-;      for i=0, n_elements(flagTags)-1 do begin
-;        thisIntIdx=(where(intFlagTags[i] eq tags, countInt))[0]
-;        thisByteIdx=(where(byteFlagTags[i] eq tags, countByte))[0]
-;        if watCount gt 0 then begin
-;          if countInt eq 1 then data_tc.(thisIntIdx)=mapQualityFlags(data_tc.(thisIntIdx), waterIdxs, INT_NAN)
-;          if countByte eq 1 then data_tc.(thisByteIdx)=mapQualityFlags(data_tc.(thisByteIdx), waterIdxs, BYTE_NAN)
-;        endif
-;      endfor
+      ;      for i=0, n_elements(flagTags)-1 do begin
+      ;        thisIntIdx=(where(intFlagTags[i] eq tags, countInt))[0]
+      ;        thisByteIdx=(where(byteFlagTags[i] eq tags, countByte))[0]
+      ;        if watCount gt 0 then begin
+      ;          if countInt eq 1 then data_tc.(thisIntIdx)=mapQualityFlags(data_tc.(thisIntIdx), waterIdxs, INT_NAN)
+      ;          if countByte eq 1 then data_tc.(thisByteIdx)=mapQualityFlags(data_tc.(thisByteIdx), waterIdxs, BYTE_NAN)
+      ;        endif
+      ;      endfor
 
       ;      dataSets=[ptr_new(data_tc.day, /NO_COPY),ptr_new(data_tc.nday, /NO_COPY), $
       ;        ptr_new(data_tc.fapar, /NO_COPY), ptr_new(data_tc.dev_temp, /NO_COPY), ptr_new(data_tc.sigma, /NO_COPY), $
@@ -543,18 +657,18 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
         ptr_new(data_tc.nir, /NO_COPY), ptr_new(data_tc.dev_nir_temp, /NO_COPY), ptr_new(data_tc.sigma_nir, /NO_COPY), $
         ptr_new(data_tc.toc_red, /NO_COPY),ptr_new(data_tc.toc_nir, /NO_COPY), $
         ptr_new(data_tc.flag, /NO_COPY),ptr_new(prevflag, /NO_COPY), $
-        ptr_new(data_tc.ts, /NO_COPY), ptr_new(data_tc.tv, /NO_COPY)]
+        ptr_new(data_tc.ts, /NO_COPY), ptr_new(data_tc.tv, /NO_COPY), ptr_new(realFapar, /NO_COPY), ptr_new(data_tc.faparmean, /NO_COPY)]
 
       boundary=[-180.0, 180.0, -90, 90.]
 
       ;destncfilename=outputDir+destncfilename
       ;desthdffilename=outputDir+desthdffilename
       date_created=ST_utils->getSysTime(/FILECOMPATIBILITY)
-      satellite='NOAA '+strcompress(missionCode, /REMOVE)
+      satellite='NOAA '+strcompress(missionCode, /REMOVE)+'Vs '+'SWF'
       time_Coverage_Start=ST_utils->formatDate([year, month, first[type], 0, 0, 0], template='satellite')
       time_Coverage_End=ST_utils->formatDate([year, month, last[type], 23, 59, 59], template='satellite')
-      header.cdr_variable=['cdr_variable', 'FAPAR']
-      header.process='Time composite'
+      header.cdr_variable=['cdr_variable', 'FAPAR_DIFF']
+      header.process='Difference'
 
       write_georef_ncdf, destncfilename, $
         bandNames, bandStandardNames, bandLongNames, bandMeasureUnits, $

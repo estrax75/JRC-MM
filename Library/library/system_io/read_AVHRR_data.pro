@@ -3,9 +3,13 @@
 ;-
 ;@.\Library\library\objects\GenericOperator.pro
 ;@../Library/library/objects/FileSystem.pro
-function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
+function read_AVHRR_data, folder, fileName, FOUND=FOUND, $
   FULL=FULL, APPLY_CONVERSION=APPLY_CONVERSION, varName=varName, offset=offset, count=count, fid=fid
 
+
+  COMMON singleTons, ST_utils, ST_operator, ST_fileSystem
+
+  declareSingleTons
 
   ;  catch, error_status
   ;
@@ -24,38 +28,36 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
 
   ; 0, 1, 2,3,4,5,6,(7),(8),(9),10,11,12
 
-  if ~obj_valid(operatorObj) then operatorObj=obj_new('GenericOperator')
-  if ~obj_valid(fsObj) then fsObj=obj_new('FileSystem', /STAND)
-  newFolder=fsObj->adjustDirSep(folder, /ADD)
+  newFolder=ST_fileSystem->adjustDirSep(folder, /ADD)
   fullFileName=newFolder+fileName
 
-  fName=fsObj->getFileNameInfo(fullFileName, filePath=dir, extension=ext)
+  fName=ST_fileSystem->getFileNameInfo(fullFileName, filePath=dir, extension=ext)
 
   if n_elements(varName) eq 1 then begin
     ;slope=1
     ;offset=0
     ;fillValue=2^15
-    ;dataSet=operatorObj->readNcdfVar(fullFileName, varName, slope=slope, intercept=intercept, fillvalue=fillvalue, FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
-    dataSet=operatorObj->readNcdfVar(fullFileName, varName, FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count, fid=fid)
+    ;dataSet=ST_operator->readNcdfVar(fullFileName, varName, slope=slope, intercept=intercept, fillvalue=fillvalue, FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
+    dataSet=ST_operator->readNcdfVar(fullFileName, varName, FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count, fid=fid)
     if keyword_set(FOUND) then begin
       countNan=-1
       if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
       valid=1
       FOUND=1
-      fapar=1.*dataset.data
+      data=1.*dataset.data
       if keyword_set(APPLY_CONVERSION) then begin
-        fapar=fapar*dataset.slope+dataset.intercept
-        slope_fapar=1
-        offset_fapar=0
+        data=data*dataset.slope+dataset.intercept
+        slope_data=1
+        offset_data=0
       endif else begin
-        slope_fapar=dataset.slope
-        offset_fapar=dataset.intercept
+        slope_data=dataset.slope
+        offset_data=dataset.intercept
       endelse
       if countNan gt 0 then begin
-        if size(flag, /TYPE) eq 4 then fapar[nanList]=!VALUES.F_NAN
-        if size(flag, /TYPE) eq 5 then fapar[nanList]=!VALUES.D_NAN
+        if size(flag, /TYPE) eq 4 then data[nanList]=!VALUES.F_NAN
+        if size(flag, /TYPE) eq 5 then data[nanList]=!VALUES.D_NAN
       endif
-      return, {fapar:fapar, slope_fapar:slope_fapar, offset_fapar:offset_fapar, fillValue:!VALUES.F_NAN, valid:valid}
+      return, {data:data, slope_data:slope_data, offset_data:offset_data, fillValue:!VALUES.F_NAN, valid:valid}
     endif
     return, 0
   endif
@@ -63,8 +65,8 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
   fapar=0
   slope_fapar=1
   offset_fapar=0
-  ;dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[0], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
-  dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[0], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
+  ;dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[0], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
+  dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[0], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
   if keyword_set(FOUND) then begin
     countNan=-1
     if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
@@ -86,8 +88,8 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
   sigma=0
   slope_sigma=1
   offset_sigma=0
-  ;dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[1], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
-  dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[1], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
+  ;dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[1], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
+  dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[1], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
   if keyword_set(FOUND) then begin
     countNan=-1
     if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
@@ -109,8 +111,8 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
   red=0
   slope_red=1
   offset_red=0
-  ;dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[2], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
-  dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[2], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
+  ;dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[2], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
+  dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[2], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
   if keyword_set(FOUND) then begin
     countNan=-1
     if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
@@ -132,8 +134,8 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
   sigma_red=0
   slope_sigma_red=1
   offset_sigma_red=0
-  ;dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[3], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
-  dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[3], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
+  ;dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[3], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
+  dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[3], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
   if keyword_set(FOUND) then begin
     countNan=-1
     if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
@@ -155,8 +157,8 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
   nir=0
   slope_nir=1
   offset_nir=0
-  ;dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[4], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
-  dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[4], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
+  ;dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[4], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
+  dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[4], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
   if keyword_set(FOUND) then begin
     countNan=-1
     if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
@@ -178,8 +180,8 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
   sigma_nir=0
   slope_sigma_nir=1
   offset_sigma_nir=0
-  ;dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[5], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
-  dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[5], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
+  ;dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[5], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
+  dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[5], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
   if keyword_set(FOUND) then begin
     countNan=-1
     if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
@@ -201,8 +203,8 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
   qa=0
   slope_qa=1
   offset_qa=0
-  ;dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[6], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
-  dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[6], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
+  ;dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[6], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
+  dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[6], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
   if keyword_set(FOUND) then begin
     countNan=-1
     if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
@@ -225,8 +227,8 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
   slope_ts=1
   offset_ts=0
   if keyword_set(FULL) then begin
-    ;dataSet=operatorObj->readNcdfVar(fullFileName, AVBANDNAMES[7], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
-    dataSet=operatorObj->readNcdfVar(fullFileName, AVBANDNAMES[7], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
+    ;dataSet=ST_operator->readNcdfVar(fullFileName, AVBANDNAMES[7], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
+    dataSet=ST_operator->readNcdfVar(fullFileName, AVBANDNAMES[7], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
     if keyword_set(FOUND) then begin
       countNan=-1
       if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
@@ -250,8 +252,8 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
   slope_tv=1
   offset_tv=0
   if keyword_set(FULL) then begin
-    ;dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[8], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
-    dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[8], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
+    ;dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[8], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
+    dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[8], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
     if keyword_set(FOUND) then begin
       countNan=-1
       if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
@@ -275,8 +277,8 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
   slope_phi=1
   offset_phi=0
   if keyword_set(FULL) then begin
-    ;dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[9], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
-    dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[9], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
+    ;dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[9], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
+    dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[9], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
     if keyword_set(FOUND) then begin
       countNan=-1
       if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
@@ -299,8 +301,8 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
   toc_red=0
   slope_toc_red=1
   offset_toc_red=0
-  ;dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[10], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
-  dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[10], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
+  ;dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[10], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
+  dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[10], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
   if keyword_set(FOUND) then begin
     countNan=-1
     if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
@@ -322,8 +324,8 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
   toc_nir=0
   slope_toc_nir=1
   offset_toc_nir=0
-  ;dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[11], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
-  dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[11], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
+  ;dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[11], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
+  dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[11], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
   if keyword_set(FOUND) then begin
     countNan=-1
     if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
@@ -346,7 +348,7 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
   slope_flag=1
   offset_flag=0
   ;if keyword_set(FULL) then begin
-  dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[12], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
+  dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[12], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
   if keyword_set(FOUND) then begin
     countNan=-1
     if dataSet.fillValueExist then nanList=where(dataSet.data eq dataSet.fillValue, countNan)
@@ -366,7 +368,7 @@ function read_AVHRR_FAPAR, folder, fileName, FOUND=FOUND, $
   endif
   ;endif
 
-  ;dataSet=operatorObj->readNcdfVar(fullFileName, avBandNames[12], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
+  ;dataSet=ST_operator->readNcdfVar(fullFileName, avBandNames[12], FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, offset=offset, count=count)
 
   if keyword_set(FOUND) then begin
     allData={  fapar:fapar, sigma:sigma, $

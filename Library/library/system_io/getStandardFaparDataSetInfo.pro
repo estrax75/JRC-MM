@@ -20,7 +20,8 @@ function getStandardFaparDataSetInfo, Type=Type
     'LDTR_FLAG', $
     'TS', 'TV', 'PHI', $
     'BRF_TOC_BAND_1', 'BRF_TOC_BAND_2', $
-    'JRC_FLAG','FAPAR_real']
+    'JRC_FLAG']
+  ;'JRC_FLAG','FAPAR_real']
 
 
   bandLongNames=['Fraction of Absorbed Photosynthetically Active Radiation','Uncertainties of FAPAR', $
@@ -29,7 +30,8 @@ function getStandardFaparDataSetInfo, Type=Type
     'LDTR_FLAG', $
     'Solar Zenith Angle', 'View Zenith Angle', 'Relative Azimuth Angle', $
     'Surface Bidirectional Reflectance Factor Band 1', 'Surface Bidirectional Reflectance Factor Band 2', $
-    'JRC_FLAG','Fraction of Absorbed Photosynthetically Active Radiation']
+    'JRC_FLAG']
+  ;'JRC_FLAG','Fraction of Absorbed Photosynthetically Active Radiation']
 
   bandStandardNames=['Fraction of Absorbed Photosynthetically Active Radiation','Uncertainties of FAPAR', $
     'Rectified Reflectance in Band 1', 'Uncertainties of Band 1', $
@@ -37,7 +39,8 @@ function getStandardFaparDataSetInfo, Type=Type
     'LDTR_FLAG', $
     'Solar Zenith Angle', 'View Zenith Angle', 'Relative Azimuth Angle', $
     'Surface Bidirectional Reflectance Factor Band 1', 'Surface Bidirectional Reflectance Factor Band 2', $
-    'JRC_FLAG','Fraction of Absorbed Photosynthetically Active Radiation']
+    'JRC_FLAG']
+  ;'JRC_FLAG','Fraction of Absorbed Photosynthetically Active Radiation']
 
   ; this is only a sample... overwrite externally (slope = 1./250 or 1./254) 
   bandSlopes=[1, 1, $
@@ -46,7 +49,8 @@ function getStandardFaparDataSetInfo, Type=Type
     1, $
     10e-03, 10e-03, 10e-03,$
     10e-05, 10e-05,$
-    1, 1]
+    1]
+  ;1, 1]
 
   bandMeasureUnits=['-','-', $
     '-', '-', $
@@ -54,7 +58,8 @@ function getStandardFaparDataSetInfo, Type=Type
     '-', $
     'degree','degree','degree', $
     '-', '-', $
-    '-','-']
+    '-']
+  ;'-','-']
 
   bandIntercepts=fltarr(n_elements(bandSlopes))
 
@@ -71,7 +76,8 @@ function getStandardFaparDataSetInfo, Type=Type
     12,$
     2,2,2, $
     2,2,$
-    16,4]
+    16]
+  ;16,4]
 
   minMaxs=fltarr(n_elements(bandDataTypes), 2)
   scaledMinMaxs=minMaxs
@@ -143,9 +149,9 @@ function getStandardFaparDataSetInfo, Type=Type
   scaledMinMaxs[12,*]=[0,15]
   nanList[12]=255
 
-  minMaxs[13,*]=[0.,1.]
-  scaledMinMaxs[13,*]=[0.,1.]
-  nanList[13]=-1
+;  minMaxs[13,*]=[0.,1.]
+;  scaledMinMaxs[13,*]=[0.,1.]
+;  nanList[13]=-1
 
 
 

@@ -5,7 +5,8 @@
 ;launch_fapar_daily, 1991, 1991, 11, 11, 1, 'NCHDF', OVERWRITE=0, TC_TYPE='DAILY'
 ;launch_fapar_daily, 1991, 1991, 12, 12, 1, 'NCHDF', OVERWRITE=0, TC_TYPE='DAILY'
 ;launch_fapar_daily, 1982, 1982, 11, 11, 1, 'NCHDF', OVERWRITE=0, TC_TYPE='DAILY'
-;launch_fapar_daily, 1999, 1999, 6, 6, 1, 'NCHDF', OVERWRITE=0, TC_TYPE='DAILY'
+;launch_fapar_daily, 1999, 1999, 6, 6, 3, 'NCHDF', OVERWRITE=0, TC_TYPE='DAILY'
+;launch_fapar_daily, 1996, 1996, 8, 8, 3, 'NCHDF', OVERWRITE=0, TC_TYPE='DAILY'
 pro launch_fapar_daily, startYear, endYear, startMonth, endMonth, outputtype, outputformat, $
   TC_TYPE=TC_TYPE, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, OVERWRITE=OVERWRITE
 
@@ -24,13 +25,6 @@ pro launch_fapar_daily, startYear, endYear, startMonth, endMonth, outputtype, ou
   ;sourceDir='/space3/storage/products/results/BRFs'
   ;sourceDir4=''
   ;sourceDir5=''
-  TYPE1=1
-  if n_elements(sourceformattype) eq 1 then begin
-    if sourceformattype eq 2 then TYPE2=1
-  endif
-  TYPE2=1-keyword_set(TYPE1)
-  if keyword_set(TYPE1) then typeFolder='type1' else typeFolder='type2'
-
   ;outputDir='/space3/storage/products/results/FAPAR/'+typeFolder+path_sep()+TC_TYPE
   ;outputDir1='/space3/storage/products'
   ;outputDir2='/space4/storage/products'
@@ -45,8 +39,8 @@ pro launch_fapar_daily, startYear, endYear, startMonth, endMonth, outputtype, ou
   ;level='L2'
 
   runDailyFapar, confDir, tempDir, startYear, endYear, startMonth, endMonth, $
-    TYPE2=TYPE2, TYPE1=TYPE1, NC=NC, HDF=HDF, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
-    OVERWRITE=OVERWRITE, TC_TYPE=TC_TYPE;, SWITCH_TS_TV=SWITCH_TS_TV
+    NC=NC, HDF=HDF, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
+    OVERWRITE=OVERWRITE
 
 end
 

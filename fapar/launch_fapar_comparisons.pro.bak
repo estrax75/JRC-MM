@@ -55,7 +55,7 @@ pro launch_fapar_comparisons, startYear, endYear, startMonth, endMonth, $
       resFile=doFaparComparison(confDir, instruments, sourceDir, mainVarNames, sourceFormats, $
         missionNames, missionCodes, spatialResolutions, level, $
         tempDir, outputDir, plotDir, thisYear, thisMonth, $
-        OVERWRITE=OVERWRITE, TC_TYPE=TC_TYPE, TA_TYPE=TA_TYPE, HDF=HDF, NC=NC, CLOUDTYPE=CLOUD_TYPE)
+        OVERWRITE=OVERWRITE, TC_TYPE=TC_TYPE, TA_TYPE=TA_TYPE, HDF=HDF, NC=NC, CLOUD_TYPE=CLOUD_TYPE)
     endfor
   endfor
   ;  runCompareFapar, confDir, instruments, sourceDir, mainVarNames, sourceFormat, $

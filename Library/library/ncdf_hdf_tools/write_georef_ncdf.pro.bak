@@ -6,7 +6,8 @@ pro write_georef_ncdf, fileName, bandNames, bandStandardNames, bandLongNames, $
   trueSlopes=trueSlopes, trueIntercepts=trueIntercepts, $
   header=header, NOREVERSE=NOREVERSE, gridMapping=gridMapping, $
   time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End, $
-  Id=Id, satellite=satellite, date_created=date_created, cdr_variable=cdr_variable
+  Id=Id, satellite=satellite, date_created=date_created, cdr_variable=cdr_variable, $
+  OLDSTYLE=OLDSTYLE
   ; procedure to read a geoTiff and export an a new one
 
   nvar=n_elements(bandNames)
@@ -66,7 +67,7 @@ pro write_georef_ncdf, fileName, bandNames, bandStandardNames, bandLongNames, $
   NCDF_ATTPUT,ncid,latid,'long_name','Latitude'
   NCDF_ATTPUT,ncid,latid,'standard_name','Latitude'
   NCDF_ATTPUT,ncid,latid,'units','degrees_north'
-  NCDF_ATTPUT,ncid,lonid,'axis','Y'
+  NCDF_ATTPUT,ncid,latid,'axis','Y'
 
 ;  timedim = NCDF_VARDEF(ncid, 'time', [1], /DOUBLE, gzip=gzipLevel)
 ;  NCDF_ATTPUT,ncid,timedim,'long_name','time'
@@ -119,7 +120,7 @@ pro write_georef_ncdf, fileName, bandNames, bandStandardNames, bandLongNames, $
 
     ; _Unsinned is a "not-well-documented" feature for unsigned data type (INT and BYTE)
     IS_UNSIGNED=convertDataType(undef, bandDataType[v], /IS_UNSIGNED)
-    if keyword_set(IS_UNSIGNED) then my_NCDF_ATTPUT, ncid, ncvarid[v], '_Unsigned', "true"
+    if keyword_set(IS_UNSIGNED) and ~(keyword_set(OLDSTYLE)) then my_NCDF_ATTPUT, ncid, ncvarid[v], '_Unsigned', "true"
 
     ;flag Nan...
     fillNanIdxs=where(thisBand eq NAN, nullNum, complement=valid_Idxs)
@@ -163,12 +164,14 @@ pro write_georef_ncdf, fileName, bandNames, bandStandardNames, bandLongNames, $
     my_NCDF_ATTPUT, ncid, ncvarid[v], 'units', varunits[v]
     ; add additional info only if it is necessary
     if ~(trueSlopes[v] eq 1. and trueIntercepts[v] eq 0.) then begin
-      my_NCDF_ATTPUT, ncid, ncvarid[v], 'scale_factor', trueSlopes[v]
-      my_NCDF_ATTPUT, ncid, ncvarid[v], 'add_offset', trueIntercepts[v]
+      if keyword_set(OLDSTYLE) then my_NCDF_ATTPUT, ncid, ncvarid[v], 'slope', trueSlopes[v] else my_NCDF_ATTPUT, ncid, ncvarid[v], 'scale_factor', trueSlopes[v]
+      if keyword_set(OLDSTYLE) then my_NCDF_ATTPUT, ncid, ncvarid[v], 'intercept', trueIntercepts[v] else my_NCDF_ATTPUT, ncid, ncvarid[v], 'add_offset', trueIntercepts[v] 
     endif
     data_type=convertDataType(nanList[v], bandDataType[v], /GET_NAME, FORMAT='NC')
     my_NCDF_ATTPUT, ncid, ncvarid[v], 'data_type', (reform(data_type[0]))[0], type=7 ;STRING
-    my_NCDF_ATTPUT, ncid, ncvarid[v], 'data_type_comment', (reform(data_type[1]))[0], type=7 ;STRING
+    my_NCDF_ATTPUT, ncid, ncvarid[v], 'data_type_full_name', (reform(data_type[1]))[0], type=7 ;STRING
+    my_NCDF_ATTPUT, ncid, ncvarid[v], 'data_type_url', 'http://www.unidata.ucar.edu/software/netcdf/docs/data_type.html', type=7 ;STRING
+    
     ;if n_elements(gridMapping) eq 0 then my_NCDF_ATTPUT, ncid, ncvarid[v], 'grid_mapping', 'latitude_longitude' else my_NCDF_ATTPUT, ncid, ncvarid[v], 'grid_mapping', gridMapping
     ;my_NCDF_ATTPUT, ncid, ncvarid[v], 'axis','YX'
     ;my_NCDF_ATTPUT, ncid, ncvarid[v], 'version', header.versionNumber
@@ -222,7 +225,7 @@ pro write_georef_ncdf, fileName, bandNames, bandStandardNames, bandLongNames, $
 
   NCDF_CLOSE, ncid
   if keyword_set(postcompression) then begin
-    if strupcase(!VERSION.OS_FAMILY eq 'WINDOWS') then begin
+    if strupcase(!VERSION.OS_FAMILY) eq 'WINDOWS' then begin
       zipCommand="C:\Program Files\7-Zip\7z.exe"
       type="zip"
       command="a"
@@ -233,7 +236,7 @@ pro write_georef_ncdf, fileName, bandNames, bandStandardNames, bandLongNames, $
       zipFile=onlyRealFileName+'.'+type;fileName+'.'+type
       spawn, '"'+zipCommand+'"'+" "+command+option+" "+zipFile+" "+iFile, /HIDE
     endif
-    if strupcase(!VERSION.OS_FAMILY eq 'UNIX') then begin
+    if strupcase(!VERSION.OS_FAMILY) eq 'UNIX' then begin
       zipCommand='zip'
       type='zip'
       command=''

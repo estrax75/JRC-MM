@@ -1,5 +1,5 @@
 pro runDailyFapar, confDir, tempDir, startYear, endYear, startMonth, endMonth, missionIndex, $
-  NC=NC, HDF=HDF, outputDir=outputDir, $
+  NC=NC, HDF=HDF, outputDir=outputDir, datadir=datadir, $
   OVERWRITE=OVERWRITE, TC_TYPE=TC_TYPE, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX
 
   ;confDir='E:\mariomi\Documents\projects\LDTR\data\AVHRR\data'
@@ -44,7 +44,7 @@ pro runDailyFapar, confDir, tempDir, startYear, endYear, startMonth, endMonth, m
         thisMonth=months[m]
         yearDay=utility->calcDayOfYear([thisYear,thisMonth,thisDay,0])+1
         print, 'working on', thisYear, thisMonth, thisDay, '...'
-        sourceDir=getsourcedir_by_year(thisYear)
+        if n_elements(datadir) eq 1 then sourceDir=dataDir else sourceDir=getsourcedir_by_year(thisYear) 
         if n_elements(outputDir) eq 0 then outputDir=sourceDir
         resFile=doFapar(instrument, indicator, spatialResolution, level, missionName, mainVarName, noaanumber, thisyear, thismonth, thisday, $
           sourceDir, outputDir, tempdir, $

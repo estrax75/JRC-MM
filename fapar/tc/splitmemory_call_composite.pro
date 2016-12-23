@@ -52,11 +52,12 @@ Pro sm_make_tc_distance_eu_vegetation_m, daysNumber, data_in, idx_doIt, day, mea
     idx_valid = where(buf le thres and buf ge 0.0, validCount); and distance(t,*,*) lt 50.0)
     ; check our distance vs StdDev
     if validCount gt 0 then index_2(idx_valid)=index_2(idx_valid)+one(idx_valid)
-    ; mark and remove outliers using flag 21
+    ; mark and remove outliers using flag 1 (21)
     if nfield eq 2 then idx_bad_mask = where(buf gt thres and (data_in(t).flag eq 4 or data_in(t).flag eq 5), outliersCount)
     if nfield eq 3 then idx_bad_mask = where(buf gt thres and data_in(t).flag eq 0, outliersCount)
     vld=where(buf lt 100)
-    if outliersCount gt 1 then data_in(t).flag(idx_bad_mask)=21.0
+    ;if outliersCount gt 1 then data_in(t).flag(idx_bad_mask)=21.0
+    if outliersCount gt 1 then data_in(t).flag(idx_bad_mask)=1
   endfor
   ;
   ;stop
@@ -139,7 +140,7 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
 
   INT_NAN=2^15
   DATA_RANGE=[0., 1.]
-  DATA_NAN=-1
+  DATA_NAN=!VALUES.F_NAN
 
   ; only with a valid filename there is a valid day...
   validIdx=where(data_day_f.fname ne '', count)
@@ -216,7 +217,7 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
   ; day may be 0 (the first); 255 means no data
   data_tc.day[*,*]=255
   ; nday equal 0 means no data.
-  data_tc.nday[*,*]=0
+  data_tc.nday[*,*]=255
   ;
   ;==========================================================================================
   ;
@@ -332,7 +333,7 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
     data_tc_split.sigma_nir[*,*]=DATA_NAN
 
     data_tc_split.day[*,*]=255
-    data_tc_split.nday[*,*]=0
+    data_tc_split.nday[*,*]=255
 
     ; only for test
     data_tc_split.ts[*,*]=INT_NAN
@@ -360,10 +361,6 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
         data_day_split[t].sigma_red=faparData.sigma_red
         data_day_split[t].nir=faparData.nir
         data_day_split[t].sigma_nir=faparData.sigma_nir
-        flagMatrix=fapardata.flag
-        data_day_split[t].flag=flagMatrix
-        resFlags=[resFlags,flagMatrix[UNIQ(flagMatrix, SORT(flagMatrix))]]
-        flagMatrix=0
         data_day_split[t].qa=faparData.qa
         data_day_split[t].ts=fapardata.ts
         data_day_split[t].tv=faparData.tv
@@ -378,18 +375,25 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
           if cloudtype eq 2 then cloudNaN=where(checkCloud2 eq 1, countCloud)
         endif
         if countCloud gt 0 then begin
-          faparData.fapar[cloudNaN]=!VALUES.F_NAN
-          faparData.nir[cloudNaN]=!VALUES.F_NAN
-          faparData.red[cloudNaN]=!VALUES.F_NAN
-          faparData.toc_nir[cloudNaN]=!VALUES.F_NAN
-          faparData.toc_red[cloudNaN]=!VALUES.F_NAN
+          ;faparData.fapar[cloudNaN]=!VALUES.F_NAN
+          ;faparData.nir[cloudNaN]=!VALUES.F_NAN
+          ;faparData.red[cloudNaN]=!VALUES.F_NAN
+          ;faparData.toc_nir[cloudNaN]=!VALUES.F_NAN
+          ;faparData.toc_red[cloudNaN]=!VALUES.F_NAN
+          ;leave original values, but flag cloud
+          changeIdxs=where(faparData.flag[cloudNaN] eq 4 or faparData.flag[cloudNaN] eq 5 or faparData.flag[cloudNaN] eq 6 or faparData.flag[cloudNaN] eq 0, cnt)
+          if cnt gt 0 then faparData.flag[cloudNaN[changeIdxs]]=2 ; force cloud code for fapar and soil
         endif
         data_day_split[t].fapar=faparData.fapar
         data_day_split[t].red=faparData.red
         data_day_split[t].nir=faparData.nir
         data_day_split[t].toc_red=fapardata.toc_red
         data_day_split[t].toc_nir=faparData.toc_nir
-        checkCloud1=-1 & checkCloud2=-1 
+        flagMatrix=fapardata.flag
+        data_day_split[t].flag=flagMatrix
+        resFlags=[resFlags,flagMatrix[UNIQ(flagMatrix, SORT(flagMatrix))]]
+        flagMatrix=0
+        checkCloud1=-1 & checkCloud2=-1
         ;.day set to position of file in the (sub)sequence (n/8,9,10 for decade n/28,29,30,31 for mponthly), use doy???
         data_day_split[t].day=t
         ;array=faparData.flag
@@ -532,8 +536,8 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
         data_tc_split.sigma_red(idx_t)= data_day_split(t).sigma_red(idx_t)
         data_tc_split.sigma_nir(idx_t)= data_day_split(t).sigma_nir(idx_t)
         data_tc_split.sigma(idx_t)= data_day_split(t).sigma(idx_t)
-        wrongIndex=where(data_day_split(t).flag(idx_t) eq 21, countWrong)
-        if countWrong ne 0 then stop
+        ;wrongIndex=where(data_day_split(t).flag(idx_t) eq 21, countWrong)
+        ;if countWrong ne 0 then stop
         data_tc_split.flag(idx_t)= data_day_split(t).flag(idx_t)
         ;overwriteCheck=where(data_tc_split.day(idx_t) ne 255, overWriteCount)
         ;if overWriteCount ne 0 then stop
@@ -567,16 +571,16 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
       ;final Veg Mask
       idx_time = where(validMaskVeg eq 1 and (data_day_split(t).flag eq 0) and (dayVeg eq 1 or index_2 eq 1), countSingleDay)
 
-;      idx_timeOld = where((data_day_split(t).flag eq 0) and (data_day_split(t).fapar gt 0.0) and (dayVeg eq 1 or index_2 eq 1), countSingleDayOld)
-;      if countSingleDay ne countSingleDayOld then stop
+      ;      idx_timeOld = where((data_day_split(t).flag eq 0) and (data_day_split(t).fapar gt 0.0) and (dayVeg eq 1 or index_2 eq 1), countSingleDayOld)
+      ;      if countSingleDay ne countSingleDayOld then stop
       print, 'singleDay for day: ', t, countSingleDay
       if countSingleDay gt 0 then begin
         data_tc_split.nday(idx_time)=1
         data_tc_split.red(idx_time)=data_day_split(t).red(idx_time)
         data_tc_split.nir(idx_time)=data_day_split(t).nir(idx_time)
         data_tc_split.fapar(idx_time)=data_day_split(t).fapar(idx_time)
-        wrongIndex=where(data_day_split(t).flag(idx_time) eq 21, countWrong)
-        if countWrong ne 0 then stop
+        ;wrongIndex=where(data_day_split(t).flag(idx_time) eq 21, countWrong)
+        ;if countWrong ne 0 then stop
         data_tc_split.flag(idx_time)=data_day_split(t).flag(idx_time)
         data_tc_split.sigma_red(idx_time)= data_day_split(t).sigma_red(idx_time)
         data_tc_split.sigma_nir(idx_time)= data_day_split(t).sigma_nir(idx_time)
@@ -628,8 +632,8 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
           data_tc_split.sigma(idx_time(idx_lp))= data_day_split(t).sigma(idx_time(idx_lp))
           data_tc_split.sigma_red(idx_time(idx_lp))= data_day_split(t).sigma_red(idx_time(idx_lp))
           data_tc_split.sigma_nir(idx_time(idx_lp))= data_day_split(t).sigma_nir(idx_time(idx_lp))
-          wrongIndex=where(data_day_split(t).flag(idx_time(idx_lp)) eq 21, countWrong)
-          if countWrong ne 0 then stop
+          ;wrongIndex=where(data_day_split(t).flag(idx_time(idx_lp)) eq 21, countWrong)
+          ;if countWrong ne 0 then stop
           data_tc_split.flag(idx_time(idx_lp))= data_day_split(t).flag(idx_time(idx_lp))
           data_tc_split.day(idx_time(idx_lp))=data_day_split(t).day
         endif
@@ -650,8 +654,8 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
       ;final Veg Mask
       idx_ok = where(validMaskVeg eq 1 and (dayVeg eq 2 or index_2 eq 2) and (data_tc_split.day ne t) and data_day_split(t).flag eq 0, countDay)
 
-;      idx_okOld=where((data_day_split(t).flag eq 0) and (data_day_split(t).fapar gt 0.0) and (dayVeg eq 2 or index_2 eq 2) and (data_tc_split.day ne t), countDayOld)
-;      if countDay ne countDayOld then stop
+      ;      idx_okOld=where((data_day_split(t).flag eq 0) and (data_day_split(t).fapar gt 0.0) and (dayVeg eq 2 or index_2 eq 2) and (data_tc_split.day ne t), countDayOld)
+      ;      if countDay ne countDayOld then stop
       if idx_ok(0) ge 0 then begin
         data_tc_split.dev_red_temp(idx_ok)=abs(data_tc_split.red(idx_ok)-data_day_split(t).red(idx_ok))
         data_tc_split.dev_nir_temp(idx_ok)=abs(data_tc_split.nir(idx_ok)-data_day_split(t).nir(idx_ok))
@@ -717,8 +721,8 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
         data_tc_split.red(idx_t)= data_day_split(t).red(idx_t)
         data_tc_split.nir(idx_t)= data_day_split(t).nir(idx_t)
         data_tc_split.fapar(idx_t)= data_day_split(t).fapar(idx_t)
-        wrongIndex=where(data_day_split(t).flag(idx_t) eq 21, countWrong)
-        if countWrong ne 0 then stop
+        ;wrongIndex=where(data_day_split(t).flag(idx_t) eq 21, countWrong)
+        ;if countWrong ne 0 then stop
         data_tc_split.flag(idx_t)= data_day_split(t).flag(idx_t)
         data_tc_split.day(idx_t) = days(idx_t)
         data_tc_split.toc_red(idx_t)= data_day_split(t).toc_red(idx_t)
@@ -757,8 +761,8 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
         data_tc_split.sigma(idx_ones(idx_time))=data_day_split(t).sigma(idx_ones(idx_time))
         data_tc_split.sigma_red(idx_ones(idx_time))=data_day_split(t).sigma_red(idx_ones(idx_time))
         data_tc_split.sigma_nir(idx_ones(idx_time))=data_day_split(t).sigma_nir(idx_ones(idx_time))
-        wrongIndex=where(data_day_split(t).flag(idx_ones(idx_time)) eq 21, countWrong)
-        if countWrong ne 0 then stop
+        ;wrongIndex=where(data_day_split(t).flag(idx_ones(idx_time)) eq 21, countWrong)
+        ;if countWrong ne 0 then stop
         data_tc_split.flag(idx_ones(idx_time))=data_day_split(t).flag(idx_ones(idx_time))
         data_tc_split.day(idx_ones(idx_time))=data_day_split(t).day(idx_ones(idx_time))
         bareSday(idx_ones(idx_time))=1.
@@ -802,8 +806,8 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
           data_tc_split.sigma(idx_time(idx_lp))= data_day_split(t).sigma(idx_time(idx_lp))
           data_tc_split.toc_red(idx_time(idx_lp))= data_day_split(t).toc_red(idx_time(idx_lp))
           data_tc_split.toc_nir(idx_time(idx_lp))= data_day_split(t).toc_nir(idx_time(idx_lp))
-          wrongIndex=where(data_day_split(t).flag(idx_time(idx_lp)) eq 21, countWrong)
-          if countWrong ne 0 then stop
+          ;wrongIndex=where(data_day_split(t).flag(idx_time(idx_lp)) eq 21, countWrong)
+          ;if countWrong ne 0 then stop
           data_tc_split.flag(idx_time(idx_lp))= data_day_split(t).flag(idx_time(idx_lp))
           data_tc_split.day(idx_time(idx_lp))=data_day_split(t).day
           bareSday(idx_time(idx_lp))=1.
@@ -844,30 +848,32 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
       if cntCloudIce gt 0 then nSeaMx[idxSea]=nseaMx[idxSea]+ones[idxSea]
       if cntSea gt 0 then nCloudIceMx[idxCloudIce]=nCloudIceMx[idxCloudIce]+ones[idxCloudIce]
     endfor
-;    restore, filename='fpa_'+strcompress(cloudtype, /REMOVE)+'.sav'
-;    restore, filename='red_'+strcompress(cloudtype, /REMOVE)+'.sav'
-;    restore, filename='nir_'+strcompress(cloudtype, /REMOVE)+'.sav'
-;    meandata=reform(mean_field.nir(0,1950:2100))
-;    stddata=reform(std_field.nir(*,0,1950:2100))
-;    stdmean=reform(std_mean.nir(0,1950:2100))
-    
+    ;    restore, filename='fpa_'+strcompress(cloudtype, /REMOVE)+'.sav'
+    ;    restore, filename='red_'+strcompress(cloudtype, /REMOVE)+'.sav'
+    ;    restore, filename='nir_'+strcompress(cloudtype, /REMOVE)+'.sav'
+    ;    meandata=reform(mean_field.nir(0,1950:2100))
+    ;    stddata=reform(std_field.nir(*,0,1950:2100))
+    ;    stdmean=reform(std_mean.nir(0,1950:2100))
+
     ; Set best flag available for tc (only when not assigned by previous steps) flag eq notAssignedFlag
     tempFlag=data_tc_split.flag
     notAssigned=where(data_tc_split.flag eq notAssignedFlag, notAssignedCount)
+    aa=where(data_tc_split.flag eq 255, nancnt)
     if notAssignedCount gt 1 then begin
       print, '**Flag = ', notAssignedFlag, '!!! (not assigned value)***'
       ;at least one pixel classified as sea/water...
       idxSea=where(nSeaMx ne 0 and data_tc_split.flag eq notAssignedFlag, cntSea)
       ;at least one pixel classified as cloud/ice...
-      idxCloudIce=where(nCloudIceMx ne 0 and data_tc_split.flag eq notAssignedFlag, cntCloudIce)
-
+      ; aggiungere flag ldtr  afare per natale
+      ;
+      ;      idxCloudIce=where(nCloudIceMx ne 0 and data_tc_split.flag eq notAssignedFlag, cntCloudIce)
       choosenDay=-1
       if cntSea gt 0 then begin
         for pix=0, cntSea-1 do begin
-          ; lowest flag values... different decoding table 
+          ; lowest flag values... different decoding table
           flagList=data_day_split[*].flag[idxSea[pix]]
           unikFlags=flagList[UNIQ(flagList, SORT(flagList))]
-          if n_elements(unikFlags) ne 1 then stop
+          ;if n_elements(unikFlags) ne 1 then stop
           ; work around to map best flag using C/Seawifs approach
           mapFlagList=mapFaparFlag(flagList)
           selectedFlag=min(mapFlagList)
@@ -875,6 +881,8 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
           selectedFlag=mapFaparFlag(selectedFlag,/REVERT)
           ; come back to AVHRR flag decoding
           data_tc_split.flag[idxSea[pix]]=selectedFlag
+          ;aa=where(data_tc_split.flag eq 255, cnt255)
+          ;if cnt255 ne 0 then stop
           data_tc_split.fapar[idxSea[pix]] = data_day_split[selectedDay].fapar[idxSea[pix]]
           data_tc_split.red[idxSea[pix]]=data_day_split[selectedDay].red[idxSea[pix]]
           data_tc_split.day[idxSea[pix]]=data_day_split[selectedDay].day
@@ -889,57 +897,64 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
           data_tc_split.toc_red[idxSea[pix]]=data_day_split[selectedDay].toc_red[idxSea[pix]]
           data_tc_split.toc_nir[idxSea[pix]]=data_day_split[selectedDay].toc_nir[idxSea[pix]]
         endfor
-      endif else begin
-        nSeaMx[*]=0
-        if cntCloudIce gt 0 then begin
-          print, 'clouds:', cntCloudIce
-          for pix=0, cntCloudIce-1 do begin
-            ; just for display test recycle nSeaMx variable
-            nSeaMx[idxCloudIce[pix]]=1
-            flagList=data_day_split[*].flag[idxCloudIce[pix]]
-            unikFlags=flagList[UNIQ(flagList, SORT(flagList))]
-            aa=where(unikFlags eq 21,c)
-            ;if n_elements(unikFlags) ne 1 and c eq 0 then stop
-            ; work around to map best flag using C/Seawifs approach
-            mapFlagList=mapFaparFlag(flagList)
-            notBad=where(mapFlagList ne 255, cnt)
-            if cnt gt 0 then selectedFlag=max(mapFlagList[notBad]) else selectedFlag=255
-            selectedDay=(where(selectedFlag eq mapFlagList))[0]
-            selectedFlag=mapFaparFlag(selectedFlag,/REVERT)
-            ; come back to AVHRR flag decoding
-            ;if selectedFlag ne 1 then begin
-            data_tc_split.flag[idxCloudIce[pix]] = selectedFlag
-            ;print, 'choose:', selectedFlag
-            ;print, 'from:', unikFlags
-            data_tc_split.fapar[idxCloudIce[pix]] = data_day_split[selectedDay].fapar[idxCloudIce[pix]]
-            data_tc_split.day[idxCloudIce[pix]] = data_day_split[selectedDay].day
-            data_tc_split.red[idxCloudIce[pix]]=data_day_split[selectedDay].red[idxCloudIce[pix]]
-            data_tc_split.nir[idxCloudIce[pix]]= data_day_split[selectedDay].nir[idxCloudIce[pix]]
-            data_tc_split.sigma_red[idxCloudIce[pix]]= data_day_split[selectedDay].sigma_red[idxCloudIce[pix]]
-            data_tc_split.sigma_nir[idxCloudIce[pix]]= data_day_split[selectedDay].sigma_nir[idxCloudIce[pix]]
-            data_tc_split.sigma[idxCloudIce[pix]]= data_day_split[selectedDay].sigma[idxCloudIce[pix]]
-            data_tc_split.toc_red[idxCloudIce[pix]]= data_day_split[selectedDay].toc_red[idxCloudIce[pix]]
-            data_tc_split.toc_nir[idxCloudIce[pix]]= data_day_split[selectedDay].toc_nir[idxCloudIce[pix]]
-            data_tc_split.ts[idxCloudIce[pix]]=data_day_split[selectedDay].ts[idxCloudIce[pix]]
-            data_tc_split.tv[idxCloudIce[pix]]=data_day_split[selectedDay].tv[idxCloudIce[pix]]
-            data_tc_split.toc_red[idxCloudIce[pix]]=data_day_split[selectedDay].toc_red[idxCloudIce[pix]]
-            data_tc_split.toc_nir[idxCloudIce[pix]]=data_day_split[selectedDay].toc_nir[idxCloudIce[pix]]
-            ;endif
-          endfor
-        endif else begin
-          for jj=0, n_elements(notAssigned)-1 do begin
-            fList=data_day_split[*].flag[notAssigned[jj]]
-            unikFlags=fList[UNIQ(fList, SORT(fList))]
-            if n_elements(unikFlags) ne 1 then stop
-            if unikFlags ne 1 then stop
-            data_tc_split.flag[notAssigned[jj]]=unikFlags
-            print, 'undetermined flag-->', unikFlags
-          endfor
-        endelse
-      endelse
+      endif
+      nSeaMx[*]=0
+      aa=where(data_tc_split.flag eq 255, cnt255)
+      if cnt255 ne 0 then stop
+      if cntCloudIce gt 0 then begin
+        print, 'clouds:', cntCloudIce
+        for pix=0, cntCloudIce-1 do begin
+          ; just for display test recycle nSeaMx variable
+          nSeaMx[idxCloudIce[pix]]=1
+          flagList=data_day_split[*].flag[idxCloudIce[pix]]
+          unikFlags=flagList[UNIQ(flagList, SORT(flagList))]
+          ;aa=where(unikFlags eq 21,c)
+          ;if n_elements(unikFlags) ne 1 and c eq 0 then stop
+          ; work around to map best flag using C/Seawifs approach
+          mapFlagList=mapFaparFlag(flagList)
+          notBad=where(mapFlagList ne 255, cnt)
+          if cnt gt 0 then selectedFlag=max(mapFlagList[notBad]) else selectedFlag=255
+          selectedDay=(where(selectedFlag eq mapFlagList))[0]
+          selectedFlag=mapFaparFlag(selectedFlag,/REVERT)
+          ; come back to AVHRR flag decoding
+          ;if selectedFlag ne 1 then begin
+          data_tc_split.flag[idxCloudIce[pix]] = selectedFlag
+          ;print, 'choose:', selectedFlag
+          ;print, 'from:', unikFlags
+          data_tc_split.fapar[idxCloudIce[pix]] = data_day_split[selectedDay].fapar[idxCloudIce[pix]]
+          data_tc_split.day[idxCloudIce[pix]] = data_day_split[selectedDay].day
+          data_tc_split.red[idxCloudIce[pix]]=data_day_split[selectedDay].red[idxCloudIce[pix]]
+          data_tc_split.nir[idxCloudIce[pix]]= data_day_split[selectedDay].nir[idxCloudIce[pix]]
+          data_tc_split.sigma_red[idxCloudIce[pix]]= data_day_split[selectedDay].sigma_red[idxCloudIce[pix]]
+          data_tc_split.sigma_nir[idxCloudIce[pix]]= data_day_split[selectedDay].sigma_nir[idxCloudIce[pix]]
+          data_tc_split.sigma[idxCloudIce[pix]]= data_day_split[selectedDay].sigma[idxCloudIce[pix]]
+          data_tc_split.toc_red[idxCloudIce[pix]]= data_day_split[selectedDay].toc_red[idxCloudIce[pix]]
+          data_tc_split.toc_nir[idxCloudIce[pix]]= data_day_split[selectedDay].toc_nir[idxCloudIce[pix]]
+          data_tc_split.ts[idxCloudIce[pix]]=data_day_split[selectedDay].ts[idxCloudIce[pix]]
+          data_tc_split.tv[idxCloudIce[pix]]=data_day_split[selectedDay].tv[idxCloudIce[pix]]
+          ;endif
+        endfor
+      endif
+      notAssigned=where(data_tc_split.flag eq notAssignedFlag, notAssignedCount)
+      for jj=0, n_elements(notAssigned)-1 do begin
+        fList=data_day_split[*].flag[notAssigned[jj]]
+        unikFlags=fList[UNIQ(fList, SORT(fList))]
+        if n_elements(unikFlags) ne 1 then print, 'warning'
+        if unikFlags[0] ne 1 then print, 'warning'
+        data_tc_split.flag[notAssigned[jj]]=min(unikFlags)
+        print, 'undetermined flag-->', min(unikFlags)
+      endfor
     endif
+    waterIdxs=where(data_tc_split.flag[*,*] eq 3, waterCount)
+    if waterCount gt 0 then begin
+      data_tc_split.day[waterIdxs]=255
+      data_tc_split.nday[waterIdxs]=255
+    endif
+    NanDay=where(data_tc_split.day ne 255, validCountDay)
+    if validCountDay gt 0 then data_tc_split.day=data_tc_split.day+1
+
     ; test daily behaviour
-    
+
     ;    diffDay=dd-data_tc_split.day
     ;    window, 1
     ;    tvscl, congrid(reform(data_tc_split.day), 72, 360)
@@ -985,6 +1000,8 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
     ;tv, reverse(congrid(data_tc_split.fapar*250.0, 720*2, 360*2),2)
     ;tv, congrid(data_tc_split.fapar*250.0, 72*3, 360*3)
     print, 'compute slice...', slice+1, '/', nSlice
+    ; Add 1 to update 0-based day "index": more readable field (think about set doy instead)
+
     prevflag[subXStart:subXEnd, subYStart:subYEnd]=tempFlag
     data_tc.nday[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.nday[*,*]
     data_tc.day[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.day[*,*]
@@ -1011,17 +1028,11 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
 
   endfor
   ;===================================================================================================
-  NanDay=where(data_tc.day ne 255, validCountDay)
-  ; Add 1 to update 0-based day "index": more readable field (think about set doy instead)
-  if validCountDay gt 0 then data_tc.day=data_tc.day+1
-
-
-  tNames=tag_names(data_tc)
+  ;tNames=tag_names(data_tc)
 
   ; check Sahara mistery...
   ;data_tc.fapar[3500:3700, 2100]=0.5
-
-  saharaIndex=where(data_tc.fapar eq 0 and data_tc.flag eq 6, countSahara)
+  ;saharaIndex=where(data_tc.fapar eq 0 and data_tc.flag eq 6, countSahara)
 
 end
 ;========================================================================================================

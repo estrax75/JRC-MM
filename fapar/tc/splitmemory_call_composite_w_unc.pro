@@ -69,7 +69,8 @@ Pro sm_make_tc_distance_eu_vegetation_m_w_unc, daysNumber, data_in, idx_doIt, da
     ;if max(buf[vld]) gt thres then stop
     ;if nfield eq 2 then idx_bad_mask = where(buf gt thres and (data_in(t).flag eq 4 or data_in(t).flag eq 5), outliersCount)
     ;if nfield eq 3 then idx_bad_mask = where(buf gt std_mean.temp and data_in(t).flag eq 0, outliersCount)
-    if outliersCount gt 1 then data_in(t).flag(idx_bad_mask)=21.0
+    ;if outliersCount gt 1 then data_in(t).flag(idx_bad_mask)=21.0
+    if outliersCount gt 1 then data_in(t).flag(idx_bad_mask)=1.0
     ; remove mask ONLY to work on bare soil (We need original daily flag values...)...
     ;if idx_bad_mask(0) ge 0 and nfield eq 2 then data_in(t).flag(idx_bad_mask)=21.0
     ;if idx_bad_mask(0) ge 0 then print, data_in(t).fapar(idx_bad_mask(0)), t
@@ -615,8 +616,8 @@ PRO sm_call_composite_w_unc, daysNumber, data_day_f, data_tc, nSlice, prevflag=p
         data_tc_split.sigma_red(idx_t)= data_day_split(t).sigma_red(idx_t)
         data_tc_split.sigma_nir(idx_t)= data_day_split(t).sigma_nir(idx_t)
         data_tc_split.sigma(idx_t)= data_day_split(t).sigma(idx_t)
-        wrongIndex=where(data_day_split(t).flag(idx_t) eq 21, countWrong)
-        if countWrong ne 0 then stop
+        ;;wrongIndex=where(data_day_split(t).flag(idx_t) eq 21, countWrong)
+        ;if countWrong ne 0 then stop
         data_tc_split.flag(idx_t)= data_day_split(t).flag(idx_t)
         ;overwriteCheck=where(data_tc_split.day(idx_t) ne 255, overWriteCount)
         ;if overWriteCount ne 0 then stop
@@ -710,8 +711,8 @@ PRO sm_call_composite_w_unc, daysNumber, data_day_f, data_tc, nSlice, prevflag=p
         data_tc_split.red(idx_time)=data_day_split(t).red(idx_time)
         data_tc_split.nir(idx_time)=data_day_split(t).nir(idx_time)
         data_tc_split.fapar(idx_time)=data_day_split(t).fapar(idx_time)
-        wrongIndex=where(data_day_split(t).flag(idx_time) eq 21, countWrong)
-        if countWrong ne 0 then stop
+        ;wrongIndex=where(data_day_split(t).flag(idx_time) eq 21, countWrong)
+        ;if countWrong ne 0 then stop
         data_tc_split.flag(idx_time)=data_day_split(t).flag(idx_time)
         data_tc_split.sigma_red(idx_time)= data_day_split(t).sigma_red(idx_time)
         data_tc_split.sigma_nir(idx_time)= data_day_split(t).sigma_nir(idx_time)
@@ -794,8 +795,8 @@ PRO sm_call_composite_w_unc, daysNumber, data_day_f, data_tc, nSlice, prevflag=p
           data_tc_split.sigma(idx_time(idx_lp))= data_day_split(t).sigma(idx_time(idx_lp))
           data_tc_split.sigma_red(idx_time(idx_lp))= data_day_split(t).sigma_red(idx_time(idx_lp))
           data_tc_split.sigma_nir(idx_time(idx_lp))= data_day_split(t).sigma_nir(idx_time(idx_lp))
-          wrongIndex=where(data_day_split(t).flag(idx_time(idx_lp)) eq 21, countWrong)
-          if countWrong ne 0 then stop
+          ;wrongIndex=where(data_day_split(t).flag(idx_time(idx_lp)) eq 21, countWrong)
+          ;if countWrong ne 0 then stop
           data_tc_split.flag(idx_time(idx_lp))= data_day_split(t).flag(idx_time(idx_lp))
           ;overwriteCheck=where(data_tc_split.day(idx_time(idx_lp)) ne 255, overWriteCount)
           ;if overWriteCount then stop
@@ -1000,8 +1001,8 @@ PRO sm_call_composite_w_unc, daysNumber, data_day_f, data_tc, nSlice, prevflag=p
         ;tv, congrid(data_tc_split.fapar*250.0, 72*3, 360*3)
         ;window,14, xsize=72*3, ysize=360*3, title='V'+strcompress(t, /remove)
         ;tv, congrid((mmask/30)*250.0, 72*3, 360*3), title='V'+strcompress(t, /remove)
-        wrongIndex=where(data_day_split(t).flag(idx_t) eq 21, countWrong)
-        if countWrong ne 0 then stop
+        ;wrongIndex=where(data_day_split(t).flag(idx_t) eq 21, countWrong)
+        ;if countWrong ne 0 then stop
         data_tc_split.flag(idx_t)= data_day_split(t).flag(idx_t)
         ;overwriteCheck=where(data_tc_split.day(idx_t) ne 255, overWriteCount)
         ;if overWriteCount then stop
@@ -1161,8 +1162,8 @@ PRO sm_call_composite_w_unc, daysNumber, data_day_f, data_tc, nSlice, prevflag=p
           data_tc_split.sigma(idx_time(idx_lp))= data_day_split(t).sigma(idx_time(idx_lp))
           data_tc_split.toc_red(idx_time(idx_lp))= data_day_split(t).toc_red(idx_time(idx_lp))
           data_tc_split.toc_nir(idx_time(idx_lp))= data_day_split(t).toc_nir(idx_time(idx_lp))
-          wrongIndex=where(data_day_split(t).flag(idx_time(idx_lp)) eq 21, countWrong)
-          if countWrong ne 0 then stop
+          ;wrongIndex=where(data_day_split(t).flag(idx_time(idx_lp)) eq 21, countWrong)
+          ;if countWrong ne 0 then stop
           data_tc_split.flag(idx_time(idx_lp))= data_day_split(t).flag(idx_time(idx_lp))
           ;overwriteCheck=where(data_tc_split.day(idx_time(idx_lp)) ne 255, overWriteCount)
           ;if overWriteCount then stop
@@ -1296,7 +1297,7 @@ PRO sm_call_composite_w_unc, daysNumber, data_day_f, data_tc, nSlice, prevflag=p
             nSeaMx[idxCloudIce[pix]]=1
             flagList=data_day_split[*].flag[idxCloudIce[pix]]
             unikFlags=flagList[UNIQ(flagList, SORT(flagList))]
-            aa=where(unikFlags eq 21,c)
+            ;aa=where(unikFlags eq 21,c)
             ;if n_elements(unikFlags) ne 1 and c eq 0 then stop
             ; work around to map best flag using C/Seawifs approach
             mapFlagList=mapFaparFlag(flagList)

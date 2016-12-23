@@ -1,5 +1,5 @@
 pro runTCFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, startMonth, endMonth, level, $
-  TA_TYPE=TA_TYPE, TC_TYPE=TC_TYPE, UNC=UNC, data_dir=data_dir
+  TA_TYPE=TA_TYPE, TC_TYPE=TC_TYPE, UNC=UNC, data_dir=data_dir, CLOUDTYPE=CLOUDTYPE
 
   ;confDir='E:\mariomi\Documents\projects\LDTR\data\AVHRR\data'
 
@@ -110,7 +110,7 @@ pro runTCFapar, confDir, sourceDir, tempDir, outputDir, startYear, endYear, star
       resFile=doFaparComposite_split(instrument, indicator, spatialResolution, level, missionName, mainVarName, noaanumber, thisyear, thisMonth, day, $
         sourceDir, outputDir, tempdir, $
         FIRST_LOOK=FIRST_LOOK, $
-        NC=NC, HDF=HDF, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
+        NC=NC, HDF=HDF, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, CLOUDTYPE=CLOUDTYPE, $
         OVERWRITE=OVERWRITE, TC_TYPE=TC_TYPE, TA_TYPE=TA_TYPE, UNC=UNC, data_dir=data_dir)
       if resFile eq -1 then print, thisyear, thismonth, ' skip (already exists or missing/corrupted source file)
       ;resFile=AVH01_merge_BRFGlob(file1, file2, file3, confDir, thisYear, thisMonth, thisDay, noaanumber, operatorObj, fsObj, tempDir, testFile=testFile)

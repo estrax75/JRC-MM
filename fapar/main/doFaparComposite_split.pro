@@ -4,7 +4,7 @@
 FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, inputLevel, missionName, mainVarName, missionCode, year, month, day, $
   sourceDir, outputDir, tempdir, $
   FIRST_LOOK=FIRST_LOOK, $
-  NC=NC, HDF=HDF, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
+  NC=NC, HDF=HDF, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, CLOUDTYPE=CLOUDTYPE, $
   OVERWRITE=OVERWRITE, TC_TYPE=TC_TYPE, TA_TYPE=TA_TYPE, UNC=UNC, data_dir=data_dir
   ;
   ;
@@ -395,7 +395,7 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
     if TA_TYPE eq 'TC' then begin
 
       starttime=systime(1)
-      cloudType=3
+      if n_elements(cloudType) eq 0 then cloudType=1
       if instrument eq 'AVH' then begin
         ;  change procedure by TC type (monthly, multiple day...)
         if TC_TYPE eq '5D' or TC_TYPE eq '10D' or TC_TYPE eq '16D' then begin
@@ -442,7 +442,7 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
       ;call_composite, expectedDays, data_day1, data_tc
       ;;
       fNames=['both', 'only_cloudy', 'only_shadow_cloud', 'no_mask']
-      tempDir='E:\mariomi\Documents\projects\ldtr\data\pics\avhrr\'
+      ;tempDir='E:\mariomi\Documents\projects\ldtr\data\pics\avhrr\'
 
       restore, filename='fpa_'+strcompress(cloudtype, /REMOVE)+'.sav'
       device, decomposed=0
@@ -566,12 +566,12 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
       ;waterIdxs=where(data_tc.flag eq 3, watCount)
 
       res=dataByteScaling(data_tc.fapar, data_tc.flag, $
-        DATA_NAN=!VALUES.F_NAN, BYTE_NAN=faparTCDSInfo.nans[2], $
-        DATA_RANGE=faparTCDSInfo.minMaxs[2,*], BYTE_RANGE=faparTCDSInfo.scaledminmaxs[2,*], outSlope, outIntercept)
+        DATA_NAN=!VALUES.F_NAN, BYTE_NAN=nanList[2], $
+        DATA_RANGE=minMaxs[2,*], BYTE_RANGE=scaledminmaxs[2,*], outSlope, outIntercept)
       ;DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
       ;DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
       data_tc.fapar=res.resultData
-      if notValidCount gt 0 then data_tc.fapar[notValidIdxs]=faparTCDSInfo.nans[2]
+      if notValidCount gt 0 then data_tc.fapar[notValidIdxs]=nanList[2]
       ; overwrite slope & intercept for fapar band
       trueIntercepts[2]=outIntercept
       trueSlopes[2]=outSlope
@@ -579,12 +579,12 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
 
       ;tv, rebin(bytscl(data_tc.sigma), 720, 360) ;*
       res=dataByteScaling(data_tc.sigma, data_tc.flag, $
-        DATA_NAN=!VALUES.F_NAN, BYTE_NAN=faparTCDSInfo.nans[3], $
-        DATA_RANGE=faparTCDSInfo.minMaxs[3,*], BYTE_RANGE=faparTCDSInfo.scaledminmaxs[3,*], outSlope, outIntercept)
+        DATA_NAN=!VALUES.F_NAN, BYTE_NAN=nanList[3], $
+        DATA_RANGE=minMaxs[3,*], BYTE_RANGE=scaledminmaxs[3,*], outSlope, outIntercept)
       ;        DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
       ;        DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
       data_tc.sigma=res.resultData
-      if notValidCount gt 0 then data_tc.sigma[notValidIdxs]=faparTCDSInfo.nans[3]
+      if notValidCount gt 0 then data_tc.sigma[notValidIdxs]=nanList[3]
       ; overwrite slope & intercept for sigma band (fapar)
       trueIntercepts[3]=outIntercept
       trueSlopes[3]=outSlope
@@ -592,12 +592,12 @@ FUNCTION doFaparComposite_split, instrument, indicator, spatialResolution, input
 
       ;tv, rebin(bytscl(data_tc.dev_temp), 720, 360) ;*
       res=dataByteScaling(data_tc.dev_temp, data_tc.flag, $
-        DATA_NAN=!VALUES.F_NAN, BYTE_NAN=faparTCDSInfo.nans[4], $
-        DATA_RANGE=faparTCDSInfo.minMaxs[4,*], BYTE_RANGE=faparTCDSInfo.scaledminmaxs[4,*], outSlope, outIntercept)
+        DATA_NAN=!VALUES.F_NAN, BYTE_NAN=nanList[4], $
+        DATA_RANGE=minMaxs[4,*], BYTE_RANGE=scaledminmaxs[4,*], outSlope, outIntercept)
       ;        DATA_NAN=DATA_NAN, BYTE_NAN=BYTE_NAN, $
       ;        DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
       data_tc.dev_temp=res.resultData;data_tc.sigma=res.resultData
-      if notValidCount gt 0 then data_tc.dev_temp[notValidIdxs]=faparTCDSInfo.nans[4]
+      if notValidCount gt 0 then data_tc.dev_temp[notValidIdxs]=nanList[4]
       ; overwrite slope & intercept for dev band (fapar)
       trueIntercepts[4]=outIntercept
       trueSlopes[4]=outSlope

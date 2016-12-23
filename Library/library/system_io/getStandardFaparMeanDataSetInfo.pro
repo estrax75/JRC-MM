@@ -82,10 +82,10 @@ function getStandardFaparMeanDataSetInfo
 
   ;'Day','Number_of_Day', $, $
   minMaxs[0,*]=[0,31]
-  nanList[0]=0
+  nanList[0]=BYTE_NAN1
 
   minMaxs[1,*]=[0,31]
-  nanList[1]=0
+  nanList[1]=BYTE_NAN2
 
   ;'FAPAR','Dev_Temp','Sigma_FAPAR', $
   minMaxs[*,*]=-1

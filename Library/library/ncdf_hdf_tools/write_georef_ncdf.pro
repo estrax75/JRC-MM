@@ -118,7 +118,7 @@ pro write_georef_ncdf, fileName, bandNames, bandStandardNames, bandLongNames, $
     nullNum=0
     if keyword_set(NOREVERSE) then thisBand=1.*(*(bandList[v])) else thisBand=reverse(1.*(*(bandList[v])),2)
 
-    ; _Unsinned is a "not-well-documented" feature for unsigned data type (INT and BYTE)
+    ; _Unsigned is a "not-well-documented" feature for unsigned data type (INT and BYTE)
     IS_UNSIGNED=convertDataType(undef, bandDataType[v], /IS_UNSIGNED)
     if keyword_set(IS_UNSIGNED) and ~(keyword_set(OLDSTYLE)) then my_NCDF_ATTPUT, ncid, ncvarid[v], '_Unsigned', "true"
 

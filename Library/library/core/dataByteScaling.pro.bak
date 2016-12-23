@@ -12,6 +12,8 @@ FUNCTION dataByteScaling, data, flagMatrix, $;, FLAG_VALUES=FLAG_VALUES, $
   resData=bytscl(resData, MIN=DATA_RANGE[0], MAX=DATA_RANGE[1], TOP=outInterval, /NAN);+VALUE_BYTES[0]
   resData=resData+BYTE_RANGE[0]
 
+  prevExcept=!EXCEPT
+  !EXCEPT=0
   idxneg=where(data lt DATA_RANGE[0])
   if idxneg[0] ge 0 then begin
     resData[idxneg]=0.0;DATA_RANGE[0]
@@ -32,6 +34,8 @@ FUNCTION dataByteScaling, data, flagMatrix, $;, FLAG_VALUES=FLAG_VALUES, $
   ;idx=aa[0]
   ;print, resdata[idx], resdata[idx]*outSlope+outIntercept, data[idx]
   if n_elements(flagMatrix) eq 0 then flagMatrix=resdata
+  testMath=CHECK_MATH()
+  !EXCEPT=prevExcept
   return, {resultData:resdata, resultFlag:flagMatrix}
 
 

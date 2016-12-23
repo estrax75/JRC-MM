@@ -8,7 +8,7 @@
 ;launch_fapar_daily, 1999, 1999, 6, 6, 3, 'NCHDF', OVERWRITE=0, TC_TYPE='DAILY'
 ;launch_fapar_daily, 1996, 1996, 8, 8, 3, 'NCHDF', OVERWRITE=0, TC_TYPE='DAILY'
 pro launch_fapar_daily, startYear, endYear, startMonth, endMonth, outputtype, outputformat, $
-  TC_TYPE=TC_TYPE, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, OVERWRITE=OVERWRITE
+  TC_TYPE=TC_TYPE, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, OVERWRITE=OVERWRITE, datadir=datadir
 
   COMMON singleTons, ST_utils, ST_operator, ST_fileSystem
 
@@ -35,12 +35,16 @@ pro launch_fapar_daily, startYear, endYear, startMonth, endMonth, outputtype, ou
   if HDF+NC eq 0 then NC=1  
   ;if strupcase(format) eq  then HDF=1 else NC=1
   if n_elements(MISSIONOVERLAPINDEX) eq 0 then MISSIONOVERLAPINDEX=0
-  tempDir='/home/mariomi/temp/'
+  if n_elements(tempDir) ne 1 then begin
+    if strupcase(!VERSION.OS_FAMILY) eq strupcase('windows') then tempDir='E:\mariomi\Documents\temp'
+    if strupcase(!VERSION.OS_FAMILY) eq strupcase('unix') then tempDir='/home/mariomi/temp'
+  endif
+  if n_elements(tempDir) ne 1 then stop
   ;level='L2'
 
   runDailyFapar, confDir, tempDir, startYear, endYear, startMonth, endMonth, $
     NC=NC, HDF=HDF, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
-    OVERWRITE=OVERWRITE
+    OVERWRITE=OVERWRITE, datadir=datadir
 
 end
 

@@ -72,7 +72,7 @@ function getStandardFaparTCDataSetInfo
 
   minMaxs[1,*]=DAY_DATA_RANGE
   scaledMinMaxs[1,*]=DAY_DATA_RANGE
-  nanList[1]=BYTE_NAN1
+  nanList[1]=BYTE_NAN2
 
   ;'FAPAR','Dev_Temp','Sigma_FAPAR', $
   minMaxs[2,*]=GENERIC_DATA_RANGE
@@ -116,7 +116,7 @@ function getStandardFaparTCDataSetInfo
   ;'JRC_FLAG', $
   minMaxs[11,*]=[0,15]
   scaledMinMaxs[11,*]=[0,15]
-  nanList[11]=255
+  nanList[11]=BYTE_NAN2
 
   return, { $
     header: infoHeader, $

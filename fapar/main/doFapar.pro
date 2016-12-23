@@ -66,7 +66,9 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
     hdfFileInfo=build_JRC_FPA_AVH_Daily_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, $
       product, version, 'HDF',  indicator=indicator, level, projection=projection)
   endif
-  sourceDir=sourceDir+sourceFileInfo.filePath
+  testDir=sourceDir+sourceFileInfo.filePath
+  ; useful for test (source dir not need to be organized in subfolder...
+  if (file_info(testDir)).directory eq 1 then sourceDir=testDir   
   ; always add path_sep() as last character...
   sourceDir=ST_fileSystem->adjustDirSep(sourceDir, /ADD)
   sourceFileName=sourceDir+sourceFileInfo.fileName
@@ -76,7 +78,7 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
   ;insert or remove version here
   ;set intermediate folder for testing...
   ; ToDo: remove with final version!!!
-  destDir=destDir+'v1.5'+path_sep()
+  ;destDir=destDir+'v1.5'+path_sep()
   resFileNC=destDir+ncFileInfo.fileName
   resFileHDF=destDir+hdfFileInfo.fileName
 
@@ -512,11 +514,11 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
   ;byteOutput=dataByteScaling(output.fpar, NAN_BYTE_VALUE=0, VALUE_BYTES=[1,255])
   ;byteOutput=dataByteScaling(output.fpar, NAN_BYTE_VALUE=0, VALUE_BYTES=[1,255])
   ;byteOutput=dataByteScaling(output.fpar, VALUE_BYTES=[0,250])
-  remarkableFlags=bSInfo.remarkableFlags
+  ;remarkableFlags=bSInfo.remarkableFlags
   ; useful values coming from scaling routine
-  DATA_NAN=bSInfo.DATA_NAN
-  BYTE_NAN=bSInfo.BYTE_NAN
-  BYTE_RANGE=bSInfo.BYTE_RANGE
+  ;DATA_NAN=bSInfo.DATA_NAN
+  ;BYTE_NAN=bSInfo.BYTE_NAN
+  ;BYTE_RANGE=bSInfo.BYTE_RANGE
 
   ; Info about which variables store and in which way is inside a product-dependended function
   faparDSInfo=getStandardFaparDataSetInfo()
@@ -551,8 +553,8 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
   output.fpar=res.resultData
   
   ; If VGT case (JRC_FLAG eq 0) set a value <> 0 (First available after byta_range[0])
-  setToMinIdx=where(output.fpar eq BYTE_RANGE[0] and output.flag eq 0, setToMinCount)
-  output.fpar[setToMinIdx]=BYTE_RANGE[0]+1b
+  setToMinIdx=where(output.fpar eq reform(faparDSInfo.scaledminmaxs[0,0]) and output.flag eq 0, setToMinCount)
+  output.fpar[setToMinIdx]=reform(faparDSInfo.scaledminmaxs[0,0])+1b
   ;idx=where(output.flag eq 0 or output.flag eq 4 or output.flag eq 5, num, compl=idxN)
   ;output.fpar[idx]=!VALUES.F_NAN
   
@@ -561,8 +563,8 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
 
   ; do it for sigma-fapar
   res=dataByteScaling(output.sigma, output.flag, $
-    DATA_NAN=!VALUES.F_NAN, BYTE_NAN=BYTE_NAN, $
-    DATA_RANGE=DATA_RANGE, BYTE_RANGE=BYTE_RANGE, outSlope, outIntercept)
+    DATA_NAN=!VALUES.F_NAN, BYTE_NAN=faparDSInfo.nans[1], $
+    DATA_RANGE=faparDSInfo.minMaxs[1,*], BYTE_RANGE=reform(faparDSInfo.scaledminmaxs[1,*]), outSlope, outIntercept)
   output.sigma=res.resultData
   ;output.flag=res.resultFlag
   trueIntercepts[1]=outIntercept
@@ -670,7 +672,7 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
     dataSets, bandDataTypes, bandIntercepts, bandSlopes, tempDir, boundary, scaledminmaxs=scaledminmaxs, $
     trueMinMaxs=minMaxs, nanList=nanList, trueIntercepts=trueIntercepts, trueSlopes=trueSlopes, $
     id=hdfFileInfo.filename, satellite=satellite, header=header, $
-    date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End
+    date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End, /POSTCOMPRESSION
 
   print, 'done'
 

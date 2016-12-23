@@ -169,7 +169,8 @@ pro write_hdf, fileName, bandNames, bandStandardNames, bandLongNames, $
     ;if n_elements(gridMapping) eq 0 then HDF_SD_ATTRSET, sdid_thisband, 'grid_mapping', 'latitude_longitude' else HDF_SD_ATTRSET, sdid_thisband, 'grid_mapping', gridMapping
     data_type=convertDataType(nanList[i], bandDataType[i], /GET_NAME, FORMAT='HDF')
     HDF_SD_ATTRSET, sdid_thisband, 'data_type', (reform(data_type[0]))[0], /STRING
-    HDF_SD_ATTRSET, sdid_thisband, 'data_type_comment', (reform(data_type[1]))[0], /STRING
+    HDF_SD_ATTRSET, sdid_thisband, 'data_type_full_name', (reform(data_type[1]))[0], /STRING
+    HDF_SD_ATTRSET, sdid_thisband, 'data_type_url', 'http://www.unidata.ucar.edu/software/netcdf/docs/data_type.html', /STRING
     ;HDF_SD_ATTRSET, sdid_thisband, 'valid_min_comment', 'min value before apply scale and offset', /STRING
     ;HDF_SD_ATTRSET, sdid_thisband, 'valid_max_comment', 'max value before apply scale and offset', /STRING
 

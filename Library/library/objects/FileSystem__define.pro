@@ -8,6 +8,18 @@ FUNCTION FileSystem::adjustDirSep, folder, ADD=ADD, REMOVE=REMOVE
 
 END
 
+FUNCTION FileSystem::getSPPTemplateFile
+
+  return, self.SPPtemplateFile
+
+END
+
+FUNCTION FileSystem::setSPPTemplateFile, fileName
+
+  self.SPPtemplateFile=fileName
+
+END
+
 FUNCTION FileSystem::getUtility
 
  return, self.utility
@@ -303,6 +315,35 @@ FUNCTION FileSystem::readCSVFile, fileName, FOOTERDISCARDLINES=FOOTERDISCARDLINE
   
 END
 
+PRO FileSystem::workAroundCSVFile, fileName
+
+  ;  ERROR=0
+  ;  catch, error_status
+  ;  ;print, systime()
+  ;  if error_status NE 0 THEN BEGIN
+  ;    ERROR=1
+  ;    catch, /CANCEL
+  ;    msg='problem with file: <'+fileName+'> check existence or read permission.'
+  ;    errMsg=dialog_message(msg, /ERROR)
+  ;    message, msg
+  ;  endif
+  openr, unitIn, fileName, /GET_LUN
+  
+  tmpName='tmp'+cgTimeStamp(10, RANDOM_DIGITS=4)
+  tmpName=self->adjustDirSep(GETENV('IDL_TMPDIR'), /ADD)+tmpName
+  openw, unitOut, tmpName, /GET_LUN
+  bufferString=''
+
+  for i=0, 1 do begin
+    readf, unitIn, bufferString
+    printf, unitOut, bufferString
+  endfor
+  close, unitIn & free_lun, unitIn
+  close, unitOut & free_lun, unitOut
+  file_move, tmpName, fileName, /ALLOW, /OVERWRITE
+
+END
+
 FUNCTION FileSystem::removeFileExtension, fullFileName, extensionSep=extensionSep
 
   if ~keyword_set(extensionSep) then extension='.' else extension=extensionSep
@@ -521,6 +562,58 @@ FUNCTION FileSystem::buildMapEntryFromFile, fileName
 END
 
 ; load from ini file
+FUNCTION FileSystem::buildSimpleMapEntryFromFile, fileName
+
+  ;map all configuration that system need from a configuration file!!!
+  ERROR=0
+  catch, error_status
+
+  if error_status NE 0 THEN BEGIN
+    ERROR=1
+    catch, /CANCEL
+    msg='Problem with file '+fileName+' check version, contents, existence or read permission.'
+    errMsg=dialog_message(msg, /ERROR)
+    message, msg
+    exit
+  endif
+
+  bufferString=''
+  openr, unit, fileName, /GET_LUN
+
+  bufferString=''
+  i=0 & j=0
+  objMaps=replicate({ List , $
+    id: '', $
+    value: ''}, 100)
+  ;confMap=obj_new('ConfMap')
+
+  while not(eof(unit)) do begin
+    readf, unit, bufferString
+    i++
+    void=strlen(strcompress(bufferString, /REMOVE)) eq 0
+    checkFirst=strmid(bufferString, 0,1)
+    check1=(strpos(checkFirst, '[')+1) > 0
+    check2=(strpos(checkFirst, ';')+1) > 0
+    check3=(strpos(checkFirst, '#')+1) > 0
+    null=strlen(checkFirst) eq 0
+    if (check1+check2+check3) gt 0 or null or void then begin
+      print, 'Discard row', i
+      print, bufferString
+    endif else begin
+      info=strsplit(bufferString, '=', /EXTRACT)
+      ;mapEntry=obj_new('MapEntry', info[0], info[1])
+      ;confMap->addEntry, mapEntry
+      objMaps[j].(0)=info[0]
+      objMaps[j].(1)=info[1]
+      j++
+    endelse
+  endwhile
+  objMaps=objMaps[0:j-1]
+  close, unit & free_lun, unit
+  return, objMaps
+
+END
+
 FUNCTION FileSystem::loadInitFileData
 
   fileName=self->getInitFileName()
@@ -783,11 +876,12 @@ END
 ; constructor/destructor
 ;***********************
 
-FUNCTION FileSystem::init, applicationName, mainApplication, applicationRoot=applicationRoot, recordSeparator=recordSeparator, STAND_ALONE=STAND_ALONE, MUSTEXISTS=MUSTEXISTS
+FUNCTION FileSystem::init, applicationName, mainApplication, applicationRoot=applicationRoot, recordSeparator=recordSeparator, STAND_ALONE=STAND_ALONE, MUSTEXISTS=MUSTEXISTS, SPPtemplatefile=SPPtemplatefile
 
   if not self -> Object :: init() then return , 0
   self.oSDirSeparator=path_sep()
   if n_elements(applicationName) ne 0 then self.applicationName=applicationName
+  if n_elements(SPPtemplateFile) eq 1 then self.SPPtemplateFile=SPPtemplateFile
   ;self.configurationMap=obj_new('ConfMap')
   if n_elements(mainApplication) eq 1 then self.mainApplication=mainApplication
   if ~keyword_set(STAND_ALONE) then if n_elements(applicationRoot) eq 1 then self.applicationRoot=applicationRoot else self->configure, !DIR, MUSTEXISTS=MUSTEXISTS, NOTFOUND=NOTFOUND
@@ -818,6 +912,7 @@ PRO FileSystem__Define
   Struct = { FileSystem , $
     applicationRoot: '', $
     applicationName: '', $
+    SPPtemplateFile: '', $
     oSDirSeparator: '', $
     recordSeparator: '', $
     invalidCharList: ptr_new(), $

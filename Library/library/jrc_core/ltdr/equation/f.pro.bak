@@ -12,10 +12,13 @@ FUNCTION F,ttasun,ttaview,phisun,phiview, k,T,rhoc
   ;
 
   ; MM (6)
+  ;!EXCEPT=2
   cosg=cos(ttasun)*cos(ttaview) + sin(ttasun)*sin(ttaview)*cos(abs(phisun-phiview))
   ; MM (7)
   G = sqrt(tan(ttasun)^2 + tan(ttaview)^2 - 2*tan(ttasun)*tan(ttaview)*cos(abs(phisun-phiview)))
   ; MM (3)
+  ;aa=where(finite(ttasun) eq 0, cc)
+  ;if cc gt 0 then stop
   f1=((cos(ttasun)*cos(ttaview))^(k-1.))/((cos(ttasun) + cos(ttaview))^(1.-k))
   ; MM (4)
   f2=(1-T^2.)/((1. + 2*T*cosg + T^2.)^(1.5))

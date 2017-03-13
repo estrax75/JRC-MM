@@ -1,6 +1,7 @@
 pro runDailyFapar, confDir, tempDir, startYear, endYear, startMonth, endMonth, missionIndex, $
-  NC=NC, HDF=HDF, outputDir=outputDir, datadir=datadir, $
-  OVERWRITE=OVERWRITE, TC_TYPE=TC_TYPE, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX
+  NC=NC, HDF=HDF, CSV=CSV, outputDir=outputDir, datadir=datadir, DISKSPACE=DISKSPACE, $
+  OVERWRITE=OVERWRITE, TC_TYPE=TC_TYPE, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
+  PIXELS_PROCESS=PIXELS_PROCESS, coeffFile=coeffFile
 
   ;confDir='E:\mariomi\Documents\projects\LDTR\data\AVHRR\data'
 
@@ -9,6 +10,8 @@ pro runDailyFapar, confDir, tempDir, startYear, endYear, startMonth, endMonth, m
 
   ;sensor='AVHRR'
   ;sensor='AVH09C1'
+  
+  ;if keyword_set(PIXELS_PROCESS) then instrument='AVH09C1' else instrument='AVH'
   instrument='AVH'
   indicator='LAN'
   spatialResolution='0005D'
@@ -46,11 +49,12 @@ pro runDailyFapar, confDir, tempDir, startYear, endYear, startMonth, endMonth, m
         print, 'working on', thisYear, thisMonth, thisDay, '...'
         if n_elements(datadir) eq 1 then sourceDir=dataDir else sourceDir=getsourcedir_by_year(thisYear) 
         if n_elements(outputDir) eq 0 then outputDir=sourceDir
-        resFile=doFapar(instrument, indicator, spatialResolution, level, missionName, mainVarName, noaanumber, thisyear, thismonth, thisday, $
+        resFile=doDailyFapar(instrument, indicator, spatialResolution, level, missionName, mainVarName, noaanumber, thisyear, thismonth, thisday, $
           sourceDir, outputDir, tempdir, $
-          NC=NC, HDF=HDF, $; /FIRST, 
+          NC=NC, HDF=HDF, CSV=CSV, $; /FIRST, 
           MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
-          OVERWRITE=OVERWRITE)
+          OVERWRITE=OVERWRITE, DISKSPACE=DISKSPACE, $
+          PIXELS_PROCESS=PIXELS_PROCESS, coeffFile=coeffFile)
         if resFile eq -1 then print, thisyear, thismonth, thisday, ' skip (already exists or missing/corrupted source file)
         ;resFile=AVH01_merge_BRFGlob(file1, file2, file3, confDir, thisYear, thisMonth, thisDay, noaanumber, operatorObj, fsObj, tempDir, testFile=testFile)
         ;resFile=merge_BRFGlob(file1, file2, file3, confDir, thisYear, thisMonth, thisDay, noaanumber, operatorObj, fsObj, tempDir, testFile=testFile)

@@ -160,6 +160,7 @@ pro testCompareFAPAR, latPos, lonPos, year, month, noaa, TO_PIX=TO_PIX, RESET=RE
       myDailyPixFapar=reform(myDailyPixFaparMx[k,j,*])
       myDailyPixmeandat=reform(myDailyPixmeandatMx[k,j])
 
+
       RoughDistance=abs(myDailyPixFapar-(reform(myDailyPixmeandat))[0])
 
       indexEucl=(where(min(myDailyPixDistance, /NAN, max=maxEucl) eq myDailyPixDistance))[0]

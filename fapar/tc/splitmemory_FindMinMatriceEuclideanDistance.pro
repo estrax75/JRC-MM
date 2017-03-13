@@ -135,7 +135,6 @@ Pro sm_call_mean_3,  daysNumber, data_in, mean_field, std_mean, std_field, nfiel
       buff=mean_field.red
       validMask=finite(buf) and finite(buff)
       goodIndexes=where(validMask eq 1)
-
       idxMaskVeg=where(buf[goodIndexes] gt 0.0 and buf[goodIndexes] lt 1.0 and $
         buff[goodIndexes] gt 0.0 and buff[goodIndexes] lt 1.0)
       validMaskVeg=validMask*0
@@ -290,7 +289,6 @@ Pro sm_call_mean_3,  daysNumber, data_in, mean_field, std_mean, std_field, nfiel
     std_mean.temp[*,*]=buf3[*,*]
     checkZeroes=where(std_mean.temp[*,*] eq 0, countZeroes)
     print,'Find # points with Standard Deviation Mean FAPAR = 0 ', countZeroes
-
   endif
   ;
   ;stop
@@ -536,6 +534,5 @@ PRO sm_FindEuclideanMatricDistance, daysNumber, data_in, idx_third, distance, me
     endfor
     ;stop
   endelse
-
   ; stop
 END

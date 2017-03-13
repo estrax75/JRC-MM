@@ -1,0 +1,58 @@
+FUNCTION compute_neural_net_v1_parameter_M, periodType, $
+    month, year, roiCode, roiArchiveCode, inputDir, outputDir, $
+    parCode, day=day, refRoi=refRoi, $
+    NOTFOUND=NOTFOUND, GETCHLVAR=GETCHLVAR, GETMAPINFO=GETMAPINFO, $
+    outMapInfo=outMapInfo, $
+    JULDAY=JULDAY, SETNAN=SETNAN
+    
+    
+  COMMON smurffCB, mainApp
+  
+  roi=roiArchiveCode
+  NOTFOUND=1
+  fs=mainApp->getFileSystem()
+  utility=mainApp->getUtility()
+  
+  tempDir=mainApp->getKeyValue('TEMP_DIR')
+  ignoreValue=float(mainApp->getKeyValue('NAN_VALUE'))
+  
+  destFolder=mainApp->getOutputFolder()
+  parameters=mainApp->getParameters()
+  
+  parInfo=parameters->getElementByCode(parCode)
+  
+  physConvFunc=parInfo.conversionFunction
+  physInputVar=parInfo.inputBandName
+  physOutputVar=parInfo.outputBandName
+  
+  physicals=mainApp->getPhysicalFromYear(year)
+  physical=physicals[0]
+  sensorCode=physical->getCode()
+  
+  
+  statOperator=obj_new('BiomapStatisticsOperator', mainApp, tempDir, periodType, statBandCode='mean', bandToExportList='mean')
+  fileList=statOperator->getFileToOverwriteList(month, year, resDir, parCode+'_'+sensorCode, roi, parInfo=parInfo, NONE=NONE, fileToPreserveNo=fileToPreserveNo, fileToPreserveIdx=fileToPreserveIdx, /overwriteFlag)
+  
+  ;biomapResDir=mainApp->getKeyValue('BIOMAP_OUTPUT_DIR') & fullFileName=biomapResDir+path_sep()+fileList[0]
+  resDir=inputDir & fullFileName=resDir+path_sep()+fileList[0]
+  
+  ;data=bioMapStatOperator->readNcdfVar(fullFileName, parCode, FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE)
+  data=statOperator->readNcdfVar(fullFileName, parCode, FOUND=FOUND, /REVERSE, TRANSPOSE=TRANSPOSE)
+  if keyword_set(GETMAPINFO) and keyword_set(FOUND) then outMapInfo=readNcdfGeoInfo(infilenames);, /REVERSE, GRIDASDATASET=GRIDASDATASET, lats=lats, lons=lons)
+  ;here read lat/lon
+  
+  NOTFOUND=1-keyword_set(FOUND)
+  obj_destroy, statOperator
+  
+  if keyword_set(FOUND) then begin
+    data=data.data
+    ignoreValue=float(mainApp->getKeyValue('NAN_VALUE'))
+    ;discardIdx=where(data eq ignoreValue, count)
+    ;if count gt 0 then data[discardIdx] = !values.F_NAN
+    data=mainApp->applyRangeConditions(parCode, data, parCode, ignoreValue=ignoreValue, SETNAN=SETNAN)
+    ;data=reverse(data, 2)
+    outTitle=parCode
+    return, data
+  endif else return, -1
+  
+END

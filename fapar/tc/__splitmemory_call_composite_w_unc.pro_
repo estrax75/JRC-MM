@@ -1,0 +1,144 @@
+Pro sm_make_tc_distance_eu_vegetation_m_w_unc, daysNumber, data_in, splitDims, faparMean, cloudtype=cloudtype
+  ;
+  ; input
+  ; daysNumber : total number of days (files)
+  ; data_in : data for each days
+  ; idx_doIt : position where index ge 3
+  ; nfield : 3 over vegetation pixels (consider fapar value) / 2 over bare soil pixels (ignore fapar value)
+  ; output:
+  ; day : the day to be used in the time composite
+  ; index_2 : valid observations after outliers
+  ; meandat : temporal deviation over the period (only valid pixels after outliers)
+  ;
+  ; compute the distance
+  ;help, idx_doIT
+  ;stop
+
+  for pixPosX=0, splitDims[0]-1 do begin
+    for pixPosY=0, splitDims[1]-1 do begin
+      outFAPAR=!VALUES.F_NAN
+      ComputeFPARwRectUncert, daysNumber, $
+        data_in[*].fapar[pixPosX, pixPosY], $     ; Input FPAR */
+        data_in[*].red[pixPosX, pixPosY], $     ; Input Rect R */
+        data_in[*].nir[pixPosX, pixPosY], $     ; Input Rect NIR */
+        data_in[*].sigma[pixPosX, pixPosY], $   ; Input FPAR */
+        data_in[*].sigma_red[pixPosX, pixPosY], $   ; Input Rect R */
+        data_in[*].sigma_nir[pixPosX, pixPosY], $   ; Input Rect NIR */
+        badvalue, $                 ; Input bad value */
+        data_in[*].jrc_flag[pixPosX, pixPosY],$      ; Input flag */
+        outFAPAR, $                   ; Output selected FPAR */
+        outbrf_r, $                   ; Output selected rect R */
+        outbrf_n, $                   ; Output selected rect NIR */
+        outFAPAR_u, $                 ; Output selected FPAR */
+        outbrf_r_u, $                 ; Output selected rect R */
+        outbrf_n_u, $                 ; Output selected rect NIR */
+        outdev_FAPAR, $               ; Output stdev FPAR */
+        outdev_brf_r, $               ; Output stdev rect R */
+        outdev_brf_n, $               ; Output stdev rect NIR */
+        outp_DayAvailable, $               ; Output nb of values used */
+        outp_DayIndex               ; Output file number selected */
+      if n_elements(outFAPAR) eq 1 then testFapar[pixPosX, pixPosY]=outFAPAR else testFapar[pixPosX, pixPosY]=!VALUES.F_NAN
+      dayIndex=outp_DayIndex
+      data_tc_split.nday[pixPosX, pixPosY]=outp_DayAvailable
+      data_tc_split.day[pixPosX, pixPosY]=outp_DayIndex
+
+      data_tc_split.dev_red_temp[pixPosX, pixPosY]=outdev_FAPAR
+      data_tc_split.dev_nir_temp[pixPosX, pixPosY]=outdev_brf_r
+      data_tc_split.dev_temp[pixPosX, pixPosY]=outdev_brf_n
+
+      data_tc_split.sigma[pixPosX, pixPosY]=data_in[dayIndex].sigma[pixPosX,pixPosY]
+      data_tc_split.sigma_red[pixPosX, pixPosY]=data_in[dayIndex].sigma_red[pixPosX,pixPosY]
+      data_tc_split.sigma_nir[pixPosX, pixPosY]=data_in[dayIndex].sigma_nir[pixPosX,pixPosY]
+      data_tc_split.jrc_flag[pixPosX, pixPosY]=data_in[dayIndex].jrc_flag[pixPosX,pixPosY]
+      data_tc_split.ltdr_flag[pixPosX, pixPosY]=data_in[dayIndex].ltdr_flag[pixPosX,pixPosY]
+
+      data_tc_split.nir[subXStart:subXEnd, subYStart:subYEnd]=data_in[dayIndex].nir[pixPosX,pixPosY]
+      data_tc_split.red[subXStart:subXEnd, subYStart:subYEnd]=data_in[dayIndex].red[pixPosX,pixPosY]
+      ;only for deep check test
+      data_tc_split.ts[subXStart:subXEnd, subYStart:subYEnd]=data_in[dayIndex].ts[pixPosX,pixPosY]
+      data_tc_split.tv[subXStart:subXEnd, subYStart:subYEnd]=data_in[dayIndex].tv[pixPosX,pixPosY]
+      data_tc_split.phi[subXStart:subXEnd, subYStart:subYEnd]=data_in[dayIndex].phi[pixPosX,pixPosY]
+      data_tc_split.toc_red[subXStart:subXEnd, subYStart:subYEnd]=data_in[dayIndex].toc_red[pixPosX,pixPosY]
+      data_tc_split.toc_nir[subXStart:subXEnd, subYStart:subYEnd]=data_in[dayIndex].toc_nir[pixPosX,pixPosY]
+      data_tc_split.fapar=data_in[dayIndex].fapar[pixPosX,pixPosY]
+    endfor
+  endfor
+  tvscl, congrid(testFAPAR, 36, 360), /NAN
+  
+  sm_FindEuclideanMatricDistance_w_unc, daysNumber, data_in, idx_doIt, distance, meandat, std_mean, nfield, splitDims, faparMean, cloudtype=cloudtype
+  ;
+  ; remove outliers ; check the numbers
+  ;
+  if nfield eq 3 then thres = 7.915
+  if nfield eq 2 then thres = 5.991
+  ; this setting coming from SeaWifs l3time C-Code
+  ;  if nfield eq 3 then thres = 3.53
+  ;  if nfield eq 2 then thres = 2.30
+  ;
+  ;=================================================================
+  ;
+  ; re-compute number of days
+  ;
+  ;========================================================================
+  index_2=bytarr(splitDims[0],splitDims[1])
+  buf=fltarr(splitDims[0],splitDims[1])
+  index_2(*,*)=0b
+  one=index_2
+  one(*,*)=1b
+  tt=[0, daysNumber]
+  ;try to avoid indexing/masking...
+  ;
+  ;stop
+  if nfield eq 3 then idx_remake=where(data_in.jrc_flag eq 0 and index_2 ge 3, complement=saveIndexes)
+  if nfield eq 2 then idx_remake=where((data_in.jrc_flag eq 4 or data_in.jrc_flag eq 5) and index_2 ge 3)
+  ; Use DelIdlVar to save memory
+  DelidlVar, buf
+  DelidlVar, one
+  DelidlVar, idx_bad_mask
+  if idx_remake(0) ge 0 then begin
+    print, 'Remake after Outliers out'
+    sm_FindEuclideanMatricDistance_w_unc, daysNumber, data_in, idx_remake, distanceRes, meandatRes, std_meanRes, nfield, splitDims
+    ;stop
+    distance(*,idx_remake)=distanceRes(*,idx_remake)
+    DelidlVar, distanceRes
+    meandat.red(idx_remake)=meandatRes.red(idx_remake)
+    meandat.nir(idx_remake)=meandatRes.nir(idx_remake)
+    meandat.fapar(idx_remake)=meandatRes.fapar(idx_remake)
+    DelidlVar, meandatRes
+    ;help, std_mean, std_meanRes
+
+    std_mean.red(idx_remake)=std_meanRes.red(idx_remake)
+    std_mean.nir(idx_remake)=std_meanRes.nir(idx_remake)
+    std_mean.temp(idx_remake)=std_meanRes.temp(idx_remake)
+    DelidlVar, std_meanRes
+  endif
+  ; look for day of minimum distance
+  ;
+  day=bytarr(splitDims[0],splitDims[1])
+  day(*,*)=255
+  min_val=fltarr(splitDims[0],splitDims[1])
+  buf=fltarr(splitDims[0],splitDims[1])
+  ;
+  ; take the first as minimum value
+  ;
+  min_val(*,*)=10000.0
+  ; MM: 20161028: check use of idx_remake
+  for t=tt(1)-1, 0, -1 do begin
+    buf(*,*) = 11000.0
+    ; MM 20161028: subscribe distance with idx_remake???
+    buf=reform((distance[t,*,*]))
+    idx_mask = where(buf(*,*) lt min_val(*,*) and buf(*,*) lt 100, count)
+    if count gt 0 then begin
+      min_val(idx_mask)=buf(idx_mask)
+      window, 1
+      plot, min_val, max=100
+      window, 2
+      plot, data_in[t].fapar(idx_mask)
+      wait, 1
+      day(idx_mask)=data_in(t).day
+    endif
+  endfor
+  print,'find minimum distance day ...'
+
+  ;
+END

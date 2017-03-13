@@ -508,6 +508,7 @@ PRO sm_call_composite_w_unc, daysNumber, data_day_f, data_tc, nSlice, prevflag=p
         data_day_split[t].valid=1
       endif
     endfor
+
     resFlags=resFlags[UNIQ(resFlags, SORT(resFlags))]
     print, resFlags
     ;save, data_day_split, filename='testData10.sav', /COMPRESS
@@ -633,7 +634,6 @@ PRO sm_call_composite_w_unc, daysNumber, data_day_f, data_tc, nSlice, prevflag=p
       ;        (data_tc_split.fapar(*) lt (MEANDATFAPAR(*)+std_mean.temp(*)) and $
       ;        data_tc_split.fapar(*) gt (meandatFapar(idx_t)-std_mean.temp(*))), consistencyCount)
     endfor
-
     ; all data
     ;    idx_check=where(data_tc_split.flag(*)eq 21.0, countWrong)
     ;    print, countWrong
@@ -764,6 +764,7 @@ PRO sm_call_composite_w_unc, daysNumber, data_day_f, data_tc, nSlice, prevflag=p
     fapar_two=fltarr(xSplitDim,3600)
     ;
     for t=0, tt(1)  do begin      ; ng ++
+
       buf=data_day_split(t).flag
       buf1=data_day_split(t).fapar
 

@@ -12,7 +12,8 @@ FUNCTION F,ttasun,ttaview,phisun,phiview, k,T,rhoc
   ;
 
   ; MM (6)
-  ;!EXCEPT=2
+  prevExcept=!EXCEPT
+  !EXCEPT=0
   cosg=cos(ttasun)*cos(ttaview) + sin(ttasun)*sin(ttaview)*cos(abs(phisun-phiview))
   ; MM (7)
   G = sqrt(tan(ttasun)^2 + tan(ttaview)^2 - 2*tan(ttasun)*tan(ttaview)*cos(abs(phisun-phiview)))
@@ -24,6 +25,8 @@ FUNCTION F,ttasun,ttaview,phisun,phiview, k,T,rhoc
   f2=(1-T^2.)/((1. + 2*T*cosg + T^2.)^(1.5))
   ; MM (5)
   f3=1.0 + (1.-rhoc)/(1.+G)
+  a=CHECK_MATH()
+  !EXCEPT=prevExcept
   ;stop
   ; MM (2)
   RETURN,f1*f2*f3

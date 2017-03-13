@@ -7,8 +7,12 @@ pro write_georef_ncdf, fileName, bandNames, bandStandardNames, bandLongNames, $
   header=header, NOREVERSE=NOREVERSE, gridMapping=gridMapping, $
   time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End, $
   Id=Id, satellite=satellite, date_created=date_created, cdr_variable=cdr_variable, $
-  OLDSTYLE=OLDSTYLE
+  OLDSTYLE=OLDSTYLE, THUMB=THUMB
   ; procedure to read a geoTiff and export an a new one
+
+  COMMON singleTons, ST_utils, ST_operator, ST_fileSystem
+
+  declareSingleTons
 
   nvar=n_elements(bandNames)
   if n_elements(trueMinMaxs) ne nvar*2 then minMaxs=fltarr(nvar,2) else minMaxs=trueMinMaxs
@@ -224,6 +228,54 @@ pro write_georef_ncdf, fileName, bandNames, bandStandardNames, bandLongNames, $
   ENDFOR
 
   NCDF_CLOSE, ncid
+  file_move, tempFileName, fileName, /OVERWRITE, /ALLOW_SAME
+  
+  if keyword_set(THUMB) then begin
+    onlyFile=ST_fileSystem->getFileNameInfo(fileName, filePath=filePath, extension=extension)
+    jrcflag1=read_AVHRR(filePath[0], onlyFile, FOUND=FOUND, $
+      FULL=FULL, APPLY_CONVERSION=APPLY_CONVERSION, varName='JRC_FLAG')
+    jrcf=jrcflag1.data
+    fapar1=read_AVHRR(filePath[0], onlyFile, FOUND=FOUND, $
+      FULL=FULL, APPLY_CONVERSION=APPLY_CONVERSION, varName='FAPAR')
+    ;  fapar2=read_AVHRR(filedir, fileName2, FOUND=FOUND, $
+    ;    FULL=FULL, APPLY_CONVERSION=APPLY_CONVERSION, varName='FAPAR', offset=offset, count=count)
+    values1=fapar1.data
+    ;  values2=fapar2.data
+    setTo255=where(finite(values1) eq 0, count)
+    if keyword_set(count) then values1[setTo255]=255b
+    values1=byte(fix(values1))
+    ;  setTo255=where(finite(values2) eq 0, count)
+    ;  if keyword_set(count) then values2[setTo255]=255b
+    ;  values2=byte(fix(values2))
+    ;  diff=fix(values1)-fix(values2)
+    ;  diffImg=bytscl(diff)
+    ;desert=where(jrcf eq 4 or jrcf eq 5, cnt)
+    ;if cnt gt 0 then diffImg[desert]=254
+
+    ;device, decomposed=0
+    faparcolor, r,g,b
+    r=reform(r)
+    g=reform(g)
+    b=reform(b)
+    ;
+    ;  colorMapImg=bytarr(765, 360)
+    ;  width=floor(765./250)
+    ;  shiftPx=0
+    ;  ;
+    ;  for i=0, 250 do begin
+    ;    colorMapImg[shiftPx:(shiftPx+width)-1, 0:359]=i
+    ;    shiftPx+=width
+    ;    print, shiftPx
+    ;  endfor
+    ;  colorMapImg=colorMapImg[0:shiftPx-width, *]
+    ;
+    ;  write_gif, filedir+'\fapar_colorbar.gif', colorMapImg, r,g,b
+
+    write_gif, filePath[0]+path_sep()+onlyFile+'cloud_removed.gif', values1, r,g,b
+    values1=congrid(values1, 720, 360)
+    write_gif, filePath[0]+path_sep()+onlyFile+'cloud_removed_pauper.gif', values1, r,g,b
+    
+  endif
   if keyword_set(postcompression) then begin
     if strupcase(!VERSION.OS_FAMILY) eq 'WINDOWS' then begin
       zipCommand="C:\Program Files\7-Zip\7z.exe"
@@ -235,21 +287,31 @@ pro write_georef_ncdf, fileName, bandNames, bandStandardNames, bandLongNames, $
       iFile=onlyRealFileName;fileName
       zipFile=onlyRealFileName+'.'+type;fileName+'.'+type
       spawn, '"'+zipCommand+'"'+" "+command+option+" "+zipFile+" "+iFile, /HIDE
+      obj_destroy, fs
+      obj_destroy, utils
+      return
     endif
     if strupcase(!VERSION.OS_FAMILY) eq 'UNIX' then begin
       zipCommand='zip'
       type='zip'
       command=''
-      option=''
-      iFile=onlyRealFileName;fileName
-      zipFile=onlyRealFileName+'.'+type;fileName+'.'+type
-      spawn, '"'+zipCommand+'"'+" "+command+option+" "+zipFile+" "+iFile, /HIDE
+      option=' -j'
+      ;iFile=onlyRealFileName;fileName
+      iFile=fileName
+      zipFile=iFile+'.'+type;fileName+'.'+type
+      gzfile=iFile+'.'+'gz';fileName+'.'+type
+      spawn, '"'+zipCommand+'"'+" "+command+option+" "+zipFile+" "+iFile;, /HIDE
+      file_delete, iFile, /ALLOW_NONEXISTENT, /QUIET
+      file_delete, gzfile, /ALLOW_NONEXISTENT, /QUIET
+      obj_destroy, fs
+      obj_destroy, utils
+      return
     endif
   endif
 
   obj_destroy, fs
   obj_destroy, utils
-  file_move, tempFileName, fileName, /OVERWRITE, /ALLOW_SAME
+  
 
 end
 

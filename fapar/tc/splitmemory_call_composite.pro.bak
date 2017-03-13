@@ -78,7 +78,6 @@ Pro sm_make_tc_distance_eu_vegetation_m, daysNumber, data_in, idx_doIt, day, mea
     std_mean.red(idx_remake)=std_meanRes.red(idx_remake)
     std_mean.nir(idx_remake)=std_meanRes.nir(idx_remake)
     std_mean.temp(idx_remake)=std_meanRes.temp(idx_remake)
-
     DelidlVar, std_meanRes
   endif
   ;
@@ -124,6 +123,7 @@ Pro sm_make_tc_distance_eu_vegetation_m, daysNumber, data_in, idx_doIt, day, mea
     endif
   endfor
   print,'find minimum distance day ...'
+
   ;
 END
 
@@ -143,6 +143,7 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
 
   ; only with a valid filename there is a valid day...
   validIdx=where(data_day_f.fname ne '', count)
+
   data_day_t=data_day_f[validIdx]
   daysNumber=count
   print, 'In the time composite program ...'
@@ -239,7 +240,6 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
   for slice=startSlice, endSlice-1 do begin ;nSlice-1 do begin
     subXStart=slice*xSplitDim & subXEnd=(slice+1)*xSplitDim-1
     subYStart=0 & subYEnd=3600-1
-
     ; initialize this slice (overwriting previous...)
     ;data_day_split={  day: bytarr(xSplitDim,ySplitDim), $
     ;  data_day_split={  day: 0b, $
@@ -387,7 +387,7 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
         data_day_split[t].fapar=faparData.fapar
         data_day_split[t].red=faparData.red
         data_day_split[t].nir=faparData.nir
-        data_day_split[t].toc_red=fapardata.toc_red
+        data_day_split[t].toc_red=faparData.toc_red
         data_day_split[t].toc_nir=faparData.toc_nir
         checkCloud1=-1 & checkCloud2=-1 
         ;.day set to position of file in the (sub)sequence (n/8,9,10 for decade n/28,29,30,31 for mponthly), use doy???
@@ -562,7 +562,6 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
       validMaskVeg=validMask*0
       validMaskVeg[goodIndexes[idxMaskVeg]]=1
       ;create Veg mask
-
       validMaskVeg=validMask*validMaskVeg
       ;final Veg Mask
       idx_time = where(validMaskVeg eq 1 and (data_day_split(t).flag eq 0) and (dayVeg eq 1 or index_2 eq 1), countSingleDay)
@@ -584,6 +583,7 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
         data_tc_split.toc_red(idx_time)= data_day_split(t).toc_red(idx_time)
         data_tc_split.toc_nir(idx_time)= data_day_split(t).toc_nir(idx_time)
         data_tc_split.day(idx_time)=data_day_split(t).day
+
       endif
     endfor
 
@@ -598,6 +598,7 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
     idx_two = where(dayVeg eq 2 or index_2 eq 2)
     fapar_two=fltarr(xSplitDim,3600)
     for t=0, tt(1)  do begin      ; ng ++
+
       buf=data_day_split(t).flag
       buf1=data_day_split(t).fapar
 
@@ -607,7 +608,6 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
       validMaskVeg=validMask*0
       validMaskVeg[goodIndexes[idxMaskVeg]]=1
       ;create Veg mask
-
       validMaskVeg=validMask*validMaskVeg
       ;final Veg Mask
       idx_time = where(validMaskVeg eq 1 and (dayVeg eq 2 or index_2 eq 2) and buf eq 0, coundTwoDays)
@@ -645,7 +645,6 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
       validMaskVeg=validMask*0
       validMaskVeg[goodIndexes[idxMaskVeg]]=1
       ;create Veg mask
-
       validMaskVeg=validMask*validMaskVeg
       ;final Veg Mask
       idx_ok = where(validMaskVeg eq 1 and (dayVeg eq 2 or index_2 eq 2) and (data_tc_split.day ne t) and data_day_split(t).flag eq 0, countDay)
@@ -700,13 +699,11 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
     idx_thirds = where(indexBareSoil ge 3, complement=flagNan)
     print, '# soil pixels more than 3 times', N_elements(idx_thirds)
     ;stop
-
     ;==========================================================================================
     sm_make_tc_distance_eu_vegetation_m, daysNumber, data_day_split, idx_thirds, days, meandats, std_means, 2, index_2s, [xSplitDim, ySplitDim]
     array=data_tc_split.flag
     bareSday=data_tc_split.red
     bareSday[*]=0
-
     for t=0 , tt(1) do begin        ; ng ++
       idx_t1=where(days eq t and index_2s ge 3, countThreeDays1)
       idx_t=where(days eq t and index_2s ge 3 and (data_day_split(t).flag eq 4 or $
@@ -860,7 +857,6 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
       idxSea=where(nSeaMx ne 0 and data_tc_split.flag eq notAssignedFlag, cntSea)
       ;at least one pixel classified as cloud/ice...
       idxCloudIce=where(nCloudIceMx ne 0 and data_tc_split.flag eq notAssignedFlag, cntCloudIce)
-
       choosenDay=-1
       if cntSea gt 0 then begin
         for pix=0, cntSea-1 do begin
@@ -1014,13 +1010,10 @@ PRO sm_call_composite, daysNumber, data_day_f, data_tc, nSlice, prevFlag=prevFla
   NanDay=where(data_tc.day ne 255, validCountDay)
   ; Add 1 to update 0-based day "index": more readable field (think about set doy instead)
   if validCountDay gt 0 then data_tc.day=data_tc.day+1
-
-
   tNames=tag_names(data_tc)
 
   ; check Sahara mistery...
   ;data_tc.fapar[3500:3700, 2100]=0.5
-
   saharaIndex=where(data_tc.fapar eq 0 and data_tc.flag eq 6, countSahara)
 
 end

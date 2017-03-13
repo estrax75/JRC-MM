@@ -1,0 +1,382 @@
+PRO sm_call_composite_w_unc, daysNumber, data_day_f, data_tc, nSlice, prevflag=prevflag, cloudtype=cloudtype, sigma_correction=sigma_correction, forceLTDRCloud=forceLTDRCloud
+  ;
+  ;
+  ;
+  ; data_day = products for each day and each pixels
+  ;
+  ; data_tc = time-composite results
+  ;
+  ; test pixel position
+
+  COMMON singleTons, ST_utils, ST_operator, ST_fileSystem
+
+  declareSingleTons
+
+  ; only with a valid filename there is a valid day...
+  validIdx=where(data_day_f.fname ne '', count)
+
+  data_day_t=data_day_f[validIdx]
+  daysNumber=count
+  print, 'In the time composite program ...'
+  ;
+  ; !!!!!!!!!!!!!!!!
+  ; NG 2016: YOU HAVE TO CHANGE THIS AS IF THERE IS MISSING DAILY FILE THE DAY WILL NOT CORRESPOND TO THE T ...
+  ;         I suggest that you add and save the DOY to replace in to DAY fiels in the output files
+  ;
+  ;
+  ;tt=size(data_day.day)
+  tt=[0, daysNumber-1]    ; ng ++
+  print, 'daysNumber', daysnumber
+  ;
+  ;only for test
+  prevflag=bytarr(7200,3600)
+
+  data_tc= getDataTCStruct1()
+  ;end test
+
+  data_tc.fapar[*,*]=DATA_NAN
+  data_tc.red[*,*]=DATA_NAN
+  data_tc.nir[*,*]=DATA_NAN
+
+  data_tc.dev_red_temp[*,*]=DATA_NAN
+  data_tc.dev_nir_temp[*,*]=DATA_NAN
+  data_tc.dev_temp[*,*]=DATA_NAN
+
+  data_tc.sigma[*,*]=DATA_NAN
+  data_tc.sigma_red[*,*]=DATA_NAN
+  data_tc.sigma_nir[*,*]=DATA_NAN
+
+  ;only for test
+  data_tc.tv[*,*]=INT_NAN
+  data_tc.phi[*,*]=INT_NAN
+  data_tc.ts[*,*]=INT_NAN
+  data_tc.toc_red[*,*]=DATA_NAN
+  data_tc.toc_nir[*,*]=DATA_NAN
+  ;end test
+  ;
+  ; initialize to unvalid
+  data_tc.jrc_flag[*,*]=1
+  ; day may be 0 (the first); 255 means no data
+  data_tc.day[*,*]=255
+  ; nday equal 0 means no data.
+  data_tc.nday[*,*]=255
+  ;
+  ;==========================================================================================
+  ;
+  ; look for vegetated pixels
+  ;
+  ; count the number of dates where we have valid pixels over vegetation land
+  xSplitDim=7200/nSlice
+  ySplitDim=3600; full dim,
+
+  tt=[0, daysNumber-1]    ; ng ++
+  pixel_position=[460, 1680]
+  ; for a faster test set a specific slice here...
+  startSlice=0;2
+  endSlice=nSlice;2
+  ; good test: vertical slice half of total slices shows "Center Europe and Africa"
+  ;startSlice=9;2
+  ;endSlice=12;2
+  for slice=startSlice, endSlice-1 do begin ;nSlice-1 do begin
+    subXStart=slice*xSplitDim & subXEnd=(slice+1)*xSplitDim-1
+    subYStart=0 & subYEnd=3600-1
+
+    data_day_split=getDataDayStruct(xSplitDim, ySplitDim)
+
+    data_tc_split=getDataTCStruct(xSplitDim, ySplitDim)
+
+    notAssignedFlag=15
+    data_tc_split.jrc_flag=notAssignedFlag ; init to not-assigned flag coding....
+    data_tc_split.ltdr_flag=INT_NAN ; init to not-assigned flag coding....
+    data_tc_split.fapar[*,*]=DATA_NAN
+    data_tc_split.red[*,*]=DATA_NAN
+    data_tc_split.nir[*,*]=DATA_NAN
+
+    data_tc_split.dev_red_temp[*,*]=DATA_NAN
+    data_tc_split.dev_nir_temp[*,*]=DATA_NAN
+    data_tc_split.dev_temp[*,*]=DATA_NAN
+
+    data_tc_split.sigma[*,*]=DATA_NAN
+    data_tc_split.sigma_red[*,*]=DATA_NAN
+    data_tc_split.sigma_nir[*,*]=DATA_NAN
+
+    data_tc_split.day[*,*]=255
+    data_tc_split.nday[*,*]=255
+
+    data_tc_split.ts[*,*]=INT_NAN
+    data_tc_split.tv[*,*]=INT_NAN
+    data_tc_split.phi[*,*]=INT_NAN
+    data_tc_split.toc_red[*,*]=DATA_NAN
+    data_tc_split.toc_nir[*,*]=DATA_NAN
+    finalCloud=data_tc_split.toc_nir
+    finalCloud[*,*]=0
+
+    data_day_split=replicate(data_day_split, daysNumber)
+
+    print, 'reading day from: ', tt[0]+1, 'to: ', tt[1]+1
+    print, '...'
+    resFlags=0
+    for t=0, tt[1] do begin   ; ng ++
+
+      print, 'reading day...', t+1, '/', tt[1]+1
+      if data_day_f[t].fid gt 0 then faparData=read_AVHRR_FAPAR(data_day_f[t].fDir, data_day_f[t].fName, FOUND=FOUND, /APPLY, offset=[subXStart, 0], count=[xSplitDim, ySplitDim], fid=data_day_f[t].fid, /FULL) $
+      else faparData=read_AVHRR_FAPAR(data_day_f[t].fDir, data_day_f[t].fName, FOUND=FOUND, /APPLY, offset=[subXStart, 0], count=[xSplitDim, ySplitDim], fid=fid, /FULL)
+      print, 'done'
+      data_day_split[t].valid=0
+      if keyword_set(FOUND) then begin
+
+        data_day_split[t].sigma=faparData.sigma
+        data_day_split[t].red=faparData.red
+        data_day_split[t].sigma_red=faparData.sigma_red
+        data_day_split[t].nir=faparData.nir
+        data_day_split[t].sigma_nir=faparData.sigma_nir
+        data_day_split[t].ltdr_flag=faparData.qa
+        data_day_split[t].ts=fapardata.ts
+        data_day_split[t].tv=faparData.tv
+        data_day_split[t].phi=faparData.phi
+
+        ; remove clouds from data...
+        ;titles=['fapar - mask bit 1 or 2 (cloudy/shadow cloud)', 'fapar - mask bit 1 (cloudy', 'fapar - mask bit 2 (shadow cloud)', 'fapar - no mask']
+        countCloud=0
+        if cloudtype le 2 then begin
+          checkCloud1=cgi_map_bitwise_flag(data_day_split[t].ltdr_flag,1)
+          checkCloud2=cgi_map_bitwise_flag(data_day_split[t].ltdr_flag,2)
+          if cloudtype eq 0 then cloudNaN=where(checkCloud1 eq 1 or checkCloud2 eq 1, countCloud)
+          if cloudtype eq 1 then cloudNaN=where(checkCloud1 eq 1, countCloud)
+          if cloudtype eq 2 then cloudNaN=where(checkCloud2 eq 1, countCloud)
+        endif
+        if countCloud gt 0 then begin
+          ;faparData.fapar[cloudNaN]=!VALUES.F_NAN
+          ;faparData.nir[cloudNaN]=!VALUES.F_NAN
+          ;faparData.red[cloudNaN]=!VALUES.F_NAN
+          ;faparData.toc_nir[cloudNaN]=!VALUES.F_NAN
+          ;faparData.toc_red[cloudNaN]=!VALUES.F_NAN
+          ;leave original values, but flag cloud
+          changeIdxs=where(faparData.flag[cloudNaN] eq 4 or faparData.flag[cloudNaN] eq 5 or faparData.flag[cloudNaN] eq 6 or faparData.flag[cloudNaN] eq 0, cnt)
+          ; ng 2016: set a "fake" cloud to flag out fapar values
+          ; ng + mm
+          ; if cnt gt 0 then faparData.flag[cloudNaN[changeIdxs]]=2 ; force cloud code for fapar and soil
+          ; ng 2017: set a big sigma to flag out fapar values
+          ;cloudType='4'
+          ;faparData.sigma[cloudNaN[changeIdxs]]=faparData.sigma[cloudNaN[changeIdxs]]*5.0
+          if cnt gt 0 then begin
+            if n_elements(sigma_correction) eq 1 then faparData.sigma[cloudNaN[changeIdxs]]=faparData.sigma[cloudNaN[changeIdxs]]*sigma_correction
+            if keyword_set(forceLTDRCloud) then faparData.flag[cloudNaN[changeIdxs]]=2 ; force cloud code for fapar and soil
+          endif
+          ;if cnt gt 0 then faparData.sigma[cloudNaN[changeIdxs]]=faparData.sigma[cloudNaN[changeIdxs]]*5.0
+          ;if cnt gt 0 then faparData.flag[cloudNaN[changeIdxs]]=2 ; force cloud code for fapar and soil
+        endif
+        ;; TODO REMOVE!!! only for test
+        ;data_day_split[t].sigma=0.00001
+        ;data_day_split[t].sigma_red=0.00001
+        ;data_day_split[t].sigma_nir=0.00001
+        ;;
+        data_day_split[t].fapar=faparData.fapar
+        data_day_split[t].red=faparData.red
+        data_day_split[t].nir=faparData.nir
+        data_day_split[t].toc_red=faparData.toc_red
+        data_day_split[t].toc_nir=faparData.toc_nir
+        flagMatrix=fapardata.flag
+        data_day_split[t].jrc_flag=flagMatrix
+        resFlags=[resFlags,flagMatrix[UNIQ(flagMatrix, SORT(flagMatrix))]]
+        flagMatrix=0
+        checkCloud1=-1 & checkCloud2=-1
+        ;.day set to position of file in the (sub)sequence (n/8,9,10 for decade n/28,29,30,31 for mponthly), use doy???
+        data_day_split[t].day=t
+        ;array=faparData.jrc_flag
+        ;print, array[UNIQ(array, SORT(array))]
+        ; test flag...
+        if keyword_set(test_pics) then begin
+          loadct,12
+          tvlct,r,g,b, /get
+          ;8Invalid
+          ;9Invalid
+          ;3Pixel is over water1 = yes, 0 = no
+          ;2Pixel contains cloud shadow1 = yes, 0 = no
+          ;1Pixel is cloudy1 = yes, 0 = no
+          red = [0,1,0.8,0,0.00,0.68,0.,0.55,0.00,0.00,0.85,0,00,0.]
+          gre = [0,0,0.0,0,1.00,0.00,0.,0.55,0.77,0.66,0.00,0.00,0.]
+          blu = [0,0,0.0,1,1.00,1.00,1.,1.00,1.00,0.55,0.80,0.77,0.]
+          TVLCT, red*255, gre*255, blu*255
+          tvlct,r,g,b, /get
+          destFlag=(data_day_split[t].ltdr_flag)*0
+          cloud1=cgi_map_bitwise_flag(data_day_split[t].ltdr_flag,1)
+          idx=where(cloud1 eq 1, cnt)
+          destFlag[idx]=1
+          write_tiff,'/space2/storage/projects/LAN/AVH/L3/PLC/1999/06/flag_pics/LDTR_cloud1_day'+strcompress(t+1, /remove)+'.tiff', reverse(destFlag,2), red=r,gre=g,blu=b
+
+          cloud2=cgi_map_bitwise_flag(data_day_split[t].ltdr_flag,2)
+          idx=where(cloud2 eq 1, cnt)
+          destFlag[idx]=2
+          write_tiff,'/space2/storage/projects/LAN/AVH/L3/PLC/1999/06/flag_pics/LDTR_cloud2_day'+strcompress(t+1, /remove)+'.tiff', reverse(destFlag, 2), red=r,gre=g,blu=b
+
+          water=cgi_map_bitwise_flag(data_day_split[t].ltdr_flag,3)
+          idx=where(water eq 1, cnt)
+          destFlag[idx]=3
+          write_tiff,'/space2/storage/projects/LAN/AVH/L3/PLC/1999/06/flag_pics/LDTR_water_day'+strcompress(t+1, /remove)+'.tiff', reverse(destFlag,2), red=r,gre=g,blu=b
+
+          invalid1=cgi_map_bitwise_flag(data_day_split[t].ltdr_flag,8)
+          idx=where(invalid1 eq 1, cnt)
+          destFlag[idx]=4
+          write_tiff,'/space2/storage/projects/LAN/AVH/L3/PLC/1999/06/flag_pics/LDTR_invalid1_day'+strcompress(t+1, /remove)+'.tiff', reverse(destFlag,2), red=r,gre=g,blu=b
+
+          invalid2=CGI_MAP_BITWISE_FLAG(data_day_split[t].ltdr_flag,9)
+          idx=where(invalid2 eq 1, cnt)
+          destFlag[idx]=4
+          write_tiff,'/space2/storage/projects/LAN/AVH/L3/PLC/1999/06/flag_pics/LDTR_invalid2_day'+strcompress(t+1, /remove)+'.tiff', reverse(destflag,2), red=r,gre=g,blu=b
+
+          write_tiff,'/space2/storage/projects/LAN/AVH/L3/PLC/1999/06/flag_pics/LDTR_day'+strcompress(t+1, /remove)+'.tiff', reverse(bytscl(faparData.ltdr_flag, min=0, max=25600),2), red=r,gre=g,blu=b
+          red = [0,1,1,0,0.66,0.68,0.,0.55,0.00,0.00,0.85,0,00,0.]
+          gre = [0,0,0,0,0.66,0.00,0.,0.55,0.77,0.66,0.00,0.00,0.]
+          blu = [0,0,1,1,0.66,1.00,1.,1.00,1.00,0.55,0.80,0.77,0.]
+          TVLCT, red*255, gre*255, blu*255
+          tvlct,r,g,b, /get
+          write_tiff,'/space2/storage/projects/LAN/AVH/L3/PLC/1999/06/flag_pics/JRC_day'+strcompress(t+1, /remove)+'.tiff', reverse(faparData.jrc_flag,2), red=r,gre=g,blu=b
+        endif
+        ; .valid eq 1 means a good file
+        data_day_split[t].valid=1
+      endif
+    endfor
+    resFlags=resFlags[UNIQ(resFlags, SORT(resFlags))]
+    print, 'input flags list:', resFlags
+    vIdxs=where(data_day_split.valid eq 1, dNumber)
+    daysNumber=dNumber
+    data_day_split=data_day_split[vIdxs]
+    for pixPosX=0, xSplitDim-1 do begin
+      for pixPosY=0, ySplitDim-1 do begin
+        outFAPAR=!VALUES.F_NAN
+        ComputeFPARwRectUncert, daysNumber, $
+          data_day_split[*].fapar[pixPosX, pixPosY], $     ; Input FPAR */
+          data_day_split[*].red[pixPosX, pixPosY], $     ; Input Rect R */
+          data_day_split[*].nir[pixPosX, pixPosY], $     ; Input Rect NIR */
+          data_day_split[*].sigma[pixPosX, pixPosY], $   ; Input FPAR */
+          data_day_split[*].sigma_red[pixPosX, pixPosY], $   ; Input Rect R */
+          data_day_split[*].sigma_nir[pixPosX, pixPosY], $   ; Input Rect NIR */
+          badvalue, $                 ; Input bad value */
+          data_day_split[*].jrc_flag[pixPosX, pixPosY],$      ; Input flag */
+          outFAPAR, $                   ; Output selected FPAR */
+          outbrf_r, $                   ; Output selected rect R */
+          outbrf_n, $                   ; Output selected rect NIR */
+          outFAPAR_u, $                 ; Output selected FPAR */
+          outbrf_r_u, $                 ; Output selected rect R */
+          outbrf_n_u, $                 ; Output selected rect NIR */
+          outdev_FAPAR, $               ; Output stdev FPAR */
+          outdev_brf_r, $               ; Output stdev rect R */
+          outdev_brf_n, $               ; Output stdev rect NIR */
+          outp_DayAvailable, $               ; Output nb of values used */
+          outp_DayIndex               ; Output file number selected */
+        ;if n_elements(outFAPAR) eq 1 then testFapar[pixPosX, pixPosY]=outFAPAR else testFapar[pixPosX, pixPosY]=!VALUES.F_NAN
+        if n_elements(outp_DayIndex) eq 1 then begin
+          dayIndex=outp_DayIndex
+          data_tc_split.nday[pixPosX, pixPosY]=outp_DayAvailable
+          data_tc_split.day[pixPosX, pixPosY]=data_day_split[outp_DayIndex].day
+
+          data_tc_split.dev_red_temp[pixPosX, pixPosY]=outdev_FAPAR
+          data_tc_split.dev_nir_temp[pixPosX, pixPosY]=outdev_brf_r
+          data_tc_split.dev_temp[pixPosX, pixPosY]=outdev_brf_n
+
+          data_tc_split.sigma[pixPosX, pixPosY]=data_day_split[dayIndex].sigma[pixPosX,pixPosY]
+          data_tc_split.sigma_red[pixPosX, pixPosY]=data_day_split[dayIndex].sigma_red[pixPosX,pixPosY]
+          data_tc_split.sigma_nir[pixPosX, pixPosY]=data_day_split[dayIndex].sigma_nir[pixPosX,pixPosY]
+          data_tc_split.jrc_flag[pixPosX, pixPosY]=data_day_split[dayIndex].jrc_flag[pixPosX,pixPosY]
+          data_tc_split.ltdr_flag[pixPosX, pixPosY]=data_day_split[dayIndex].ltdr_flag[pixPosX,pixPosY]
+
+          data_tc_split.nir[pixPosX, pixPosY]=data_day_split[dayIndex].nir[pixPosX,pixPosY]
+          data_tc_split.red[pixPosX, pixPosY]=data_day_split[dayIndex].red[pixPosX,pixPosY]
+          ;only for deep check test
+          data_tc_split.ts[pixPosX, pixPosY]=data_day_split[dayIndex].ts[pixPosX,pixPosY]
+          data_tc_split.tv[pixPosX, pixPosY]=data_day_split[dayIndex].tv[pixPosX,pixPosY]
+          data_tc_split.phi[pixPosX, pixPosY]=data_day_split[dayIndex].phi[pixPosX,pixPosY]
+          data_tc_split.toc_red[pixPosX, pixPosY]=data_day_split[dayIndex].toc_red[pixPosX,pixPosY]
+          data_tc_split.toc_nir[pixPosX, pixPosY]=data_day_split[dayIndex].toc_nir[pixPosX,pixPosY]
+          data_tc_split.fapar[pixPosX, pixPosY]=data_day_split[dayIndex].fapar[pixPosX,pixPosY]
+        endif else begin
+          flagList=data_day_split[*].jrc_flag[pixPosX, pixPosY]
+          waterIdx=where(flagList eq 3, waterCount)
+          cloudIdx=where(flagList eq 2, cloudCount)
+          invalidIdx=where(flagList eq 1, invalidCount)
+          if invalidCount gt 0 then begin
+            data_tc_split.jrc_flag[pixPosX, pixPosY]=1
+            data_tc_split.day[pixPosX, pixPosY]=data_day_split[invalidIdx[0]].day
+          endif
+          if cloudCount gt 0 then begin
+            data_tc_split.jrc_flag[pixPosX, pixPosY]=2
+            data_tc_split.day[pixPosX, pixPosY]=data_day_split[cloudIdx[0]].day
+          endif
+          if waterCount gt 0 then begin
+            data_tc_split.jrc_flag[pixPosX, pixPosY]=3
+            data_tc_split.day[pixPosX, pixPosY]=data_day_split[waterIdx[0]].day
+          endif
+        endelse
+        delidlvar, outp_DayIndex
+      endfor
+    endfor
+    tvscl, congrid(data_tc_split.fapar, 36, 360), /NAN
+    notAssigned=where(data_tc_split.jrc_flag eq notAssignedFlag, notAssignedCount)
+    for jj=0, n_elements(notAssigned)-1 do begin
+      fList=data_day_split[*].jrc_flag[notAssigned[jj]]
+      unikFlags=fList[UNIQ(fList, SORT(fList))]
+      ;if n_elements(unikFlags) ne 1 then print, 'warning'
+      ;if unikFlags[0] ne 1 then print, 'warning'
+      data_tc_split.jrc_flag[notAssigned[jj]]=min(unikFlags)
+      ;print, 'undetermined flag-->', min(unikFlags)
+    endfor
+
+    waterIdxs=where(data_tc_split.jrc_flag[*,*] eq 3, waterCount)
+    if waterCount gt 0 then begin
+      data_tc_split.day[waterIdxs]=255
+      ;data_tc_split.nday[waterIdxs]=255
+    endif
+
+    noFaparIdxs=where((data_tc_split.jrc_flag[*,*] ne 0) and (data_tc_split.jrc_flag[*,*] ne 4) and (data_tc_split.jrc_flag[*,*] ne 5), noFaparCount)
+    if noFaparCount gt 0 then begin
+      data_tc_split.nday[noFaparIdxs]=255
+    endif
+    NanDay=where(data_tc_split.day ne 255, validCountDay)
+    if validCountDay gt 0 then data_tc_split.day=data_tc_split.day+1
+
+    noDayIdxs=where(data_tc_split.tv eq INT_NAN, noDayCount)
+    if noDayCount gt 0 then begin
+      data_tc_split.day[noDayIdxs]=255
+    endif
+
+    print, 'compute slice...', slice+1, '/', nSlice
+    ; try use efficiently subscription (no subscript on left side, but only starting index)
+    ;prevflag[subXStart:subXEnd, subYStart:subYEnd]=tempFlag
+    data_tc.nday[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.nday
+    data_tc.day[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.day
+
+    data_tc.dev_red_temp[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.dev_red_temp
+    data_tc.dev_nir_temp[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.dev_nir_temp
+    data_tc.dev_temp[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.dev_temp
+
+    data_tc.sigma[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.sigma
+    data_tc.sigma_red[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.sigma_red
+    data_tc.sigma_nir[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.sigma_nir
+    data_tc.jrc_flag[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.jrc_flag
+    data_tc.ltdr_flag[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.ltdr_flag
+    data_tc.fapar[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.fapar
+
+    data_tc.nir[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.nir
+    data_tc.red[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.red
+    ;only for deep check test
+    data_tc.ts[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.ts
+    data_tc.tv[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.tv
+    data_tc.phi[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.phi
+    data_tc.toc_red[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.toc_red
+    data_tc.toc_nir[subXStart:subXEnd, subYStart:subYEnd]=data_tc_split.toc_nir[*,*]
+    ;data_tc.faparMean[subXStart:subXEnd, subYStart:subYEnd]=faparMean
+    ;data_tc.fapar=testFapar
+
+  endfor
+
+  ;end test
+  ;===================================================================================================
+  ;tNames=tag_names(data_tc)
+
+  ; check Sahara mistery...
+  ;data_tc.fapar[3500:3700, 2100]=0.5
+  ;saharaIndex=where(data_tc.fapar eq 0 and data_tc.jrc_flag eq 6, countSahara)
+
+end
+;========================================================================================================

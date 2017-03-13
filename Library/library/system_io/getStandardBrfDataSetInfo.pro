@@ -12,7 +12,7 @@ function getStandardBrfDataSetInfo
   ANGLES_DATA_RANGE2=[-180., 180.]
 
   bandNames=['BRF_BAND_1', 'BRF_BAND_2', 'SIGMA_BRF_BAND_1', 'SIGMA_BRF_BAND_2', $
-    'TS', 'TV', 'PHI', $
+    'TS', 'TV', 'REL_PHI', $
     'LDTR_FLAG', 'Q1', 'Q2']
 
   bandLongNames=['Bidirectional Reflectance Factor Band 1', 'Bidirectional Reflectance Factor Band 2', 'Uncertainties of Bidirectional Reflectance Factor Band 1', 'Uncertainties of Bidirectional Reflectance Factor Band 2', $

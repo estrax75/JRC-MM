@@ -21,7 +21,7 @@ PRO Make_GIF_Animated, filter, read_function, startyear=startyear
       if test.directory ne 1 then stop
       ;read_function='read_AVHRR_FAPAR'
       
-      read_function='readBRF'
+      read_function='read_BRF'
       ;filter='*FPA*.NC'
       filter='*BRDF*.NC'
 
@@ -60,7 +60,7 @@ PRO Make_GIF_Animated, filter, read_function, startyear=startyear
         print, 'reading...',  sourceFileName
         data=call_function(read_function, filePath, sourceFileName, 'BRF_BAND_1');, FOUND=FOUND)
         print, '...done...'
-        ;data=readBRF(filePath, sourceFileName, FOUND=FOUND)
+        ;data=read_BRF(filePath, sourceFileName, FOUND=FOUND)
 
         band1=congrid(data.data, xsize, ysize)
         ;band1=congrid(data.band1, xsize, ysize)

@@ -685,7 +685,7 @@ FUNCTION GenericOperator::cropping, bandInfos, outputVarList, $
 END
 
 FUNCTION GenericOperator::readNcdfVar, fileName, datasetName, FOUND=FOUND, REVERSE=REVERSE, TRANSPOSE=TRANSPOSE, ONEDIM=ONEDIM, $
-  targetCropInfo=targetCropInfo, slope=slope, intercept=intercept, fillValue=fillValue, count=count, offset=offset, fid=fid
+  targetCropInfo=targetCropInfo, slope=slope, intercept=intercept, fillValue=fillValue, fillValueExist=fillValueExist, count=count, offset=offset, fid=fid
 
   q=!QUIET
   !QUIET=1
@@ -717,7 +717,7 @@ FUNCTION GenericOperator::readNcdfVar, fileName, datasetName, FOUND=FOUND, REVER
       return, res
     endif
     res={name:datasetName, idx:-1, data:0, slope:_slope, intercept:_intercept}
-    for i=0, 100 do begin
+    for i=0, fileinq_struct.nvars-1 do begin
       varinq_struct=ncdf_varinq(fileID,i)
       varname = varinq_struct.name
       dimensions = varinq_struct.dim
@@ -731,21 +731,25 @@ FUNCTION GenericOperator::readNcdfVar, fileName, datasetName, FOUND=FOUND, REVER
         ncdf_varget,fileID,varID,variable, count=count, offset=offset
         attName='slope'
         slopeTry=NCDF_ATTINQ(fileID,varID,attName)
-        if slopeTry.length ne 1 then begin
+        if slopeTry.length ne 1 or slopeTry.dataType eq 'UNKNOWN' then begin
           attName='scale_factor'
           slopeTry=NCDF_ATTINQ(fileID,varID,attName)
         endif
         if slopeTry.length eq 1 and slopeTry.dataType ne 'UNKNOWN' then ncdf_attget, fileID, varID, attName, _slope
         attName='intercept'
         interceptTry=NCDF_ATTINQ(fileID,varID,attName)
-        if interceptTry.length ne 1 then begin
+        if interceptTry.length ne 1 or interceptTry.dataType eq 'UNKNOWN' then begin
           attName='add_offset'
           interceptTry=NCDF_ATTINQ(fileID,varID,attName)
         endif
         if interceptTry.length eq 1 and interceptTry.dataType ne 'UNKNOWN' then ncdf_attget, fileID, varID, attName, _intercept
         attName='_FillValue'
         fillValueTry=NCDF_ATTINQ(fileID,varID,attName)
-        if fillValueTry.length eq 1 and fillValueTry.dataType ne 'UNKNOWN' then ncdf_attget, fileID, varID, attName, _fillValue
+        fillValueExist=0
+        if fillValueTry.length eq 1 and fillValueTry.dataType ne 'UNKNOWN' then begin
+          ncdf_attget, fileID, varID, attName, _fillValue
+          fillValueExist=1
+        endif
         doLog, callingRoutine=callingRoutine, /STACK
         doLog, callingRoutine, fileName, LEVEL=4
         ndims=size(variable, /N_DIM)
@@ -754,7 +758,9 @@ FUNCTION GenericOperator::readNcdfVar, fileName, datasetName, FOUND=FOUND, REVER
         if fillValueTry.length eq 1 then fillvalue=_fillvalue
         if slopeTry.length eq 1 then slope=_slope
         if interceptTry.length eq 1 then intercept=_intercept
-        res={name:datasetName, idx:i, data:variable, slope:_SLOPE, intercept:_intercept, fillValue:_fillValue}
+        res={name:datasetName, idx:i, data:variable, slope:_SLOPE, intercept:_intercept, fillValue:_fillValue, fillValueExist:fillValueExist}
+        slope=res.slope & intercept=res.intercept & fillValue=res.fillValue & fillValueExist=res.fillValueExist
+        ;res={name:datasetName, idx:i, data:variable, slope:_SLOPE, intercept:_intercept, fillValue:_fillValue}
         FOUND=1
         break
       endif

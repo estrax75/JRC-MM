@@ -18,6 +18,7 @@ function getStandardFaparDataSetInfo, Type=Type
     'Rectified_BAND_1', 'Sigma_RECTIFIED_BAND_1', $
     'Rectified_BAND_2', 'Sigma_RECTIFIED_BAND_2', $
     'LDTR_FLAG', $
+    ;'TS', 'TV', 'REL_PHI', $
     'TS', 'TV', 'PHI', $
     'BRF_TOC_BAND_1', 'BRF_TOC_BAND_2', $
     'JRC_FLAG']

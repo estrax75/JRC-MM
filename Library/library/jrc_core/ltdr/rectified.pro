@@ -2,7 +2,7 @@ PRO Rectified,sensor,sensorCode,ttasun,ttaview,phisun,phiview,$
   BRF_ToA_BLUE,BRF_ToA_RED,BRF_ToA_NIR,$
   D_BRF_ToA_BLUE,D_BRF_ToA_RED,D_BRF_ToA_NIR, $
   rhoRED, rhoNIR, D_rhoRED, D_rhoNIR, $
-  D_rhotildeBLUE, D_rhotildeRED, D_rhotildeNIR, VI, D_VI, toc=TOC
+  D_rhotildeBLUE, D_rhotildeRED, D_rhotildeNIR, VI, D_VI, toc=TOC, coeffFile=coeffFile
   ;
   ;
   ; compute the rectified over bare soil and the associated uncertaintied (=D_Rect) as function as the bands uncertainties
@@ -27,7 +27,7 @@ PRO Rectified,sensor,sensorCode,ttasun,ttaview,phisun,phiview,$
   phisun  *= !dtor
   phiview *= !dtor
   ;stop
-  coeffInfo=getSensorCoeffs(sensor, sensorCode, /SOIL)
+  coeffInfo=getSensorCoeffs(sensor, sensorCode, /SOIL, coeffFile=coeffFile)
 
   RahmanCoeffs_RED=coeffInfo.RahmanCoeffs_RED
   RahmanCoeffs_NIR=coeffInfo.RahmanCoeffs_NIR

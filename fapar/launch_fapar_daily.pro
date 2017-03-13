@@ -7,16 +7,24 @@
 ;launch_fapar_daily, 1982, 1982, 11, 11, 1, 'NCHDF', OVERWRITE=0, TC_TYPE='DAILY'
 ;launch_fapar_daily, 1999, 1999, 6, 6, 3, 'NCHDF', OVERWRITE=0, TC_TYPE='DAILY'
 ;launch_fapar_daily, 1996, 1996, 8, 8, 3, 'NCHDF', OVERWRITE=0, TC_TYPE='DAILY'
+;launch_fapar_daily, 1999, 1999, 6, 6, 3, 'NCHDF', OVERWRITE=1, TC_TYPE='DAILY', datadir='C:\data\input\BRDF\1999\06'
+;launch_fapar_daily, 2003, 2004, 1, 12, 3, 'CSV', OVERWRITE=1, TC_TYPE='DAILY', datadir='C:\data\AVHRR\spp\tmp\AVHRR_JANINA_shrubland.20161216_1.avh\tmp', /PIXEL, spptemplatefile='C:\data\fapar_test\spp_template.sav' 
+; organa
+;launch_fapar_daily, 2003, 2004, 1, 12, 3, 'CSV', OVERWRITE=1, TC_TYPE='DAILY', datadir='/home/mariomi/data/SPP/AVHRR_JANINA_shrubland.20161216_1.avh/tmp', spptemplatefile='/home/mariomi/data/spp_template.sav', /PIXEL
+;malak
+;launch_fapar_daily, 2003, 2004, 1, 12, 3, 'CSV', OVERWRITE=1, TC_TYPE='DAILY', datadir='/home/mariomi/shared/AVHRR_JANINA_shrubland.20161216_1.avh/tmp', spptemplatefile='/home/mariomi/shared/spp_template.sav', /PIXEL
 pro launch_fapar_daily, startYear, endYear, startMonth, endMonth, outputtype, outputformat, $
-  TC_TYPE=TC_TYPE, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, OVERWRITE=OVERWRITE, datadir=datadir
+  TC_TYPE=TC_TYPE, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, OVERWRITE=OVERWRITE, datadir=datadir, $
+  PIXELS_PROCESS=PIXELS_PROCESS, coeffFile=coeffFile, spptemplateFile=spptemplateFile
 
   COMMON singleTons, ST_utils, ST_operator, ST_fileSystem
 
-  declareSingleTons
+  declareSingleTons, spptemplateFile
   ;colorset
 
   TC_TYPE='DAILY'
-  confDir='/home/mariomi/config'
+  ;confDir=getenv(TEMP_DIR)
+  confDir=GETENV('IDL_TMPDIR')
   ;rootDir1=''
   ;sourceDir2='/space3/storage/products/AVHRR_LDTR'
   ;sourceDir='/space3/storage/products/results/BRFs'
@@ -29,22 +37,25 @@ pro launch_fapar_daily, startYear, endYear, startMonth, endMonth, outputtype, ou
   ;outputDir1='/space3/storage/products'
   ;outputDir2='/space4/storage/products'
 
-  if n_elements(outputformat) eq 0 then outputformat='NC' 
+  if n_elements(outputformat) eq 0 then outputformat='NC'
   HDF=strpos(strupcase(outputformat), 'HDF') ge 0 ? 1 : 0
   NC=strpos(strupcase(outputformat), 'NC') ge 0 ? 1 : 0
-  if HDF+NC eq 0 then NC=1  
+  CSV=strpos(strupcase(outputformat), 'CSV') ge 0 ? 1 : 0
+  if HDF+NC eq 0 and ~keyword_set(PIXELS_PROCESS) then NC=1
+  if keyword_set(CSV) eq 0 and keyword_set(PIXELS_PROCESS) then CSV=1
   ;if strupcase(format) eq  then HDF=1 else NC=1
   if n_elements(MISSIONOVERLAPINDEX) eq 0 then MISSIONOVERLAPINDEX=0
   if n_elements(tempDir) ne 1 then begin
-    if strupcase(!VERSION.OS_FAMILY) eq strupcase('windows') then tempDir='E:\mariomi\Documents\temp'
-    if strupcase(!VERSION.OS_FAMILY) eq strupcase('unix') then tempDir='/home/mariomi/temp'
+    if strupcase(!VERSION.OS_FAMILY) eq strupcase('windows') then tempDir=GETENV('IDL_TMPDIR');'E:\mariomi\Documents\temp'
+    if strupcase(!VERSION.OS_FAMILY) eq strupcase('unix') then tempDir=GETENV('IDL_TMPDIR');'/home/mariomi/temp'
   endif
   if n_elements(tempDir) ne 1 then stop
   ;level='L2'
 
   runDailyFapar, confDir, tempDir, startYear, endYear, startMonth, endMonth, $
-    NC=NC, HDF=HDF, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
-    OVERWRITE=OVERWRITE, datadir=datadir
+    NC=NC, HDF=HDF, CSV=CSV, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, $
+    OVERWRITE=OVERWRITE, datadir=datadir, DISKSPACE=DISKSPACE, $
+    PIXELS_PROCESS=PIXELS_PROCESS, coeffFile=coeffFile
 
 end
 

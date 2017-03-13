@@ -202,15 +202,15 @@ pro write_hdf, fileName, bandNames, bandStandardNames, bandLongNames, $
       option="-t{"+type+"}";+" ";+"-slp"
       ; big file & delete original file
       option=' -slp -sdel'
-      iFile=onlyRealFileName;fileName
-      zipFile=onlyRealFileName+'.'+type;fileName+'.'+type
+      iFile=fileName;fileName
+      zipFile=iFile+'.'+type;fileName+'.'+type
       spawn, '"'+zipCommand+'"'+" "+command+option+" "+zipFile+" "+iFile, /HIDE
     endif
     if strupcase(!VERSION.OS_FAMILY) eq 'UNIX' then begin
       zipCommand='zip'
       type='zip'
       command=''
-      option=''
+      option=' -j'
       ;iFile=onlyRealFileName;fileName
       iFile=fileName
       zipFile=iFile+'.'+type;fileName+'.'+type

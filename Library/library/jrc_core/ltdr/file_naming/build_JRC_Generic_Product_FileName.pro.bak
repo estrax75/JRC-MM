@@ -131,6 +131,20 @@ function build_JRC_TCAlg_Monthly_Product_FileName, instrument, year, month, day,
 
 end
 
+function build_JRC_TCAlg_Daily_Product_FileName, instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, product, version, fileType,$
+  indicator=indicator, level, projection=projection
+
+  COMMON singleTons, ST_utils, ST_operator, ST_fileSystem
+
+  declareSingleTons
+
+  if n_elements(version) eq 0 then version1='ALGTC' else version1=version+'ALGTC'
+
+  return, build_JRC_Generic_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, product, version1, fileType,$
+    indicator=indicator, level, projection=projection)
+
+end
+
 function build_JRC_TCAlg_DailyInterval_Product_FileName, instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, product, version, fileType,$
   indicator=indicator, level, projection=projection
 
@@ -196,7 +210,7 @@ function build_JRC_AVH_TCAlg_DailyInterval_Product_FileName, instrument, year, m
 
   instrument1='AVH'
 
-  return, build_JRC_TCAlg_Monthly_Product_FileName(instrument1, year, month, day, timestamp, temporalResolution, location, spatialResolution, product, version, fileType,$
+  return, build_JRC_TCAlg_Daily_Product_FileName(instrument1, year, month, day, timestamp, temporalResolution, location, spatialResolution, product, version, fileType,$
     indicator=indicator, level, projection=projection)
 
 end
@@ -408,11 +422,12 @@ function build_JRC_FPA_AVH_TCAlg_DailyInterval_Product_FileName, instrument, yea
   product1='FPA'
 
   nOfDays=strsplit(temporalResolution, 'D', /EXTRACT, /PRESERVE_NULL)
-  nOfDays=STRING(nOfDays, FORMAT='(i03)')
+  nOfDays=STRING(nOfDays[0], FORMAT='(i03)')
   temporalResolution1=nOfDays+'D'
+  level1='L3'
 
-  return, build_JRC_AVH_TCAlg_DailyInterval_Product_FileName(instrument, year, month, day, timestamp, temporalResolution1, location, spatialResolution, product1, version, fileType,$
-    indicator=indicator, level, projection=projection)
+  return, build_JRC_AVH_TCAlg_DailyInterval_Product_FileName(instrument, year, month, day, timestamp, temporalResolution1, location, spatialResolution, product1, version1, fileType,$
+    indicator=indicator, level1, projection=projection)
   ;return, build_JRC_AVH_TCAlg_Monthly_Product_FileName(instrument, year, month, day, timestamp, temporalResolution, location, spatialResolution, product1, version, fileType,$
   ;  indicator=indicator, level, projection=projection)
 

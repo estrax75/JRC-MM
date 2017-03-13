@@ -168,7 +168,6 @@ function doFapar, instrument, indicator, spatialResolution, level, missionName, 
   data=0
   ;
 
-
   sizemat=size(red_avhrr)
   ;
   ; START

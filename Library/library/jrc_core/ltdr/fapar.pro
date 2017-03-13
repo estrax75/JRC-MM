@@ -3,7 +3,7 @@ PRO FAPAR,sensor,sensorCode,ttasun,ttaview,phisun,phiview,$
   D_BRF_ToA_BLUE,D_BRF_ToA_RED,D_BRF_ToA_NIR, $
   rhoRED, rhoNIR, D_rhoRED, D_rhoNIR, $
   D_rhotildeBLUE, D_rhotildeRED, D_rhotildeNIR, VI, D_VI, toc=TOC,$
-  MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX
+  MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, coeffFile=coeffFile
   ;
   ;
   ; compute the fapar (=VI) and the associated uncertaintied (=D_VI) as function as the bands uncertainties
@@ -28,7 +28,7 @@ PRO FAPAR,sensor,sensorCode,ttasun,ttaview,phisun,phiview,$
   phisun  *= !dtor
   phiview *= !dtor
 
-  coeffInfo=getSensorCoeffs(sensor, sensorCode, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX)
+  coeffInfo=getSensorCoeffs(sensor, sensorCode, MISSIONOVERLAPINDEX=MISSIONOVERLAPINDEX, coeffFile=coeffFile)
   
   RahmanCoeffs_RED=coeffInfo.RahmanCoeffs_RED
   RahmanCoeffs_NIR=coeffInfo.RahmanCoeffs_NIR

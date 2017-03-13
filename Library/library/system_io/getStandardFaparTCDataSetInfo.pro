@@ -1,6 +1,7 @@
 function getStandardFaparTCDataSetInfo
 
-  infoHeader=getJRCHeader_v1_5()
+  ;infoHeader=getJRCHeader_v1_5()
+  infoHeader=getJRCHeader_v1_6()
 
   INT_NAN=2^15
   INT_MAX=2^15-1
@@ -19,31 +20,41 @@ function getStandardFaparTCDataSetInfo
     'FAPAR','Dev_Temp_FAPAR','Sigma_FAPAR', $
     'RECTIFIED_RED','Dev_Temp_Red', 'Sigma_RECTIFIED_RED', $
     'RECTIFIED_NIR','Dev_Temp_Nir', 'Sigma_RECTIFIED_NIR', $
-    'JRC_FLAG']
+    'JRC_FLAG', 'LTDR_FLAG', $
+    'BRF_TOC_BAND_1', 'BRF_TOC_BAND_2', $
+    'REL_PHI', 'TS', 'TV']
 
   bandLongNames=['Representative day in the period', 'Number_of_day', $
     'Fraction of Absorbed Photosynthetically Active Radiation', 'Temporal Deviation of FAPAR', 'Uncertainties of FAPAR', $
     'Rectified Reflectance in Band 1','Temporal Deviation of Band 1', 'Uncertainties Band 1', $
     'Rectified Reflectance in Band 2','Temporal Deviation of Band 2', 'Uncertainties Band 2', $
-    'JRC_FLAG']
+    'JRC_FLAG', 'LTDR_FLAG', $
+    'Surface Bidirectional Reflectance Factor Band 1', 'Surface Bidirectional Reflectance Factor Band 2', $
+    'Relative Azimuth', 'Solar Zenith Angle', 'View Zenith Angle']
 
   bandStandardNames=['Day','Number_of_Day', $, $
     'FAPAR','Dev_Temp_FAPAR','Sigma_FAPAR', $
     'RECTIFIED_RED','Dev_Temp_Red', 'Sigma_RECTIFIED_RED', $
     'RECTIFIED_NIR','Dev_Temp_Nir', 'Sigma_RECTIFIED_NIR', $
-    'JRC_FLAG']
+    'JRC_FLAG', 'LTDR_FLAG', $
+    'BRF_TOC_BAND_1', 'BRF_TOC_BAND_2', $
+    'PHI','TS', 'TV']
 
   bandSlopes=[1,1,$
     1, 1, 1,$
     10e-05, 10e-05, 10e-05, $
     10e-05, 10e-05, 10e-05, $
-    1]
+    1, 1, $
+    10e-05, 10e-05,$
+    10e-03,10e-03, 10e-03]
 
   bandMeasureUnits=['n_a','n_a', $
     'n_a', 'n_a', 'n_a', $
     'n_a', 'n_a', 'n_a', $
     'n_a', 'n_a', 'n_a', $
-    'n_a']
+    'n_a', 'n_a', $
+    'n_a', 'n_a', $
+    'degree','degree','degree']
 
   bandIntercepts=fltarr(n_elements(bandSlopes))
 
@@ -58,7 +69,9 @@ function getStandardFaparTCDataSetInfo
     16,16,16,$
     2,2,2,$
     2,2,2,$
-    2]
+    2, 12, $
+    2,2,$
+    2,2,2]
 
   minMaxs=fltarr(n_elements(bandDataTypes), 2)
   scaledMinMaxs=minMaxs
@@ -118,6 +131,31 @@ function getStandardFaparTCDataSetInfo
   scaledMinMaxs[11,*]=[0,15]
   nanList[11]=BYTE_NAN2
 
+  ;'LTDR_FLAG', $
+  minMaxs[12,*]=[0,INT_MAX]
+  scaledMinMaxs[12,*]=[0,INT_MAX]
+  nanList[12]=INT_MAX
+
+  minMaxs[13,*]=GENERIC_DATA_RANGE;minMax[0,*]
+  scaledMinMaxs[13,*]=minMaxs[13,*]/bandSlopes[13]
+  nanList[13]=INT_NAN
+
+  minMaxs[14,*]=GENERIC_DATA_RANGE;minMax[0,*]
+  scaledMinMaxs[14,*]=minMaxs[14,*]/bandSlopes[14]
+  nanList[14]=INT_NAN
+
+  minMaxs[15,*]=ANGLES_DATA_RANGE2
+  scaledMinMaxs[15,*]=minMaxs[15,*]/bandSlopes[15]
+  nanList[15]=INT_NAN
+
+  minMaxs[16,*]=ANGLES_DATA_RANGE1
+  scaledMinMaxs[16,*]=minMaxs[16,*]/bandSlopes[16]
+  nanList[16]=INT_NAN
+
+  minMaxs[17,*]=ANGLES_DATA_RANGE1
+  scaledMinMaxs[17,*]=minMaxs[17,*]/bandSlopes[17]
+  nanList[17]=INT_NAN
+  
   return, { $
     header: infoHeader, $
     bandNames: bandNames, $

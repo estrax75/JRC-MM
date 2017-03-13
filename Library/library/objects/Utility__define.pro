@@ -19,6 +19,22 @@
 ;
 ;END
 
+FUNCTION Utility::getNan, INT=INT, DATA=DATA, BYTE=BYTE
+
+  if keyword_set(INT)then NAN=2^15
+  if keyword_set(DATA) then NAN=!VALUES.F_NAN
+  if keyword_set(BYTE) then NAN=255B
+  return, NAN
+
+END
+
+FUNCTION Utility::getRange, INT=INT, DATA=DATA, BYTE=BYTE
+
+  if keyword_set(DATA) then RANGE=[0., 1.]
+  return, RANGE
+
+END
+
 FUNCTION Utility::calcDays, yearList, monthList
 
   date=intarr(4)
@@ -1198,7 +1214,7 @@ FUNCTION Utility::formatDate, date, template=template
       stringDate=strtrim(date[3], 1)+':'+strtrim(date[2], 1)+':'+strtrim(date[1], 1)+':'+strtrim(date[0], 1)
     end
   endcase
-  
+
   return, stringDate
 
 END

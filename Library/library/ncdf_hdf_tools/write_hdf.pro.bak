@@ -194,6 +194,33 @@ pro write_hdf, fileName, bandNames, bandStandardNames, bandLongNames, $
   HDF_SD_END, sdid_file
   file_move, tempFileName, fileName, /OVERWRITE, /ALLOW_SAME
 
+  if keyword_set(postcompression) then begin
+    if strupcase(!VERSION.OS_FAMILY) eq 'WINDOWS' then begin
+      zipCommand="C:\Program Files\7-Zip\7z.exe"
+      type="zip"
+      command="a"
+      option="-t{"+type+"}";+" ";+"-slp"
+      ; big file & delete original file
+      option=' -slp -sdel'
+      iFile=onlyRealFileName;fileName
+      zipFile=onlyRealFileName+'.'+type;fileName+'.'+type
+      spawn, '"'+zipCommand+'"'+" "+command+option+" "+zipFile+" "+iFile, /HIDE
+    endif
+    if strupcase(!VERSION.OS_FAMILY) eq 'UNIX' then begin
+      zipCommand='zip'
+      type='zip'
+      command=''
+      option=''
+      ;iFile=onlyRealFileName;fileName
+      iFile=fileName
+      zipFile=iFile+'.'+type;fileName+'.'+type
+      gzfile=iFile+'.'+'gz';fileName+'.'+type
+      spawn, '"'+zipCommand+'"'+" "+command+option+" "+zipFile+" "+iFile;, /HIDE
+      file_delete, iFile, /ALLOW_NONEXISTENT, /QUIET
+      file_delete, gzfile, /ALLOW_NONEXISTENT, /QUIET
+    endif
+  endif
+
   ;  1  BYTE
   ;  2  INT
   ;  3  LONG  Longword integer

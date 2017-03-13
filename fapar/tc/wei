@@ -1,0 +1,25 @@
+;
+; compute the average of weights over the period
+;
+fpar_w=float(splitDims[0],splitDims[1])
+red_w=float(splitDims[0],splitDims[1])
+nir_w=float(splitDims[0],splitDims[1])
+N_ele=float(splitDims[0],splitDims[1])
+for t=0, tt(1)-1 do begin
+  ; cut off NaN
+  validMask=finite(data_in(t).fapar(*,*)) and finite(data_in(t).red(*,*)) and finite(data_in(t).nir(*,*))
+  goodIndexes=where(validMask eq 1)
+
+  idxMaskVeg=where(data_in(t).fapar[goodIndexes] gt 0.0 and $
+    data_in(t).red[goodIndexes] gt 0.0 and data_in(t).red[goodIndexes] lt 1.0 and $
+    data_in(t).nir[goodIndexes] gt 0.0 and data_in(t).nir[goodIndexes] lt 1.0)
+  fpar_w(idxMaskveg)=fpar_w+data_in(t).sigma(idxMaskVeg)
+  red_w(idxMaskveg)=fpar_w+data_in(t).sigma_red(idxMaskVeg)
+  nir_w(idxMaskveg)=fpar_w+data_in(t).sigma_nir(idxMaskVeg)
+  N_ele(idxMaskveg)=N_ele(idxMaskveg)+one(idxMaskveg)
+endfor
+idx_non_nul=where(N_ele GE 3)
+fpar_w(idx_non_nul)=fpar_w(idx_non_nul)/N_ele(idx_non_nul)
+red_w(idx_non_nul)=red_w(idx_non_nul)/N_ele(idx_non_nul)
+nir_w(idx_non_nul)=nir_w(idx_non_nul)/N_ele(idx_non_nul)
+;

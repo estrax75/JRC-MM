@@ -1,4 +1,4 @@
-pro ncdfread, filename,variable_name, data_variable, slope, intercept, dims, fillValue, ERROR=ERROR
+pro ncdfread, filename,variable_name, data_variable, slope, intercept, dims, fillValue, ERROR=ERROR, count=count, offset=offset
   ; This procedure will read netCDF data and place it in an IDL variable
   ; INPUT: filename - a string variable that includes the filepath
   ;        variable_name - a string that must match exactly that produced by
@@ -19,7 +19,8 @@ pro ncdfread, filename,variable_name, data_variable, slope, intercept, dims, fil
     if varID ne -1 then break
   endfor
 
-  ncdf_varget,fileID, varID, data_variable
+  ncdf_varget,fileID, varID, data_variable, count=count, offset=offset
+  ;ncdf_varget,fileID, varID, data_variable, count=[3,3,1], offset=[4066,1231,0]
   dims = size(data_variable,/dimensions)
   ; get the attribute
 

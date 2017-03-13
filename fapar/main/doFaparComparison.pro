@@ -168,20 +168,20 @@ function doFaparComparison, confDir, sensors, sourceDirs, mainVarNames, sourceFo
         faparRes=read_AVHRR_FAPAR(sourceDirs[i], inputFiles[i], FOUND=FOUND, varName=varName, /APPLY)
         varName='RECTIFIED_RED';varName='Rectified_BAND_2'
         delidlvar, FOUND
-        redRes=read_AVHRR_data(sourceDirs[i], inputFiles[i], FOUND=FOUND, varName=varName, /APPLY)
+        redRes=read_AVHRR(sourceDirs[i], inputFiles[i], FOUND=FOUND, varName=varName, /APPLY)
         if ~keyword_set(FOUND) then begin
           varName='Rectified_BAND_1'
-          redRes=read_AVHRR_data(sourceDirs[i], inputFiles[i], FOUND=FOUND, varName=varName, /APPLY)
+          redRes=read_AVHRR(sourceDirs[i], inputFiles[i], FOUND=FOUND, varName=varName, /APPLY)
         endif
         delidlvar, FOUND
         varName='RECTIFIED_NIR';varName='Rectified_BAND_1'
-        nirRes=read_AVHRR_data(sourceDirs[i], inputFiles[i], FOUND=FOUND, varName=varName, /APPLY)
+        nirRes=read_AVHRR(sourceDirs[i], inputFiles[i], FOUND=FOUND, varName=varName, /APPLY)
         if ~keyword_set(FOUND) then begin
           varName='Rectified_BAND_2'
-          nirRes=read_AVHRR_data(sourceDirs[i], inputFiles[i], FOUND=FOUND, varName=varName, /APPLY)
+          nirRes=read_AVHRR(sourceDirs[i], inputFiles[i], FOUND=FOUND, varName=varName, /APPLY)
         endif
         varName='LDTR_FLAG'
-        qa=read_AVHRR_data(sourceDirs[i], inputFiles[i], FOUND=FOUNDQA, varName=varName)
+        qa=read_AVHRR(sourceDirs[i], inputFiles[i], FOUND=FOUNDQA, varName=varName)
         if keyword_set(FOUNDQA) then begin
           qa=qa.data
           countCloud=0
@@ -394,6 +394,7 @@ function doFaparComparison, confDir, sensors, sourceDirs, mainVarNames, sourceFo
           date_created=date_created, time_Coverage_Start=time_Coverage_Start, time_Coverage_End=time_Coverage_End
       endif
     endif
+
     print, '**', resdiffFileName, '**done**'
     ptr_free, matrixF
     ptr_free, matrixR

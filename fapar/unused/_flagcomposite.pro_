@@ -1,0 +1,234 @@
+function FlagComposite, tcFlag, dayFlag
+
+  for (elem=0; elem<elem1; elem ++) flag[elem] = IFLAG_INBAD;
+
+  for (f=0; f<NbInput; f++ ) p_flag[f] +=elem1;
+  ;/* ----------------------------------------------------------------- */
+  for (elem=elem1; elem<elem2; elem ++) {
+
+  ;/* ------------------------------------------------ */
+  ;/* Count the number of occurrences for a given flag */
+
+  n_sea=0;
+  n_brightsurface=0;
+  n_soil=0;
+  n_visaturation=0;
+  n_negrect=0;
+  n_land=0;
+  n_continent=0;
+  n_cldice=0;
+  n_bad=0;
+
+;  // daily flag meanings
+;  // (NOAA idl) VEG/LAND = 0 <==> (Seawifs C) ITHRES_LAND 100
+;  // (NOAA idl) BAD CHANNEL(S) = 1 <==> (Seawifs C) IFLAG_INBAD 255
+;  // (NOAA idl) CLOUD/ICE = 2 <==> (Seawifs C) ITHRES_CLDICE 200
+;  // (NOAA idl) WATER = 3 <==> (Seawifs C) IFLAG_SEA 0
+;  // (NOAA idl) SOIL/LAND = 4 <==> (Seawifs C) IFLAG_SOIL 105
+;  // (NOAA idl) idl FAPAR NEGATIVE AFTER COMPUTATION = 5 <==> (Seawifs C) IFLAG_NEGRECT 104
+;  // (NOAA idl) FAPAR TOO HIGH AFTER COMPUTATION = 6 <==> (Seawifs C) IFLAG_SAT 103
+  num=0;
+
+  for (f=0; f<NbInput; f++ ) {
+
+  index[f]=-1; status = 1;
+
+  idxBad=where(dayFlag eq 1,  n_bad)
+  idxCloudIce=where(dayFlag eq 1,  n_cldice)
+  idxSea=where(dayFlag eq 3,  n_sea)
+  idxSoil=where(dayFlag eq 4,  n_sea)
+  ;idxLand=where(dayFlag eq 4,  n_sea) ;??
+  idxViSaturation=where(dayFlag eq 6,  n_visaturation)
+  idxNegRect=where(dayFlag eq 5,  n_negrect)
+;  // 2
+;  if ( (*p_flag[f]) < ITHRES_CLDICE ) {
+;
+;  // Not available (0 land?)
+;  if ( (*p_flag[f]) < ITHRES_LAND ) {
+;  n_sea ++;
+;}
+;else {
+;// NO
+;if ( (*p_flag[f]) == IFLAG_BRIGHTSFC ) n_brightsurface ++;
+;// 4 or 5
+;else if ( (*p_flag[f]) == IFLAG_SOIL ) n_soil ++;
+;// Not available
+;else if ( (*p_flag[f]) == IFLAG_LAND ) n_land ++;
+;// Not available
+;else if ( (*p_flag[f]) == IFLAG_SAT ) n_visaturation ++;
+;// Not available
+;else if ( (*p_flag[f]) == IFLAG_NEGRECT ) n_negrect ++;
+;}
+;}
+;else {
+;if ( (*p_flag[f]) == IFLAG_INBAD ) { n_bad ++; status = -1; }
+;else {
+;n_cldice ++;
+;if ( (*p_flag[f]) != IFLAG_CLDICE ) printf ("Problem with flag\n");
+;}
+;}
+;if ( status == 1 ) { index[num] = f; num ++; }
+;/* Make a list of the files for which the flag value is not 'bad' */
+;}
+n_continent = n_land+n_visaturation+n_soil+n_brightsurface;
+
+;/* ------------------------------------------------ */
+;/* Initialization */
+;// init to BAD
+;flag[elem] = IFLAG_INBAD;
+resFlag=11 ;or composite bad value code...
+
+;/* Case where the FPAR has been computed;
+;it means that at least one value was available for the period */
+if ( (ValueNb[elem]) != out_bad_ui8 ) {
+
+iflag = (int)(*p_flag[ValueNb[elem]]);
+landsea=(int)(landmask[(line-1)*nelem+elem]);
+
+;/* Case clearly over land . */
+if ( landsea > MIN_DEPTH ) {
+;// from day/file flag value (LAND)
+flag[elem] = (uint8)(iflag);
+}
+
+;/* Over water . */
+else {
+;/* At least 3 instances of desert / soil / vegetation AND no instance of aquatic surface detected by the 'land' algorithm OR
+;at least 4 instances of continental surfaces OR
+;at least 2 instances of vegetation . */
+;/* ng ++ add soil into the test ???
+if ( n_land+n_visaturation > 1 ) { flag[elem] = (uint8)(iflag); } */
+if ( n_land+n_visaturation+n_brightsurface >= 1 ) { flag[elem] = (uint8)(iflag); }
+else {
+if ( n_continent >= 4 ) { flag[elem] = (uint8)(iflag); }
+else {
+;/* ng ++ change nsea <=1 instead of ==0 */
+if ( n_continent >= 3 && n_sea <= 1 ) { flag[elem] = (uint8)(iflag);}
+;/* ng ++ add case where only bad and just one observation */
+else {
+if ( n_bad ==  NbInput -1 ) { flag[elem] = (uint8)(iflag);}
+;/* Cancel the value of the selected day for FPAR - flag as cloud-ice */
+else {
+
+FPARNb[elem] = out_bad_ui8; /* Index for FPAR choice re-set to 255 */
+if ( n_sea != 0 || n_continent != 0 ) {
+for (f=0; f<num; f++ ) {   /* Takes the lowest flag value */
+if ( (*p_flag[index[f]]) < flag[elem] ) {
+flag[elem]=*p_flag[index[f]]; ValueNb[elem]=index[f];
+}
+}
+}
+else{
+flag[elem] = 0;
+for (f=0; f<num; f++ ) {   /* Takes the highest flag value */
+if ( (*p_flag[index[f]]) > flag[elem] && (*p_flag[index[f]]) != IFLAG_INBAD ) {
+flag[elem]=*p_flag[index[f]]; ValueNb[elem]=index[f];
+}
+}
+}
+}
+}
+}
+}
+}
+}
+;/* No selection of the FPAR algorithm */
+else {
+
+if ( n_sea != 0 ) {
+for (f=0; f<num; f++ ) {   /* Takes the lowest flag value */
+if ( (*p_flag[index[f]]) < flag[elem] ) {
+flag[elem]=*p_flag[index[f]]; ValueNb[elem]=index[f];
+}
+}
+}
+else {
+if ( n_cldice != 0 ) {
+flag[elem] = 0;
+for (f=0; f<num; f++ ); {   /* Takes the highest flag value */
+if ( (*p_flag[index[f]]) > flag[elem] && (*p_flag[index[f]]) != IFLAG_INBAD ) {
+flag[elem]=*p_flag[index[f]]; ValueNb[elem]=index[f];
+}
+}
+}
+}
+
+}
+
+;/* ------------------------------------------------ */
+
+for (f=0; f<NbInput; f++) p_flag[f] ++;
+
+}
+;/* ----------------------------------------------------------------- */
+for (elem=elem2; elem<nelem; elem ++) flag[elem] = IFLAG_INBAD;
+
+for (f=0; f<NbInput; f++ ) p_flag[f] +=nelem-elem2;
+
+
+;/* for (f=0; f<NbInput; f++) p_flag[f] -=nelem; */
+
+;/* ----------------------------------------------------------------- */
+
+
+
+  notAssigned=where(tcFlag eq 11, notAssignedCount)
+  if notAssignedCount gt 1 then begin
+    print, '**Flag = 11!!! (not assigned value)***'
+    idxSea=where(nSeaMx ne 0 and tcFlag eq 11, cntSea)
+    idxCloudIce=where(nCloudIceMx ne 0 and tcFlag eq 11, cntCloudIce)
+
+    choosenDay=-1
+    if cntSea gt 0 then begin
+      res1=lonarr(cntSea, 3)
+      for pix=0, cntSea-1 do begin
+        flagList=data_day_split[*].flag[idxSea[pix]]
+        data_tc_split.flag[idxSea[pix]]=min(flagList)
+        ;choosenDay=(where(data_tc_split.flag[idxSea[pix]] eq flagList))[0]
+        choosenDay=(where(data_tc_split.flag[idxSea[pix]] eq flagList))[0]
+        res1[pix,*]=[choosenDay, idxSea[pix], data_tc_split.flag[idxSea[pix]]]
+        ;data_tc_split.fapar[idxSea[pix]] = data_day_split[choosenDay].fapar[idxSea[pix]]
+        ;data_tc_split.red[idxSea[pix]]=data_day_split[choosenDay].red[idxSea[pix]]
+        ;data_tc_split.nir[idxSea[pix]]= data_day_split[choosenDay].nir[idxSea[pix]]
+        ;data_tc_split.sigma_red[idxSea[pix]]= data_day_split[choosenDay].sigma_red[idxSea[pix]]
+        ;data_tc_split.sigma_nir[idxSea[pix]]= data_day_split[choosenDay].sigma_nir[idxSea[pix]]
+        ;data_tc_split.sigma[idxSea[pix]]= data_day_split[choosenDay].sigma[idxSea[pix]]
+        ;data_tc_split.toc_red[idxSea[pix]]= data_day_split[choosenDay].toc_red[idxSea[pix]]
+        ;data_tc_split.toc_nir[idxSea[pix]]= data_day_split[choosenDay].toc_nir[idxSea[pix]]
+        ;data_tc_split.ts[idxSea[pix]]=data_day_split[choosenDay].ts[idxSea[pix]]
+        ;data_tc_split.tv[idxSea[pix]]=data_day_split[choosenDay].tv[idxSea[pix]]
+        ;data_tc_split.flag[idxSea[pix]]=data_day_split[choosenDay].flag[idxSea[pix]]
+        ;data_tc_split.toc_red[idxSea[pix]]=data_day_split[choosenDay].toc_red[idxSea[pix]]
+        ;data_tc_split.toc_nir[idxSea[pix]]=data_day_split[choosenDay].toc_nir[idxSea[pix]]
+      endfor
+    endif else begin
+      nSeaMx[*]=0
+      if cntCloudIce gt 0 then begin
+        res2=lonarr(cntCloudIce, 3)
+        for pix=0, cntCloudIce-1 do begin
+          nSeaMx[idxCloudIce[pix]]=1
+          flagList=data_day_split[*].flag[idxCloudIce[pix]]
+          data_tc_split.flag[idxCloudIce[pix]]=max(flagList)
+          choosenDay=(where(data_tc_split.flag[idxCloudIce[pix]] eq flagList))[0]
+          res2[pix,*]=[choosenDay, idxCloudIce[pix], data_tc_split.flag[idxCloudIce[pix]]
+          ;data_tc_split.fapar[idxCloudIce[pix]] = data_day_split[choosenDay].fapar[idxCloudIce[pix]]
+          ;data_tc_split.red[idxCloudIce[pix]]=data_day_split[choosenDay].red[idxCloudIce[pix]]
+          ;data_tc_split.nir[idxCloudIce[pix]]= data_day_split[choosenDay].nir[idxCloudIce[pix]]
+          ;data_tc_split.sigma_red[idxCloudIce[pix]]= data_day_split[choosenDay].sigma_red[idxCloudIce[pix]]
+          ;data_tc_split.sigma_nir[idxCloudIce[pix]]= data_day_split[choosenDay].sigma_nir[idxCloudIce[pix]]
+          ;data_tc_split.sigma[idxCloudIce[pix]]= data_day_split[choosenDay].sigma[idxCloudIce[pix]]
+          ;data_tc_split.toc_red[idxCloudIce[pix]]= data_day_split[choosenDay].toc_red[idxCloudIce[pix]]
+          ;data_tc_split.toc_nir[idxCloudIce[pix]]= data_day_split[choosenDay].toc_nir[idxCloudIce[pix]]
+          ;data_tc_split.ts[idxCloudIce[pix]]=data_day_split[choosenDay].ts[idxCloudIce[pix]]
+          ;data_tc_split.tv[idxCloudIce[pix]]=data_day_split[choosenDay].tv[idxCloudIce[pix]]
+          ;data_tc_split.flag[idxCloudIce[pix]]=data_day_split[choosenDay].flag[idxCloudIce[pix]]
+          ;data_tc_split.toc_red[idxCloudIce[pix]]=data_day_split[choosenDay].toc_red[idxCloudIce[pix]]
+          ;data_tc_split.toc_nir[idxCloudIce[pix]]=data_day_split[choosenDay].toc_nir[idxCloudIce[pix]]
+        endfor
+      endif
+    endelse
+  endif
+  
+  return, [flagIndexes, flagValues]
+
+end

@@ -1,0 +1,38 @@
+;; GLOBAL ATTRIBS from AVHRR/NASA
+;function getJRCHeader_v1_3
+;
+;  date=systime()
+;
+;  return, { $
+;    Conventions: ['Conventions', 'CF-1.6'], $
+;    Metadata_Conventions:['Metadata_Conventions', 'CF-1.6, Unidata Dataset Discovery v1.0'], $
+;    standard_name_vocabulary:['standard_name_vocabulary', 'CF Standard Name Table (v25, 05 July 2013)'], $
+;    cdm_data_type:['cdm_data_type', 'Grid'], $
+;    cdr_variable:['cdr_variable', 'FAPAR'], $
+;    title: ['title', 'JRC daily FAPAR with AVHRR'], $
+;    date_created: ['date_created', 'n_a'], $ ;2014-02-12T13:39:25Z', $
+;    Process: ['process', 'JRC FAPAR TOC algorithm - see QA4ECV ATBD'], $
+;    PostProcessingVersion:['PostProcessingVersion', 'v1r0'], $
+;    product_version:['product_version', 'v1r0'], $
+;    grid_mapping_name:['grid_mapping_name', 'latitude_longitude'], $
+;    geospatial_lat_max: ['geospatial_lat_max', '90.0 degrees_north'], $
+;    geospatial_lat_min: ['geospatial_lat_min', '-90.0 degrees_north'], $
+;    geospatial_lon_max: ['geospatial_lon_max', '180.0 degrees_east'], $
+;    geospatial_lon_min: ['geospatial_lon_min', '-180.0 degrees_east'], $
+;    geospatial_lat_resolution: ['geospatial_lat_resolution', '0.05 degrees'], $
+;    geospatial_lon_resolution: ['geospatial_lon_resolution', '0.05 degrees'], $
+;    geospatial_reference:['geospatial_reference', 'EPSG:4326'], $
+;    time_coverage_start:['time_coverage_start', 'n_a'], $;1999-06-07T00:00:00Z', $
+;    time_coverage_end:['time_coverage_end', 'n_a'], $1999-06-07T23:59:00Z', $
+;    id:['id', 'n_a'], $ ;'AVHRR-Land_v004_AVH09C1_NOAA-14_19990607_c20140212133925.nc' filename, $
+;    InputDataType:['InputDataType','GAC'], $
+;    institution:['institution', 'European Commission - Joint Research Center'], $
+;    institution_url:['institution_url', 'n_a'], $
+;    institution_contact:['institution_contact','n_a'], $
+;    license:['license', 'No constraints on data access or use'], $
+;    Satellite:['satellite', 'n_a'], $ ;NOAA-14', $
+;    sensor:['sensor', 'AVHRR > Advanced Very High Resolution Radiometer'], $
+;    keywords:['keywords', 'EARTH SCIENCE , LAND SURFACE , SURFACE RADIATIVE PROPERTIES , REFLECTANCE , ECV'] $
+;  }
+;
+;end

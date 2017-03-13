@@ -314,9 +314,7 @@ Pro sm_call_mean_3_unc,  daysNumber, data_in, mean_field, std_mean, std_field, n
   if nfield eq 3 then begin
     std_mean.temp[*,*]=buf3[*,*]
     checkZeroes=where(std_mean.temp[*,*] eq 0, countZeroes)
-
     print,'Find # points with Standard Deviation Mean FAPAR = 0 ', countZeroes
-
   endif
   ;plot, mean_field(*,*).red, mean_field(*,*).nir, psym=1
   ;oplot, mean_field(*,*).nir, psym=4
@@ -436,14 +434,11 @@ PRO sm_FindEuclideanMatricDistance_unc, daysNumber, data_in, idx_third, distance
           buf4(idx_ca3)^2/buf1(idx_ca3)^2 +$
           buf5(idx_ca3)^2/buf2(idx_ca3)^2 )
       endif
-
       distance[t,*,*]=buf
     endfor
   endif else begin
     for t=0, tt(1)-1 do begin
       buf4=reform(std_field.red(t,*,*))
-
-
       buf5=reform(std_field.nir(t,*,*))
       buf(*)=100.0
       ;
@@ -475,6 +470,5 @@ PRO sm_FindEuclideanMatricDistance_unc, daysNumber, data_in, idx_third, distance
     endfor
     ;stop
   endelse
-
   ; stop
 END
